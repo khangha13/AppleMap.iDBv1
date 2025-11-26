@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# Conda Wrapper Script for HPC
+# Loads miniforge module and initializes conda
+
+module load miniforge
+module load r/4.4.0-gfbf-2023a 
+source $ROOTMINIFORGE/etc/profile.d/conda.sh
+
+echo "Conda initialized successfully!"
+echo "Available environments:"
+conda env list

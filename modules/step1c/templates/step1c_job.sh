@@ -1,0 +1,84 @@
+#!/bin/bash
+# STEP 1C IMPUTATION JOB TEMPLATE
+set -euo pipefail
+
+DATASET_PATH="$1"
+VCF_MANIFEST="$2"
+OUTPUT_DIR="$3"
+REFERENCE_FASTA="$4"
+GENE_MAP_FILE="$5"
+OUTPUT_PREFIX="$6"
+THREADS="$7"
+MEMORY_GB="$8"
+
+if [ -n "${PIPELINE_ROOT:-}" ]; then
+    if [ -d "${PIPELINE_ROOT}" ]; then
+        PIPELINE_ROOT="$(cd "${PIPELINE_ROOT}" && pwd)"
+    else
+        echo "[step1c_job] ⚠️  Provided PIPELINE_ROOT (${PIPELINE_ROOT}) does not exist; falling back to template-relative path." >&2
+        PIPELINE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    fi
+else
+    PIPELINE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+fi
+export PIPELINE_ROOT
+STEP1C_MODULE_DIR="${PIPELINE_ROOT}/modules/step1c"
+
+source "${PIPELINE_ROOT}/config/pipeline_config.sh"
+source "${PIPELINE_ROOT}/lib/logging.sh"
+source "${STEP1C_MODULE_DIR}/lib/functions.sh"
+
+init_logging "step1c" "job"
+
+# Load Beagle (fixed version for pipeline reproducibility)
+module load beagle/5.4.22jul22.46e-java-11 >/dev/null 2>&1 || log_warn "Unable to load beagle/5.4.22jul22.46e-java-11 module; ensure beagle.jar is accessible."
+
+BEAGLE_JAR="${BEAGLE_JAR:-${EBROOTBEAGLE:-}/beagle.jar}"
+if [ -z "${BEAGLE_JAR}" ] || [ ! -f "${BEAGLE_JAR}" ]; then
+    error_exit "Beagle jar not found. Set BEAGLE_JAR or load the beagle module."
+fi
+
+WORK_TMPDIR="${TMPDIR:-$(mktemp -d "${SCRATCH_BASE_PATH%/}/step1c_XXXXXX")}"
+trap 'rm -rf "${WORK_TMPDIR}"' EXIT
+mkdir -p "${WORK_TMPDIR}"
+
+log_info "Using working directory: ${WORK_TMPDIR}"
+
+rsync -rhivPt "${REFERENCE_FASTA}" "${WORK_TMPDIR}/"
+rsync -rhivPt "${REFERENCE_FASTA}.fai" "${WORK_TMPDIR}/" || true
+rsync -rhivPt "${REFERENCE_FASTA%.*}.dict" "${WORK_TMPDIR}/" || true
+
+VCF_PREFIXES=()
+while IFS= read -r vcf_path; do
+    [ -z "${vcf_path}" ] && continue
+    rsync -rhivPt "${vcf_path}" "${WORK_TMPDIR}/"
+    rsync -rhivPt "${vcf_path}.tbi" "${WORK_TMPDIR}/" || log_warn "Missing index for ${vcf_path}"
+    VCF_PREFIXES+=("$(basename "${vcf_path}")")
+done < "${VCF_MANIFEST}"
+
+LOCAL_MANIFEST="${WORK_TMPDIR}/vcf_manifest.txt"
+printf '%s\n' "${VCF_PREFIXES[@]}" > "${LOCAL_MANIFEST}"
+
+local_map_arg=""
+if [ -n "${GENE_MAP_FILE}" ] && [ -f "${GENE_MAP_FILE}" ]; then
+    rsync -rhivPt "${GENE_MAP_FILE}" "${WORK_TMPDIR}/"
+    local_map_arg="map=${WORK_TMPDIR}/$(basename "${GENE_MAP_FILE}")"
+fi
+
+cd "${WORK_TMPDIR}"
+
+JAVA_MEM="-Xmx${MEMORY_GB}g"
+
+log_info "Launching Beagle imputation..."
+
+java ${JAVA_MEM} -jar "${BEAGLE_JAR}" \
+    gt="${LOCAL_MANIFEST}" \
+    out="${WORK_TMPDIR}/${OUTPUT_PREFIX}" \
+    nthreads="${THREADS}" \
+    window=3 overlap=0.3 ne=100000 seed=2025 \
+    ${local_map_arg}
+
+mkdir -p "${OUTPUT_DIR}"
+rsync -rhivPt "${WORK_TMPDIR}/${OUTPUT_PREFIX}"* "${OUTPUT_DIR}/"
+
+log_info "Beagle imputation completed. Results copied to ${OUTPUT_DIR}"
