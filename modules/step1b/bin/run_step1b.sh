@@ -4,19 +4,23 @@
 # =============================================================================
 
 STEP1B_BIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-STEP1B_MODULE_DIR="$(cd "${STEP1B_BIN_DIR}/.." && pwd)"
-if [ -n "${PIPELINE_ROOT:-}" ]; then
-    if [ -d "${PIPELINE_ROOT}" ]; then
-        PIPELINE_ROOT="$(cd "${PIPELINE_ROOT}" && pwd)"
-    else
-        echo "[step1b] ⚠️  Provided PIPELINE_ROOT (${PIPELINE_ROOT}) does not exist; falling back to module-relative path." >&2
-        PIPELINE_ROOT="$(cd "${STEP1B_BIN_DIR}/../../.." && pwd)"
-    fi
+
+# Resolve PIPELINE_ROOT even when the script is executed from a SLURM spool copy
+if [ -n "${PIPELINE_ROOT:-}" ] && [ -d "${PIPELINE_ROOT}" ]; then
+    PIPELINE_ROOT="$(cd "${PIPELINE_ROOT}" && pwd)"
 else
     PIPELINE_ROOT="$(cd "${STEP1B_BIN_DIR}/../../.." && pwd)"
 fi
 export PIPELINE_ROOT
-SCRIPT_DIR="${STEP1B_BIN_DIR}"
+
+STEP1B_MODULE_DIR="${PIPELINE_ROOT}/modules/step1b"
+STEP1B_BIN_DIR="${STEP1B_MODULE_DIR}/bin"
+STEP1B_TEMPLATE_DIR="${STEP1B_MODULE_DIR}/templates"
+
+if [ ! -d "${STEP1B_MODULE_DIR}" ]; then
+    echo "[step1b] ❌ Step1B module directory not found at ${STEP1B_MODULE_DIR}. Set PIPELINE_ROOT to the repository root." >&2
+    exit 1
+fi
 
 source "${PIPELINE_ROOT}/lib/logging.sh"
 source "${PIPELINE_ROOT}/lib/slurm.sh"
@@ -28,6 +32,7 @@ STEP1B_GATK_MODULE="${STEP1B_GATK_MODULE:-gatk/4.3.0.0-gcccore-11.3.0-java-11}"
 LAST_STEP1B_ARRAY_MAX=0
 STEP1B_FAILURE_FLAG_PATH=""
 STEP1B_LAST_ERROR=""
+STEP1B_RUNNING_FLAG_PATH=""
 
 stage_step1b_reference_assets() {
     local reference_genome="$1"
@@ -97,10 +102,8 @@ ensure_reference_index_present() {
 
 step1b_failure_trap() {
     local exit_code="$1"
-    if [ -z "${MASTER_LOG_FILE:-}" ]; then
-        if [ -z "${STEP1B_FAILURE_FLAG_PATH:-}" ]; then
-            return
-        fi
+    if [ -z "${MASTER_LOG_FILE:-}" ] && [ -z "${STEP1B_FAILURE_FLAG_PATH:-}" ]; then
+        return
     fi
     if [ "${exit_code}" -ne 0 ]; then
         local msg="${STEP1B_LAST_ERROR:-"Step 1B failed. Review logs and Data_management structure."}"
@@ -112,23 +115,13 @@ step1b_failure_trap() {
             mkdir -p "${dir}"
             printf '%s\t%s\n' "$(date +%Y-%m-%dT%H:%M:%S)" "${msg}" > "${STEP1B_FAILURE_FLAG_PATH}"
         fi
+        if [ -n "${STEP1B_RUNNING_FLAG_PATH:-}" ]; then
+            rm -f "${STEP1B_RUNNING_FLAG_PATH}" 2>/dev/null || true
+        fi
     else
         if [ -n "${STEP1B_FAILURE_FLAG_PATH:-}" ]; then
             rm -f "${STEP1B_FAILURE_FLAG_PATH}" 2>/dev/null || true
         fi
-    fi
-}
-*** End Patch
-        return
-    fi
-    if [ "${exit_code}" -ne 0 ]; then
-        local msg="${STEP1B_LAST_ERROR:-"Step 1B failed. Review logs and Data_management structure."}"
-        local dir
-        dir="$(dirname "${STEP1B_FAILURE_FLAG_PATH}")"
-        mkdir -p "${dir}"
-        printf '%s\t%s\n' "$(date +%Y-%m-%dT%H:%M:%S)" "${msg}" > "${STEP1B_FAILURE_FLAG_PATH}"
-    else
-        rm -f "${STEP1B_FAILURE_FLAG_PATH}" 2>/dev/null || true
     fi
 }
 
@@ -138,6 +131,11 @@ setup_step1b_failure_tracking() {
     mkdir -p "${log_dir}"
     STEP1B_FAILURE_FLAG_PATH="${log_dir}/step1b_failed.flag"
     rm -f "${STEP1B_FAILURE_FLAG_PATH}" 2>/dev/null || true
+    export STEP1B_FAILURE_FLAG_PATH
+    STEP1B_FAILURE_CONTEXT="Step1B orchestrator or array task failure"
+    export STEP1B_FAILURE_CONTEXT
+    STEP1B_RUNNING_FLAG_PATH="${log_dir}/step1b_running.flag"
+    export STEP1B_RUNNING_FLAG_PATH
 }
 
 ensure_step1b_prereqs() {
@@ -186,7 +184,7 @@ main() {
     trap 'step1b_failure_trap $?' EXIT
 
     if [ -z "${MASTER_LOG_DIR:-}" ]; then
-        init_logging "step1b" "pipeline"
+    init_logging "step1b" "pipeline"
     else
         LOG_TO_FILE="false"
         LOG_TO_CONSOLE="true"
@@ -227,7 +225,7 @@ main() {
         log_info "Using STEP1B_CHROMOSOME_LIST override: ${STEP1B_CHROMOSOME_LIST}"
         chromosome_list="$(cat "${STEP1B_CHROMOSOME_LIST}")"
     else
-        chromosome_list="$(get_chromosome_list "${reference_genome}")"
+    chromosome_list="$(get_chromosome_list "${reference_genome}")"
     fi
     local chromosome_count
     chromosome_count=$(printf '%s\n' "${chromosome_list}" | grep -c '.')
@@ -280,6 +278,11 @@ main() {
     if [ $? -eq 0 ]; then
         log_slurm_submission "${job_id}" "${slurm_script}" "${dataset_name}" "${chromosome_count}"
         local array_range_max="${LAST_STEP1B_ARRAY_MAX:-$((chromosome_count - 1))}"
+
+        if [ -n "${STEP1B_RUNNING_FLAG_PATH:-}" ]; then
+            mkdir -p "$(dirname "${STEP1B_RUNNING_FLAG_PATH}")"
+            printf '%s\tJobID=%s\tChromosomes=%s\n' "$(date +%Y-%m-%dT%H:%M:%S)" "${job_id}" "${chromosome_count}" > "${STEP1B_RUNNING_FLAG_PATH}" 2>/dev/null || true
+        fi
 
         echo "✓ Step 1B submitted successfully!"
         echo "Job ID: ${job_id}"
@@ -399,7 +402,7 @@ create_step1b_slurm_script() {
 
     mkdir -p "${PIPELINE_SLURM_SCRIPT_DIR}"
     local slurm_script="${PIPELINE_SLURM_SCRIPT_DIR}/Apple_GATK_1B_${dataset_name}_$(date +%Y%m%d_%H%M%S).sh"
-    local template="${SCRIPT_DIR}/../templates/step1b_array.sh"
+    local template="${STEP1B_TEMPLATE_DIR}/step1b_array.sh"
 
     local config_string="job_name=Apple_GATK_1B_${dataset_name}
 account=${config_map[ACCOUNT]}

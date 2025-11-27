@@ -39,7 +39,7 @@ setup_shared_reference_genome() {
         error_exit "Shared reference genome setup incomplete - ${shared_ref_dir}/${ref_basename} missing. Update PIPELINE_REFERENCE_FASTA."
     fi
     
-    touch "${shared_base}/.initialized"
+            touch "${shared_base}/.initialized"
     log_info "Shared reference genome is ready at ${shared_ref_dir}"
 }
 
@@ -214,7 +214,11 @@ run_genomics_db_import() {
     log_info "Running GenomicsDBImport for ${chromosome}"
 
     local db_workspace="${workdir}/workspaces/genomicsdb_${chromosome}"
-    mkdir -p "${db_workspace}"
+    if [ -d "${db_workspace}" ]; then
+        log_warn "Removing existing GenomicsDB workspace for ${chromosome}: ${db_workspace}"
+        rm -rf "${db_workspace}"
+    fi
+    mkdir -p "${workdir}/tmp"
 
     if ! "${GATK_COMMAND}" --java-options "-Xmx${memory}" GenomicsDBImport \
         --genomicsdb-workspace-path "${db_workspace}" \
@@ -223,7 +227,11 @@ run_genomics_db_import() {
         --intervals "${chromosome}" \
         --reference "${reference_genome}" \
         --reader-threads "${GATK_READER_THREADS}" \
-        --overwrite-existing; then
+        --genomicsdb-shared-posixfs-optimizations true \
+        --merge-input-intervals true \
+        --consolidate true \
+        --overwrite-existing-genomicsdb-workspace true \
+        --tmp-dir "${workdir}/tmp"; then
         error_exit "GenomicsDBImport failed for ${chromosome}"
     fi
 

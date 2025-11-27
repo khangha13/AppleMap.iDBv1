@@ -128,6 +128,17 @@ ensure_master_logging() {
 # Master loop utilities (used when submitted via sbatch or when --step=auto with dataset)
 #
 poll_interval_seconds="${PIPELINE_MASTER_POLL_SECS:-${MONITOR_INTERVAL:-60}}"
+master_stall_limit="${PIPELINE_MASTER_STALL_POLLS:-10}"
+
+cancel_master_job() {
+    local reason="${1:-Unspecified reason}"
+    log_error "Cancelling master job: ${reason}"
+    if [ -n "${SLURM_JOB_ID:-}" ] && command -v scancel >/dev/null 2>&1; then
+        log_warn "Issuing scancel for master job ${SLURM_JOB_ID}"
+        scancel "${SLURM_JOB_ID}" >/dev/null 2>&1 || log_warn "scancel ${SLURM_JOB_ID} failed; exiting."
+    fi
+    exit 1
+}
 
 #
 # Self-submit support
@@ -194,6 +205,7 @@ wait_until_complete() {
     local label="$1"
     local checker_func="$2"
     local rdm_base="$3"
+    local stall_count=0
     log_info "Waiting for ${label} to complete (poll ${poll_interval_seconds}s)..."
     while true; do
         local status
@@ -208,11 +220,19 @@ wait_until_complete() {
                 return 1
                 ;;
             "Partial"|"Incomplete"|"Not Started")
-                log_info "… ${label} status: ${status} @ $(date)"
+                stall_count=$((stall_count + 1))
+                log_info "… ${label} status: ${status} @ $(date) (stall ${stall_count}/${master_stall_limit})"
+                if [ "${stall_count}" -ge "${master_stall_limit}" ]; then
+                    cancel_master_job "${label} not detected as running after ${stall_count} polls."
+                fi
                 sleep "${poll_interval_seconds}"
                 ;;
             *)
-                log_warn "… ${label} status (unknown='${status}'), waiting… @ $(date)"
+                stall_count=$((stall_count + 1))
+                log_warn "… ${label} status (unknown='${status}'), waiting… @ $(date) (stall ${stall_count}/${master_stall_limit})"
+                if [ "${stall_count}" -ge "${master_stall_limit}" ]; then
+                    cancel_master_job "${label} status unknown for ${stall_count} polls."
+                fi
                 sleep "${poll_interval_seconds}"
                 ;;
         esac

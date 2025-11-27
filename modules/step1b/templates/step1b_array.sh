@@ -10,6 +10,22 @@ if [ -z "${DATASET_PATH:-}" ] || [ -z "${CHROMOSOME_LIST_FILE:-}" ]; then
     exit 1
 fi
 
+step1b_array_exit_trap() {
+    local status=$?
+    if [ $status -ne 0 ] && [ -n "${STEP1B_FAILURE_FLAG_PATH:-}" ]; then
+        if [ ! -f "${STEP1B_FAILURE_FLAG_PATH}" ]; then
+            {
+                printf '%s\tStep 1B array task %s (chromosome %s) failed with status %s\n' \
+                    "$(date +%Y-%m-%dT%H:%M:%S)" \
+                    "${SLURM_ARRAY_TASK_ID:-unknown}" \
+                    "${chromosome:-unknown}" \
+                    "$status"
+            } > "${STEP1B_FAILURE_FLAG_PATH}" 2>/dev/null || true
+        fi
+    fi
+    exit $status
+}
+
 # =============================================================================
 # MODULE LOADING SECTION
 # =============================================================================
@@ -50,6 +66,7 @@ if [ -z "${chromosome:-}" ]; then
 fi
 
 log_info "Step 1B array task ${SLURM_ARRAY_TASK_ID} processing ${chromosome}"
+trap 'step1b_array_exit_trap' EXIT
 
 # Extract dataset name from DATASET_PATH for shared reference setup
 DATASET_NAME="$(basename "${DATASET_PATH}")"

@@ -161,7 +161,12 @@ check_step1b_status() {
     
     local dataset_name
     dataset_name="$(basename "${rdm_base_path%/}")"
-    local failure_flag="${LOG_BASE_PATH%/}/${dataset_name}/step1b_failed.flag"
+    local primary_failure_flag="${MASTER_LOG_DIR:-${LOG_BASE_PATH%/}/${dataset_name}}/step1b_failed.flag"
+    local failure_flag="${primary_failure_flag}"
+    local fallback_failure_flag="${LOG_BASE_PATH%/}/${dataset_name}/step1b_failed.flag"
+    if [ ! -f "${failure_flag}" ] && [ "${fallback_failure_flag}" != "${failure_flag}" ] && [ -f "${fallback_failure_flag}" ]; then
+        failure_flag="${fallback_failure_flag}"
+    fi
     if [ -f "${failure_flag}" ]; then
         local reason
         reason="$(cat "${failure_flag}" 2>/dev/null || true)"
@@ -170,9 +175,20 @@ check_step1b_status() {
         return
     fi
 
+    local running_flag="${MASTER_LOG_DIR:-${LOG_BASE_PATH%/}/${dataset_name}}/step1b_running.flag"
+    local running_fallback="${LOG_BASE_PATH%/}/${dataset_name}/step1b_running.flag"
+    if [ ! -f "${running_flag}" ] && [ "${running_fallback}" != "${running_flag}" ] && [ -f "${running_fallback}" ]; then
+        running_flag="${running_fallback}"
+    fi
+
     local consolidated_dir="${rdm_base_path}/7.Consolidated_VCF"
     
     if [ ! -d "$consolidated_dir" ]; then
+        if [ -f "${running_flag}" ]; then
+            log_info "Step 1B still running (tracking flag: ${running_flag})"
+            echo "Running"
+            return
+        fi
         log_warn "Step 1B directory does not exist: $consolidated_dir"
         echo "Not Started"
         return

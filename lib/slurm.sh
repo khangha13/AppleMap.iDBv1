@@ -108,27 +108,23 @@ EOF
         return 1
     fi
     
-    # Append the template content (skip the shebang line)
-    # Replace the PIPELINE_ROOT path resolution line with embedded value
-    local template_line_num=1
-    while IFS= read -r line || [ -n "$line" ]; do
-        # Skip shebang line
-        if [ $template_line_num -eq 1 ]; then
-            template_line_num=$((template_line_num + 1))
-            continue
-        fi
-        # Replace PIPELINE_ROOT placeholder or path resolution with embedded value
-        if [[ "$line" == *"__PIPELINE_ROOT_PLACEHOLDER__"* ]]; then
-            echo "PIPELINE_ROOT=\"${pipeline_root}\"" >> "$output"
-        elif [[ "$line" =~ ^PIPELINE_ROOT=.*BASH_SOURCE ]]; then
-            echo "PIPELINE_ROOT=\"${pipeline_root}\"" >> "$output"
-        else
-            echo "$line" >> "$output"
-        fi
-        template_line_num=$((template_line_num + 1))
-    done < "$template"
-    
-    if [ $? -ne 0 ]; then
+    local py_bin="${PYTHON_BIN:-python3}"
+    if ! command -v "$py_bin" >/dev/null 2>&1; then
+        py_bin="python"
+    fi
+    # Use stdin ("-") to avoid Python treating the template path as a script file
+    if ! "$py_bin" - <<'PY' "$template" "$output" "$pipeline_root"; then
+import sys
+template, output, pipeline_root = sys.argv[1:4]
+with open(template, encoding="utf-8") as src:
+    lines = src.readlines()
+with open(output, "a", encoding="utf-8") as dst:
+    for line in lines[1:]:
+        if line.startswith("PIPELINE_ROOT=") and "BASH_SOURCE" in line:
+            dst.write(f'PIPELINE_ROOT="{pipeline_root}"\n')
+        else:
+            dst.write(line.replace("__PIPELINE_ROOT_PLACEHOLDER__", pipeline_root))
+PY
         log_error "Failed to append template body from $template to $output"
         return 1
     fi
@@ -212,7 +208,7 @@ submit_job() {
     if [ -n "${PIPELINE_LOG_DIR_OVERRIDE:-}" ]; then
         export_arg="${export_arg},PIPELINE_LOG_DIR_OVERRIDE=${PIPELINE_LOG_DIR_OVERRIDE}"
     fi
-
+    
     local sbatch_output
     if ! sbatch_output=$(sbatch --parsable "${export_arg}" "$script_abs" $params 2>&1); then
         log_error "Failed to submit $step_name job via sbatch: ${sbatch_output}"

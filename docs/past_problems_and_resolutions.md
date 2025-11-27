@@ -507,6 +507,9 @@ variable/path consistency reports and key Step 1C/1D design decisions.
 - `create_slurm_script` substitutes the actual value during generation.
 - The generated script sources libraries via:
   - `${PIPELINE_ROOT}/lib/...`
+- Array tasks now trap failures and write to the same `step1b_failed.flag` that the orchestrator monitors, so `check_step1b_status` returns `Failed` and the master loop aborts instead of polling indefinitely when a chromosome job crashes early.
+- Template processing now runs through a tiny Python helper (default `python3`), which replaces all placeholder occurrences; this avoids nested command substitution on the cluster and guarantees every generated script embeds the correct absolute paths.
+- When the master orchestrator is running, failure flags are placed inside `MASTER_LOG_DIR`, and the status checks look there first. This keeps failure detection consistent with the consolidated log layout.
 
 **AI guidance:** for any script that SLURM could copy into `/var/spool`:
 
@@ -546,9 +549,9 @@ From `HPC_MIGRATION_SUMMARY.md` and companions:
   - Config converted to parameterised env vars with sensible defaults.
   - R scripts referenced via relative paths using `SCRIPT_DIR` detection.
 - **Why it matters:**
-  - The VCF QC / Step 1C pipeline is now portable across HPC clusters.
-  - Every new cluster needs only `vcf_analysis_config.sh` edits, not code
-    changes.
+- The VCF QC / Step 1C pipeline is now portable across HPC clusters.
+- Every new cluster needs only `vcf_analysis_config.sh` edits, not code
+  changes.
 
 **AI guidance:** when making future HPC‑targeted changes:
 
@@ -556,6 +559,67 @@ From `HPC_MIGRATION_SUMMARY.md` and companions:
   bash or R.
 - Only update this file to describe new required variables; do **not** reintroduce
   cluster‑specific paths into core scripts.
+
+### 5.8 Step 1B SLURM template path overwritten by config `SCRIPT_DIR` (2025‑11‑27)
+
+**Symptom**
+
+- Step 1B orchestrator logged:  
+  `SLURM template not found: .../config/../templates/step1b_array.sh`
+- Master loop kept reporting “Step 1B not started.”
+
+**Root cause**
+
+- `run_step1b.sh` stored its own `SCRIPT_DIR`, but sourcing
+  `config/pipeline_config.sh` redefined `SCRIPT_DIR` to the config directory.
+  The template path was then built from the wrong directory, so the generated
+  SLURM script never existed.
+
+**Fix**
+
+- `run_step1b.sh` now uses dedicated variables (`STEP1B_TEMPLATE_DIR`) and
+  builds the template path from the module root:
+
+  ```
+  ${PIPELINE_ROOT}/modules/step1b/templates/step1b_array.sh
+  ```
+
+- This avoids collisions with `SCRIPT_DIR` set by other sourced files.
+
+**AI guidance**
+
+- When sourcing shared config that defines `SCRIPT_DIR`, never reuse that name
+  for module‑local paths; prefer step‑scoped names (e.g., `STEP1B_TEMPLATE_DIR`).
+
+### 5.9 Step 1B SLURM script generation failed with Python SyntaxError (2025‑11‑27)
+
+**Symptom**
+
+- `create_slurm_script` logged `Failed to append template body` with a Python
+  `SyntaxError` pointing at `step1b_array.sh`.
+- Master loop continued polling while the orchestrator attempted submission.
+
+**Root cause**
+
+- The helper invoked `python` without `-`, so Python treated the template path
+  as the script file and ignored the heredoc code. The `set -euo pipefail` line
+  inside the template produced the syntax error.
+
+**Fix**
+
+- Call Python with `-` so it reads the substitution code from stdin:
+
+  ```
+  python - <<'PY' "$template" "$output" "$pipeline_root"
+  ```
+
+- Template substitution now runs, and generated SLURM scripts include the array
+  worker body.
+
+**AI guidance**
+
+- When feeding Python via heredoc, always pass `-` (or `-c`) to avoid Python
+  interpreting positional arguments as a script file.
 
 ---
 
