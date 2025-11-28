@@ -659,6 +659,33 @@ From `HPC_MIGRATION_SUMMARY.md` and companions:
   and symlink/copy. Treat missing indexes as configuration errors, not retry
   candidates.
 
+### 5.11 Step 1A master polling ignored Slurm state and outputs (2025‑11‑28)
+
+**Symptom**
+
+- Master logs showed duplicated config/log banners when restarting.
+- Master kept “polling” Step 1A status even after arrays were submitted, could not see running/completed state, and never advanced to Step 1B despite Step 1A finishing.
+
+**Root cause**
+
+- `pipeline_config.sh` short-circuited even when required vars were empty in `/var/spool` copies, causing re-sourcing and repeated banners.
+- Master loop used a generic status poller that didn’t track the actual Step 1A array job IDs or outputs; if the status function returned “Not Started/Partial” it would spin indefinitely.
+
+**Fix**
+
+- `pipeline_config.sh` only short-circuits when core paths are present; otherwise it reloads safely.
+- Step 1A submission now records job IDs/state in `${MASTER_LOG_DIR:-${LOG_BASE_PATH}/${dataset}}/step1a_job_id.txt` and sets a running flag.
+- Master loop waits on real Slurm state (`squeue` on recorded job IDs) and then validates outputs:
+  - If job IDs still in queue → quiet wait with periodic heartbeat.
+  - When IDs vanish → verify all per-sample VCFs exist; if missing, write `step1a_failed.flag` and abort; if complete, clear running/failed flags and advance.
+- `check_step1a_status` now surfaces running/failure flags so status reflects actual state.
+
+**AI guidance**
+
+- Persist job IDs for any submitted arrays and have the master consult `squeue` before polling status.
+- After jobs exit, validate outputs against expected samples; fail fast with a flag and message rather than looping.
+- Keep config/log init idempotent when sourcing from `/var/spool` copies to avoid duplicate banners.
+
 ---
 
 ## 6. Configuration & Troubleshooting Checklist

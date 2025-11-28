@@ -21,7 +21,12 @@ fi
 export PIPELINE_ROOT
 
 if [ "${PIPELINE_CONFIG_SOURCED:-false}" = "true" ]; then
-    return 0 2>/dev/null || exit 0
+    # Only short-circuit if core paths were already set; otherwise reload to avoid
+    # unbound variables under `set -u` when sourced in /var/spool copies.
+    if [ -n "${RDM_DATASETS_PATH:-}" ]; then
+        return 0 2>/dev/null || exit 0
+    fi
+    echo "[pipeline_config] ⚠️  PIPELINE_CONFIG_SOURCED was true but required paths were empty; reloading config." >&2
 fi
 PIPELINE_CONFIG_SOURCED="true"
 export PIPELINE_CONFIG_SOURCED

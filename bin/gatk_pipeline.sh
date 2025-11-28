@@ -239,6 +239,68 @@ wait_until_complete() {
     done
 }
 
+_step_state_dir() {
+    local dataset_name="$1"
+    pipeline_state_dir "${dataset_name}"
+}
+
+step1a_job_file() {
+    local dataset_name="$1"
+    echo "$(_step_state_dir "${dataset_name}")/step1a_job_id.txt"
+}
+
+_job_ids_active() {
+    local job_file="$1"
+    [ -f "${job_file}" ] || return 1
+    while IFS= read -r job_id; do
+        [ -n "${job_id}" ] || continue
+        if squeue -h -j "${job_id}" >/dev/null 2>&1; then
+            return 0
+        fi
+    done < "${job_file}"
+    return 1
+}
+
+wait_for_step1a_outputs() {
+    local dataset_name="$1"
+    local rdm_base="$2"
+
+    local state_dir
+    state_dir="$(_step_state_dir "${dataset_name}")"
+    mkdir -p "${state_dir}"
+    local job_file="${state_dir}/step1a_job_id.txt"
+    local heartbeat=0
+
+    while true; do
+        if _job_ids_active "${job_file}"; then
+            if [ $((heartbeat % 5)) -eq 0 ]; then
+                log_info "… Step 1A still running (job IDs from ${job_file})"
+            fi
+            heartbeat=$((heartbeat + 1))
+            sleep "${poll_interval_seconds}"
+            continue
+        fi
+
+        local s1a_status
+        s1a_status="$(_status_tail check_step1a_status "${rdm_base}")"
+        if [ "${s1a_status}" = "Complete" ]; then
+            rm -f "${state_dir}/step1a_running.flag" "${state_dir}/step1a_failed.flag" 2>/dev/null || true
+            log_info "Step 1A outputs verified as complete."
+            return 0
+        fi
+
+        local missing
+        missing="$(get_incomplete_samples "${rdm_base}")"
+        local msg="Step 1A incomplete after jobs left queue."
+        if [ -n "${missing}" ]; then
+            msg+=" Missing samples: ${missing//$'\n'/, }"
+        fi
+        log_error "${msg}"
+        printf '%s\n' "${msg}" > "${state_dir}/step1a_failed.flag"
+        return 1
+    done
+}
+
 run_master_loop() {
     local dataset_name="$1"
     local rdm_base="$2"
@@ -261,7 +323,7 @@ run_master_loop() {
         step1a)
         log_info "🚀 Running Step 1A per user request..."
             run_step1a "${dataset_name}" "${rdm_base}"
-            wait_until_complete "Step 1A" check_step1a_status "${rdm_base}"
+            wait_for_step1a_outputs "${dataset_name}" "${rdm_base}"
         unset PIPELINE_INTERACTIVE_ACTION
             ;;
         step1b)
@@ -294,12 +356,18 @@ run_master_loop() {
     local s1a_status
     s1a_status="$(_status_tail check_step1a_status "${rdm_base}")"
     if [ "${s1a_status}" != "Complete" ]; then
-        log_info "🚀 Submitting Step 1A…"
-        if ! run_step1a "${dataset_name}" "${rdm_base}"; then
-            log_error "❌ Step 1A submission failed; aborting master loop."
-            exit 1
+        local job_file
+        job_file="$(step1a_job_file "${dataset_name}")"
+        if [ -f "${job_file}" ] && _job_ids_active "${job_file}"; then
+            log_info "Step 1A already submitted (job IDs in ${job_file}); waiting for completion."
+        else
+            log_info "🚀 Submitting Step 1A…"
+            if ! run_step1a "${dataset_name}" "${rdm_base}"; then
+                log_error "❌ Step 1A submission failed; aborting master loop."
+                exit 1
+            fi
         fi
-        if ! wait_until_complete "Step 1A" check_step1a_status "${rdm_base}"; then
+        if ! wait_for_step1a_outputs "${dataset_name}" "${rdm_base}"; then
             exit 1
         fi
     else

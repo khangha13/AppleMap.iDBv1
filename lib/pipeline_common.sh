@@ -283,6 +283,15 @@ confirm() {
 # -----------------------------------------------------------------------------
 # Shared reference preparation (moved to master preflight)
 # -----------------------------------------------------------------------------
+pipeline_state_dir() {
+    local dataset_name="$1"
+    if [ -n "${MASTER_LOG_DIR:-}" ]; then
+        echo "${MASTER_LOG_DIR}"
+    else
+        echo "${LOG_BASE_PATH%/}/${dataset_name}"
+    fi
+}
+
 shared_reference_base_path() {
     local dataset_name="$1"
     echo "${SCRATCH_BASE_PATH%/}/${dataset_name}_shared"

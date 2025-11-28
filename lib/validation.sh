@@ -69,9 +69,40 @@ validate_sample_files() {
 # Function to check Step 1A completion status
 check_step1a_status() {
     local rdm_base_path=$1
+    local dataset_name
+    dataset_name="$(basename "${rdm_base_path%/}")"
+    local primary_state_dir="${MASTER_LOG_DIR:-${LOG_BASE_PATH%/}/${dataset_name}}"
+    local fallback_state_dir="${LOG_BASE_PATH%/}/${dataset_name}"
+    local state_dir="${primary_state_dir}"
+    if [ ! -d "${state_dir}" ] && [ -d "${fallback_state_dir}" ]; then
+        state_dir="${fallback_state_dir}"
+    fi
+    local failure_flag="${state_dir}/step1a_failed.flag"
+    local running_flag="${state_dir}/step1a_running.flag"
+    local job_file="${state_dir}/step1a_job_id.txt"
     
     log_info "Checking Step 1A completion status..."
     
+    if [ -f "${failure_flag}" ]; then
+        local reason
+        reason="$(cat "${failure_flag}" 2>/dev/null || true)"
+        log_error "Step 1A failure flag detected${reason:+: ${reason}}"
+        echo "Failed"
+        return
+    fi
+
+    # If we have a job id file, prefer to report Running when the job is still in Slurm
+    if [ -f "${job_file}" ]; then
+        while IFS= read -r job_id; do
+            [ -n "${job_id}" ] || continue
+            if squeue -h -j "${job_id}" >/dev/null 2>&1; then
+                log_info "Step 1A still running (job ${job_id})"
+                echo "Running"
+                return
+            fi
+        done < "${job_file}"
+    fi
+
     # Normalize path (trim CRs and trailing whitespace) and remove trailing slash
     rdm_base_path="$(printf '%s' "$rdm_base_path" | tr -d '\r' | sed -e 's/[[:space:]]\+$//')"
     local individual_vcf_dir="${rdm_base_path%/}/5.Individual_VCF"
@@ -100,6 +131,7 @@ check_step1a_status() {
         
         if [ $complete_vcfs -eq $vcf_count ]; then
             log_info "Step 1A complete: $complete_vcfs genotyped VCF files"
+            rm -f "${running_flag}" "${failure_flag}" 2>/dev/null || true
             echo "Complete"
         else
             log_warn "Step 1A partially complete: $complete_vcfs/$vcf_count VCF files"

@@ -165,7 +165,16 @@ main() {
     local job_id=""
     if job_id=$(submit_job "$slurm_script" "$rdm_base_path $sample_list_file" "$dataset_name" "1A"); then
         log_slurm_submission "$job_id" "$slurm_script" "$dataset_name" "$sample_count"
-        
+
+        local state_dir
+        state_dir="$(pipeline_state_dir "${dataset_name}")"
+        mkdir -p "${state_dir}"
+        printf '%s\n' "${job_id}" > "${state_dir}/step1a_job_id.txt"
+        printf '%s\n' "${sample_list_file}" > "${state_dir}/step1a_samples.list"
+        rm -f "${state_dir}/step1a_failed.flag" 2>/dev/null || true
+        touch "${state_dir}/step1a_running.flag"
+        log_info "Recorded Step 1A job ID to ${state_dir}/step1a_job_id.txt"
+
         echo "✓ Step 1A submitted successfully!"
         echo "Job ID: $job_id"
         echo "Array jobs: 0-${array_range_max}"
