@@ -1,0 +1,681 @@
+-rw-r--r--. 1 uqpha1 Q6785RW 8524 Nov 27 17:18 1A_18278237_0_Apple_GATK_1A_test_18278258.error
+-rw-r--r--. 1 uqpha1 Q6785RW 7517 Nov 27 17:18 1A_18278237_0_Apple_GATK_1A_test_18278258.output
+-rw-r--r--. 1 uqpha1 Q6785RW 2969 Nov 27 15:43 1A_18278237_1_Apple_GATK_1A_test_18278237.error
+-rw-r--r--. 1 uqpha1 Q6785RW    0 Nov 27 15:41 1A_18278237_1_Apple_GATK_1A_test_18278237.output
+-rw-r--r--. 1 uqpha1 Q6785RW  550 Nov 27 15:41 job_18278237.info
+[uqpha1@bunya1 test]$ for f in *; do echo "This is $f"; cat "$f"; for l in 0 2; do echo "--------------------"; done; done
+This is 1A_18278237_0_Apple_GATK_1A_test_18278258.error
+To execute Trimmomatic run: java -jar $EBROOTTRIMMOMATIC/trimmomatic-0.39.jar
+
+To execute picard run: java -jar $EBROOTPICARD/picard.jar
+
+[pipeline_config] ℹ️  Environment source: /home/uqpha1/GATK_Pipeline_KH_v1/config/environment.sh
+[pipeline_config] ℹ️  PIPELINE_REFERENCE_FASTA: /QRISdata/Q8367/Reference_Genome/GDDH13_1-1_formatted.fasta
+[pipeline_config] ℹ️  PIPELINE_ADAPTER_FASTA: /QRISdata/Q8367/Liao_2021_adapter/TruSeq2-PE.fa
+[pipeline_config] ℹ️  PIPELINE_KNOWN_SITES_VCF: /QRISdata/Q8367/Known_Sites/Final_DB_Known-sites_Filtered_by_480K_Unique_HD.vcf
+[pipeline_config] ℹ️  Set REFERENCE_GENOME from PIPELINE_REFERENCE_FASTA: /QRISdata/Q8367/Reference_Genome/GDDH13_1-1_formatted.fasta
+[pipeline_config] ℹ️  Environment source: /home/uqpha1/GATK_Pipeline_KH_v1/config/environment.sh
+[pipeline_config] ℹ️  PIPELINE_REFERENCE_FASTA: /QRISdata/Q8367/Reference_Genome/GDDH13_1-1_formatted.fasta
+[pipeline_config] ℹ️  PIPELINE_ADAPTER_FASTA: /QRISdata/Q8367/Liao_2021_adapter/TruSeq2-PE.fa
+[pipeline_config] ℹ️  PIPELINE_KNOWN_SITES_VCF: /QRISdata/Q8367/Known_Sites/Final_DB_Known-sites_Filtered_by_480K_Unique_HD.vcf
+[pipeline_config] ℹ️  Set REFERENCE_GENOME from PIPELINE_REFERENCE_FASTA: /QRISdata/Q8367/Reference_Genome/GDDH13_1-1_formatted.fasta
+[2025-11-27 15:41:49] [INFO] [step1a] Logging system initialized for module: step1a
+[2025-11-27 15:41:49] [INFO] [step1a] Log type: pipeline
+[2025-11-27 15:41:49] [INFO] [step1a] Log file: /scratch/project/bigdata_apple/logs/test_20251127_154104/pipeline_step1a_20251127_154149.log
+[2025-11-27 15:41:49] [INFO] [step1a] Log level: INFO
+[2025-11-27 15:41:49] [INFO] [step1a] Step 1A array task 0 processing sample DRR183255
+[2025-11-27 15:41:49] [INFO] [step1a] Task 0: Setting up shared reference files and backup directories
+[2025-11-27 15:41:49] [INFO] [step1a] Setting up shared reference files for all array jobs
+[2025-11-27 15:41:49] [INFO] [step1a] Shared reference files already exist, skipping copy
+[2025-11-27 15:41:49] [INFO] [step1a] Backup directories initialized
+[2025-11-27 15:41:49] [INFO] [step1a] Executing Step 1A pipeline for sample: DRR183255
+[2025-11-27 15:41:49] [INFO] [step1a] Starting pipeline from step 1.
+[2025-11-27 15:41:49] [INFO] [step1a] Copying reference files to working directory
+[2025-11-27 17:18:23] [INFO] [step1a] Reference files copied successfully
+[2025-11-27 17:18:23] [Verifying starting step: 1] [step1a] 
+[2025-11-27 17:18:23] [Step 1: WILL RUN] [step1a] 
+[2025-11-27 17:18:23] [INFO] [step1a] Starting step: Step 1: FastQC on raw reads
+[2025-11-27 17:18:23] [INFO] [step1a] Step started: Step 1: FastQC on raw reads at 2025-11-27 17:18:23
+[2025-11-27 17:18:23] [Running FastQC for sample: DRR183255 on 2 files] [step1a] 
+Started analysis of DRR183255_1.fastq.gz
+Approx 10% complete for DRR183255_1.fastq.gz
+Approx 20% complete for DRR183255_1.fastq.gz
+Approx 30% complete for DRR183255_1.fastq.gz
+Approx 40% complete for DRR183255_1.fastq.gz
+Approx 50% complete for DRR183255_1.fastq.gz
+Approx 60% complete for DRR183255_1.fastq.gz
+Approx 70% complete for DRR183255_1.fastq.gz
+Approx 80% complete for DRR183255_1.fastq.gz
+Approx 85% complete for DRR183255_1.fastq.gz
+Approx 100% complete for DRR183255_1.fastq.gz
+Started analysis of DRR183255_2.fastq.gz
+Approx 10% complete for DRR183255_2.fastq.gz
+Approx 20% complete for DRR183255_2.fastq.gz
+Approx 30% complete for DRR183255_2.fastq.gz
+Approx 40% complete for DRR183255_2.fastq.gz
+Approx 50% complete for DRR183255_2.fastq.gz
+Approx 60% complete for DRR183255_2.fastq.gz
+Approx 70% complete for DRR183255_2.fastq.gz
+Approx 80% complete for DRR183255_2.fastq.gz
+Approx 90% complete for DRR183255_2.fastq.gz
+Approx 100% complete for DRR183255_2.fastq.gz
+[2025-11-27 17:18:26] [FastQC completed successfully] [step1a] 
+[2025-11-27 17:18:26] [INFO] [step1a] Completed step: Step 1: FastQC on raw reads (Duration: 3s)
+[2025-11-27 17:18:26] [Verifying starting step: 2] [step1a] 
+[2025-11-27 17:18:26] [Step 2: WILL RUN] [step1a] 
+[2025-11-27 17:18:26] [INFO] [step1a] Starting step: Step 2: Read trimming with Trimmomatic
+[2025-11-27 17:18:26] [INFO] [step1a] Step started: Step 2: Read trimming with Trimmomatic at 2025-11-27 17:18:26
+[2025-11-27 17:18:26] [Running Trimmomatic for sample: DRR183255] [step1a] 
+TrimmomaticPE: Started with arguments:
+ -threads 10 DRR183255_1.fastq.gz DRR183255_2.fastq.gz DRR183255_forward_paired.fastq.gz DRR183255_forward_unpaired.fastq.gz DRR183255_reverse_paired.fastq.gz DRR183255_reverse_unpaired.fastq.gz ILLUMINACLIP::2:30:3:1:True LEADING:20 TRAILING:20 SLIDINGWINDOW:3:15 AVGQUAL:20 MINLEN:36
+java.io.FileNotFoundException: /scratch/temp/18278258 (Is a directory)
+	at java.base/java.io.FileInputStream.open0(Native Method)
+	at java.base/java.io.FileInputStream.open(FileInputStream.java:219)
+	at java.base/java.io.FileInputStream.<init>(FileInputStream.java:157)
+	at org.usadellab.trimmomatic.fasta.FastaParser.parse(FastaParser.java:54)
+	at org.usadellab.trimmomatic.trim.IlluminaClippingTrimmer.loadSequences(IlluminaClippingTrimmer.java:110)
+	at org.usadellab.trimmomatic.trim.IlluminaClippingTrimmer.makeIlluminaClippingTrimmer(IlluminaClippingTrimmer.java:71)
+	at org.usadellab.trimmomatic.trim.TrimmerFactory.makeTrimmer(TrimmerFactory.java:32)
+	at org.usadellab.trimmomatic.Trimmomatic.createTrimmers(Trimmomatic.java:59)
+	at org.usadellab.trimmomatic.TrimmomaticPE.run(TrimmomaticPE.java:552)
+	at org.usadellab.trimmomatic.Trimmomatic.main(Trimmomatic.java:80)
+Quality encoding detected as phred33
+Input Read Pairs: 10000 Both Surviving: 9722 (97.22%) Forward Only Surviving: 176 (1.76%) Reverse Only Surviving: 80 (0.80%) Dropped: 22 (0.22%)
+TrimmomaticPE: Completed successfully
+[2025-11-27 17:18:27] [Trimmomatic completed successfully] [step1a] 
+[2025-11-27 17:18:27] [INFO] [step1a] Completed step: Step 2: Read trimming with Trimmomatic (Duration: 1s)
+[2025-11-27 17:18:27] [INFO] [step1a] Starting step: Step 2b: FastQC on trimmed reads
+[2025-11-27 17:18:27] [INFO] [step1a] Step started: Step 2b: FastQC on trimmed reads at 2025-11-27 17:18:27
+[2025-11-27 17:18:27] [Running FastQC for sample: DRR183255 on 2 files] [step1a] 
+Started analysis of DRR183255_forward_paired.fastq.gz
+Approx 10% complete for DRR183255_forward_paired.fastq.gz
+Approx 20% complete for DRR183255_forward_paired.fastq.gz
+Approx 30% complete for DRR183255_forward_paired.fastq.gz
+Approx 40% complete for DRR183255_forward_paired.fastq.gz
+Approx 50% complete for DRR183255_forward_paired.fastq.gz
+Approx 60% complete for DRR183255_forward_paired.fastq.gz
+Approx 70% complete for DRR183255_forward_paired.fastq.gz
+Approx 80% complete for DRR183255_forward_paired.fastq.gz
+Approx 90% complete for DRR183255_forward_paired.fastq.gz
+Started analysis of DRR183255_reverse_paired.fastq.gz
+Approx 10% complete for DRR183255_reverse_paired.fastq.gz
+Approx 20% complete for DRR183255_reverse_paired.fastq.gz
+Approx 30% complete for DRR183255_reverse_paired.fastq.gz
+Approx 40% complete for DRR183255_reverse_paired.fastq.gz
+Approx 50% complete for DRR183255_reverse_paired.fastq.gz
+Approx 60% complete for DRR183255_reverse_paired.fastq.gz
+Approx 70% complete for DRR183255_reverse_paired.fastq.gz
+Approx 80% complete for DRR183255_reverse_paired.fastq.gz
+Approx 90% complete for DRR183255_reverse_paired.fastq.gz
+[2025-11-27 17:18:29] [FastQC completed successfully] [step1a] 
+[2025-11-27 17:18:29] [INFO] [step1a] Completed step: Step 2b: FastQC on trimmed reads (Duration: 2s)
+[2025-11-27 17:18:29] [INFO] [step1a] Creating backup for step: Step 2: Trimmomatic
+[2025-11-27 17:18:29] [INFO] [step1a] Backup completed for step: Step 2: Trimmomatic (paired trimmed FASTQs and logs)
+[2025-11-27 17:18:29] [Verifying starting step: 3] [step1a] 
+[2025-11-27 17:18:29] [Step 3: WILL RUN] [step1a] 
+[2025-11-27 17:18:29] [INFO] [step1a] Starting step: Step 3: BWA alignment
+[2025-11-27 17:18:29] [INFO] [step1a] Step started: Step 3: BWA alignment at 2025-11-27 17:18:29
+[2025-11-27 17:18:29] [Running BWA alignment for sample: DRR183255] [step1a] 
+[E::bwa_idx_load_from_disk] fail to locate the index files
+samtools sort: failed to read header from "-"
+[2025-11-27 17:18:30] [FATAL] [step1a] BWA alignment failed
+--------------------
+--------------------
+This is 1A_18278237_0_Apple_GATK_1A_test_18278258.output
+sending incremental file list
+>f+++++++++ DRR183255_1.fastq.gz
+        782.88K 100%  357.68MB/s    0:00:00 (xfr#1, to-chk=1/2)
+>f+++++++++ DRR183255_2.fastq.gz
+        804.48K 100%   29.51MB/s    0:00:00 (xfr#2, to-chk=0/2)
+
+sent 1.59M bytes  received 54 bytes  3.18M bytes/sec
+total size is 1.59M  speedup is 1.00
+
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║                           STARTING: Step 1: FastQC on raw reads
+║                           Started at: 2025-11-27 17:18:23
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+Analysis complete for DRR183255_1.fastq.gz
+Analysis complete for DRR183255_2.fastq.gz
+
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║                           COMPLETED: Step 1: FastQC on raw reads
+║                           Completed at: 2025-11-27 17:18:26
+║                           Duration: 3s
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+sending incremental file list
+>f+++++++++ DRR183255_1_fastqc.html
+        531.45K 100%   95.12MB/s    0:00:00 (xfr#1, to-chk=1/2)
+>f+++++++++ DRR183255_2_fastqc.html
+        535.52K 100%   12.46MB/s    0:00:00 (xfr#2, to-chk=0/2)
+
+sent 1.07M bytes  received 54 bytes  2.13M bytes/sec
+total size is 1.07M  speedup is 1.00
+sending incremental file list
+>f+++++++++ DRR183255_1_fastqc.zip
+        293.67K 100%   62.20MB/s    0:00:00 (xfr#1, to-chk=1/2)
+>f+++++++++ DRR183255_2_fastqc.zip
+        295.89K 100%    8.82MB/s    0:00:00 (xfr#2, to-chk=0/2)
+
+sent 589.86K bytes  received 54 bytes  1.18M bytes/sec
+total size is 589.56K  speedup is 1.00
+
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║                           STARTING: Step 2: Read trimming with Trimmomatic
+║                           Started at: 2025-11-27 17:18:26
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║                           COMPLETED: Step 2: Read trimming with Trimmomatic
+║                           Completed at: 2025-11-27 17:18:27
+║                           Duration: 1s
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║                           STARTING: Step 2b: FastQC on trimmed reads
+║                           Started at: 2025-11-27 17:18:27
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+Analysis complete for DRR183255_forward_paired.fastq.gz
+Analysis complete for DRR183255_reverse_paired.fastq.gz
+
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║                           COMPLETED: Step 2b: FastQC on trimmed reads
+║                           Completed at: 2025-11-27 17:18:29
+║                           Duration: 2s
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+sending incremental file list
+>f+++++++++ DRR183255_forward_paired_fastqc.html
+        547.63K 100%   98.20MB/s    0:00:00 (xfr#1, to-chk=1/2)
+>f+++++++++ DRR183255_reverse_paired_fastqc.html
+        549.18K 100%   10.69MB/s    0:00:00 (xfr#2, to-chk=0/2)
+
+sent 1.10M bytes  received 54 bytes  2.19M bytes/sec
+total size is 1.10M  speedup is 1.00
+sending incremental file list
+>f+++++++++ DRR183255_forward_paired_fastqc.zip
+        288.27K 100%   60.92MB/s    0:00:00 (xfr#1, to-chk=1/2)
+>f+++++++++ DRR183255_reverse_paired_fastqc.zip
+        294.11K 100%    8.50MB/s    0:00:00 (xfr#2, to-chk=0/2)
+
+sent 582.70K bytes  received 54 bytes  1.17M bytes/sec
+total size is 582.38K  speedup is 1.00
+sending incremental file list
+>f+++++++++ DRR183255_forward_paired.fastq.gz
+        736.81K 100%  335.71MB/s    0:00:00 (xfr#1, to-chk=0/1)
+
+sent 737.10K bytes  received 35 bytes  1.47M bytes/sec
+total size is 736.81K  speedup is 1.00
+sending incremental file list
+>f+++++++++ DRR183255_reverse_paired.fastq.gz
+        755.33K 100%  344.54MB/s    0:00:00 (xfr#1, to-chk=0/1)
+
+sent 755.63K bytes  received 35 bytes  1.51M bytes/sec
+total size is 755.33K  speedup is 1.00
+
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║                           STARTING: Step 3: BWA alignment
+║                           Started at: 2025-11-27 17:18:29
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+--------------------
+--------------------
+This is 1A_18278237_1_Apple_GATK_1A_test_18278237.error
+To execute Trimmomatic run: java -jar $EBROOTTRIMMOMATIC/trimmomatic-0.39.jar
+
+To execute picard run: java -jar $EBROOTPICARD/picard.jar
+
+[pipeline_config] ℹ️  Environment source: /home/uqpha1/GATK_Pipeline_KH_v1/config/environment.sh
+[pipeline_config] ℹ️  PIPELINE_REFERENCE_FASTA: /QRISdata/Q8367/Reference_Genome/GDDH13_1-1_formatted.fasta
+[pipeline_config] ℹ️  PIPELINE_ADAPTER_FASTA: /QRISdata/Q8367/Liao_2021_adapter/TruSeq2-PE.fa
+[pipeline_config] ℹ️  PIPELINE_KNOWN_SITES_VCF: /QRISdata/Q8367/Known_Sites/Final_DB_Known-sites_Filtered_by_480K_Unique_HD.vcf
+[pipeline_config] ℹ️  Set REFERENCE_GENOME from PIPELINE_REFERENCE_FASTA: /QRISdata/Q8367/Reference_Genome/GDDH13_1-1_formatted.fasta
+[pipeline_config] ℹ️  Environment source: /home/uqpha1/GATK_Pipeline_KH_v1/config/environment.sh
+[pipeline_config] ℹ️  PIPELINE_REFERENCE_FASTA: /QRISdata/Q8367/Reference_Genome/GDDH13_1-1_formatted.fasta
+[pipeline_config] ℹ️  PIPELINE_ADAPTER_FASTA: /QRISdata/Q8367/Liao_2021_adapter/TruSeq2-PE.fa
+[pipeline_config] ℹ️  PIPELINE_KNOWN_SITES_VCF: /QRISdata/Q8367/Known_Sites/Final_DB_Known-sites_Filtered_by_480K_Unique_HD.vcf
+[pipeline_config] ℹ️  Set REFERENCE_GENOME from PIPELINE_REFERENCE_FASTA: /QRISdata/Q8367/Reference_Genome/GDDH13_1-1_formatted.fasta
+[2025-11-27 15:41:49] [INFO] [step1a] Logging system initialized for module: step1a
+[2025-11-27 15:41:49] [INFO] [step1a] Log type: pipeline
+[2025-11-27 15:41:49] [INFO] [step1a] Log file: /scratch/project/bigdata_apple/logs/test_20251127_154104/pipeline_step1a_20251127_154149.log
+[2025-11-27 15:41:49] [INFO] [step1a] Log level: INFO
+[2025-11-27 15:41:49] [INFO] [step1a] Step 1A array task 1 processing sample ERR6909357
+[2025-11-27 15:41:49] [INFO] [step1a] Task 1: Waiting for shared reference files initialization
+[2025-11-27 15:41:49] [INFO] [step1a] Waiting for shared reference files initialization (timeout: 120s, polling every 3s)
+[2025-11-27 15:42:04] [INFO] [step1a] Still waiting for shared reference files... (15/120s)
+[2025-11-27 15:42:19] [INFO] [step1a] Still waiting for shared reference files... (30/120s)
+[2025-11-27 15:42:34] [INFO] [step1a] Still waiting for shared reference files... (45/120s)
+[2025-11-27 15:42:49] [INFO] [step1a] Still waiting for shared reference files... (60/120s)
+[2025-11-27 15:43:04] [INFO] [step1a] Still waiting for shared reference files... (75/120s)
+[2025-11-27 15:43:19] [INFO] [step1a] Still waiting for shared reference files... (90/120s)
+[2025-11-27 15:43:34] [INFO] [step1a] Still waiting for shared reference files... (105/120s)
+[2025-11-27 15:43:49] [INFO] [step1a] Still waiting for shared reference files... (120/120s)
+[2025-11-27 15:43:49] [FATAL] [step1a] Timeout waiting for shared reference files initialization (120s exceeded)
+--------------------
+--------------------
+This is 1A_18278237_1_Apple_GATK_1A_test_18278237.output
+--------------------
+--------------------
+This is job_18278237.info
+# SLURM Job Information
+Job ID: 18278237
+Dataset: test
+Sample Count: 2
+SLURM Script: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1A_test_20251127_154116.sh
+Submitted: 2025-11-27 15:41:18
+SLURM Log Directory: /scratch/project/bigdata_apple/logs/test
+Wrapper Log: /scratch/project/bigdata_apple/logs/test_20251127_154104/pipeline_step1a_20251127_154116.log
+
+# Monitoring Commands
+Monitor: squeue -u $USER
+Cancel: scancel 18278237
+View Logs: ls /scratch/project/bigdata_apple/logs/test/
+Job Details: scontrol show job 18278237
+--------------------
+--------------------
+
+
+[uqpha1@bunya1 test]$ cd ../test_20251127_154104/
+[uqpha1@bunya1 test_20251127_154104]$ ll
+total 81
+-rw-r--r--. 1 uqpha1 Q6785RW 20054 Nov 27 15:45 GATK_master_script_18278196.error
+-rw-r--r--. 1 uqpha1 Q6785RW  2192 Nov 27 15:41 GATK_master_script_18278196.output
+-rw-r--r--. 1 uqpha1 Q6785RW  4183 Nov 27 15:45 pipeline_gatk_master_20251127_154116.log
+-rw-r--r--. 1 uqpha1 Q6785RW  4267 Nov 27 15:41 pipeline_step1a_20251127_154116.log
+-rw-r--r--. 1 uqpha1 Q6785RW  4758 Nov 27 17:18 pipeline_step1a_20251127_154149.log
+[uqpha1@bunya1 test_20251127_154104]$ for f in *; do echo "This is $f"; cat "$f"; for l in 0 2; do echo "--------------------"; done; done
+This is GATK_master_script_18278196.error
+[pipeline_config] ℹ️  Environment source: /home/uqpha1/GATK_Pipeline_KH_v1/config/environment.sh
+[pipeline_config] ℹ️  PIPELINE_REFERENCE_FASTA: /QRISdata/Q8367/Reference_Genome/GDDH13_1-1_formatted.fasta
+[pipeline_config] ℹ️  PIPELINE_ADAPTER_FASTA: /QRISdata/Q8367/Liao_2021_adapter/TruSeq2-PE.fa
+[pipeline_config] ℹ️  PIPELINE_KNOWN_SITES_VCF: /QRISdata/Q8367/Known_Sites/Final_DB_Known-sites_Filtered_by_480K_Unique_HD.vcf
+[pipeline_config] ℹ️  Set REFERENCE_GENOME from PIPELINE_REFERENCE_FASTA: /QRISdata/Q8367/Reference_Genome/GDDH13_1-1_formatted.fasta
+[2025-11-27 15:41:16] [INFO] [gatk_master] Logging system initialized for module: gatk_master
+[2025-11-27 15:41:16] [INFO] [gatk_master] Log type: pipeline
+[2025-11-27 15:41:16] [INFO] [gatk_master] Log file: /scratch/project/bigdata_apple/logs/test_20251127_154104/pipeline_gatk_master_20251127_154116.log
+[2025-11-27 15:41:16] [INFO] [gatk_master] Log level: INFO
+[2025-11-27 15:41:16] [INFO] [gatk_master] Master logging directory: /scratch/project/bigdata_apple/logs/test_20251127_154104
+[2025-11-27 15:41:16] [INFO] [gatk_master] 🧬 GATK master loop for dataset: test
+[2025-11-27 15:41:16] [INFO] [gatk_master] 🧬 GATK master loop for dataset: test
+[2025-11-27 15:41:16] [INFO] [gatk_master] RDM base: /QRISdata/Q8367/WGS_Reference_Panel/test
+[2025-11-27 15:41:16] [INFO] [gatk_master] RDM base: /QRISdata/Q8367/WGS_Reference_Panel/test
+[2025-11-27 15:41:16] [INFO] [gatk_master] SLURM_JOB_ID: 18278196
+[2025-11-27 15:41:16] [INFO] [gatk_master] SLURM_JOB_ID: 18278196
+[2025-11-27 15:41:16] [INFO] [gatk_master] Interactive request detected: step1a
+[2025-11-27 15:41:16] [INFO] [gatk_master] Interactive request detected: step1a
+[2025-11-27 15:41:16] [INFO] [gatk_master] 🚀 Running Step 1A per user request...
+[2025-11-27 15:41:16] [INFO] [gatk_master] 🚀 Running Step 1A per user request...
+[pipeline_config] ℹ️  Environment source: /home/uqpha1/GATK_Pipeline_KH_v1/config/environment.sh
+[pipeline_config] ℹ️  Environment source: /home/uqpha1/GATK_Pipeline_KH_v1/config/environment.sh
+[pipeline_config] ℹ️  PIPELINE_REFERENCE_FASTA: /QRISdata/Q8367/Reference_Genome/GDDH13_1-1_formatted.fasta
+[pipeline_config] ℹ️  PIPELINE_ADAPTER_FASTA: /QRISdata/Q8367/Liao_2021_adapter/TruSeq2-PE.fa
+[pipeline_config] ℹ️  PIPELINE_KNOWN_SITES_VCF: /QRISdata/Q8367/Known_Sites/Final_DB_Known-sites_Filtered_by_480K_Unique_HD.vcf
+[pipeline_config] ℹ️  PIPELINE_REFERENCE_FASTA: /QRISdata/Q8367/Reference_Genome/GDDH13_1-1_formatted.fasta
+[pipeline_config] ℹ️  PIPELINE_ADAPTER_FASTA: /QRISdata/Q8367/Liao_2021_adapter/TruSeq2-PE.fa
+[pipeline_config] ℹ️  PIPELINE_KNOWN_SITES_VCF: /QRISdata/Q8367/Known_Sites/Final_DB_Known-sites_Filtered_by_480K_Unique_HD.vcf
+[pipeline_config] ℹ️  Set REFERENCE_GENOME from PIPELINE_REFERENCE_FASTA: /QRISdata/Q8367/Reference_Genome/GDDH13_1-1_formatted.fasta
+[pipeline_config] ℹ️  Set REFERENCE_GENOME from PIPELINE_REFERENCE_FASTA: /QRISdata/Q8367/Reference_Genome/GDDH13_1-1_formatted.fasta
+[2025-11-27 15:41:16] [INFO] [step1a] Logging system initialized for module: step1a
+[2025-11-27 15:41:16] [INFO] [step1a] Logging system initialized for module: step1a
+[2025-11-27 15:41:16] [INFO] [step1a] Log type: pipeline
+[2025-11-27 15:41:16] [INFO] [step1a] Log type: pipeline
+[2025-11-27 15:41:16] [INFO] [step1a] Log file: /scratch/project/bigdata_apple/logs/test_20251127_154104/pipeline_step1a_20251127_154116.log
+[2025-11-27 15:41:16] [INFO] [step1a] Log file: /scratch/project/bigdata_apple/logs/test_20251127_154104/pipeline_step1a_20251127_154116.log
+[2025-11-27 15:41:16] [INFO] [step1a] Log level: INFO
+[2025-11-27 15:41:16] [INFO] [step1a] Log level: INFO
+[2025-11-27 15:41:16] [INFO] [step1a] Starting Step 1A execution
+[2025-11-27 15:41:16] [INFO] [step1a] Starting Step 1A execution
+[2025-11-27 15:41:16] [INFO] [step1a] Dataset: test
+[2025-11-27 15:41:16] [INFO] [step1a] Dataset: test
+[2025-11-27 15:41:16] [INFO] [step1a] RDM Base Path: /QRISdata/Q8367/WGS_Reference_Panel/test
+[2025-11-27 15:41:16] [INFO] [step1a] RDM Base Path: /QRISdata/Q8367/WGS_Reference_Panel/test
+[2025-11-27 15:41:16] [INFO] [step1a] Validating Step 1A inputs
+[2025-11-27 15:41:16] [INFO] [step1a] Validating Step 1A inputs
+[2025-11-27 15:41:16] [INFO] [step1a] Validating directory structure for: /QRISdata/Q8367/WGS_Reference_Panel/test
+[2025-11-27 15:41:16] [INFO] [step1a] Validating directory structure for: /QRISdata/Q8367/WGS_Reference_Panel/test
+[2025-11-27 15:41:16] [INFO] [step1a] ✓ Directory exists: 1.FASTQ
+[2025-11-27 15:41:16] [INFO] [step1a] ✓ Directory exists: 1.FASTQ
+[2025-11-27 15:41:16] [INFO] [step1a] ✗ Missing directory: 2.FASTQC_pre_trimmed
+[2025-11-27 15:41:16] [INFO] [step1a] ✗ Missing directory: 2.FASTQC_pre_trimmed
+[2025-11-27 15:41:16] [INFO] [step1a] ✗ Missing directory: 3.FASTQC_post_trimmed
+[2025-11-27 15:41:16] [INFO] [step1a] ✗ Missing directory: 3.FASTQC_post_trimmed
+[2025-11-27 15:41:16] [INFO] [step1a] ✗ Missing directory: 4.BAM
+[2025-11-27 15:41:16] [INFO] [step1a] ✗ Missing directory: 4.BAM
+[2025-11-27 15:41:16] [INFO] [step1a] ✗ Missing directory: 5.Individual_VCF
+[2025-11-27 15:41:16] [INFO] [step1a] ✗ Missing directory: 5.Individual_VCF
+[2025-11-27 15:41:16] [INFO] [step1a] ✗ Missing directory: 6.genomicsdb_output
+[2025-11-27 15:41:16] [INFO] [step1a] ✗ Missing directory: 6.genomicsdb_output
+[2025-11-27 15:41:16] [INFO] [step1a] ✗ Missing directory: 7.Consolidated_VCF
+[2025-11-27 15:41:16] [INFO] [step1a] ✗ Missing directory: 7.Consolidated_VCF
+[2025-11-27 15:41:16] [INFO] [step1a] ✗ Missing directory: 8.Imputated_VCF_BEAGLE
+[2025-11-27 15:41:16] [INFO] [step1a] ✗ Missing directory: 8.Imputated_VCF_BEAGLE
+[2025-11-27 15:41:16] [INFO] [step1a] ✗ Missing directory: 9.Imputation_QC
+[2025-11-27 15:41:16] [INFO] [step1a] ✗ Missing directory: 9.Imputation_QC
+[2025-11-27 15:41:16] [INFO] [step1a] ✓ Found 2 paired-end sample files
+[2025-11-27 15:41:16] [INFO] [step1a] ✓ Found 2 paired-end sample files
+[2025-11-27 15:41:16] [INFO] [step1a] Step 1A input validation completed successfully
+[2025-11-27 15:41:16] [INFO] [step1a] Step 1A input validation completed successfully
+[2025-11-27 15:41:16] [INFO] [step1a] Scanning for sample files in: /QRISdata/Q8367/WGS_Reference_Panel/test/1.FASTQ
+[2025-11-27 15:41:16] [INFO] [step1a] Scanning for sample files in: /QRISdata/Q8367/WGS_Reference_Panel/test/1.FASTQ
+[2025-11-27 15:41:16] [INFO] [step1a] ✓ Valid sample: DRR183255
+[2025-11-27 15:41:16] [INFO] [step1a] ✓ Valid sample: DRR183255
+[2025-11-27 15:41:16] [INFO] [step1a] ✓ Valid sample: ERR6909357
+[2025-11-27 15:41:16] [INFO] [step1a] ✓ Valid sample: ERR6909357
+[2025-11-27 15:41:16] [INFO] [step1a] ✓ Created sample list with 2 samples: /scratch/project/bigdata_apple/gatk_pipeline/work/step1a/test/sample_list_test_20251127_154116.txt
+[2025-11-27 15:41:16] [INFO] [step1a] ✓ Created sample list with 2 samples: /scratch/project/bigdata_apple/gatk_pipeline/work/step1a/test/sample_list_test_20251127_154116.txt
+[2025-11-27 15:41:16] [INFO] [step1a] Checking pipeline completion status...
+[2025-11-27 15:41:16] [INFO] [step1a] Checking pipeline completion status...
+[2025-11-27 15:41:16] [INFO] [step1a] Pipeline completion summary - Completed: 0, Incomplete: 2, Total: 2
+[2025-11-27 15:41:16] [INFO] [step1a] Pipeline completion summary - Completed: 0, Incomplete: 2, Total: 2
+[2025-11-27 15:41:16] [INFO] [step1a] No samples are complete - proceeding with full Step 1A run
+[2025-11-27 15:41:16] [INFO] [step1a] No samples are complete - proceeding with full Step 1A run
+[2025-11-27 15:41:16] [INFO] [step1a] Creating Step 1A SLURM script
+[2025-11-27 15:41:16] [INFO] [step1a] Creating Step 1A SLURM script
+[2025-11-27 15:41:16] [INFO] [step1a] Creating SLURM script: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1A_test_20251127_154116.sh
+[2025-11-27 15:41:16] [INFO] [step1a] Creating SLURM script: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1A_test_20251127_154116.sh
+[2025-11-27 15:41:16] [INFO] [step1a] ✓ Created SLURM script: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1A_test_20251127_154116.sh
+[2025-11-27 15:41:16] [INFO] [step1a] ✓ Created SLURM script: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1A_test_20251127_154116.sh
+[2025-11-27 15:41:16] [INFO] [step1a]   Job name: Apple_GATK_1A_test
+[2025-11-27 15:41:16] [INFO] [step1a]   Job name: Apple_GATK_1A_test
+[2025-11-27 15:41:16] [INFO] [step1a]   Array range: 0-1
+[2025-11-27 15:41:16] [INFO] [step1a]   Array range: 0-1
+[2025-11-27 15:41:16] [INFO] [step1a]   SLURM config: 10 CPUs, 32G RAM, 200:00:00 time
+[2025-11-27 15:41:16] [INFO] [step1a]   SLURM config: 10 CPUs, 32G RAM, 200:00:00 time
+[2025-11-27 15:41:16] [INFO] [step1a] Waiting 2 seconds for filesystem sync...
+[2025-11-27 15:41:16] [INFO] [step1a] Waiting 2 seconds for filesystem sync...
+[2025-11-27 15:41:18] [INFO] [step1a] Submitting 1A job: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1A_test_20251127_154116.sh with parameters: /QRISdata/Q8367/WGS_Reference_Panel/test /scratch/project/bigdata_apple/gatk_pipeline/work/step1a/test/sample_list_test_20251127_154116.txt
+[2025-11-27 15:41:18] [INFO] [step1a] Submitting 1A job: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1A_test_20251127_154116.sh with parameters: /QRISdata/Q8367/WGS_Reference_Panel/test /scratch/project/bigdata_apple/gatk_pipeline/work/step1a/test/sample_list_test_20251127_154116.txt
+[2025-11-27 15:41:18] [INFO] [step1a] Created SLURM log directory: /scratch/project/bigdata_apple/logs/test
+[2025-11-27 15:41:18] [INFO] [step1a] Created SLURM log directory: /scratch/project/bigdata_apple/logs/test
+[2025-11-27 15:41:18] [INFO] [step1a] 1A job submitted successfully - Job ID: 18278237
+[2025-11-27 15:41:18] [INFO] [step1a] 1A job submitted successfully - Job ID: 18278237
+[2025-11-27 15:41:18] [INFO] [step1a] SLURM job submitted successfully
+[2025-11-27 15:41:18] [INFO] [step1a] SLURM job submitted successfully
+[2025-11-27 15:41:18] [INFO] [step1a] Job ID: 18278237
+[2025-11-27 15:41:18] [INFO] [step1a] Job ID: 18278237
+[2025-11-27 15:41:18] [INFO] [step1a] SLURM script: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1A_test_20251127_154116.sh
+[2025-11-27 15:41:18] [INFO] [step1a] SLURM script: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1A_test_20251127_154116.sh
+[2025-11-27 15:41:18] [INFO] [step1a] Sample count: 2
+[2025-11-27 15:41:18] [INFO] [step1a] Sample count: 2
+[2025-11-27 15:41:18] [INFO] [step1a] SLURM log directory: /scratch/project/bigdata_apple/logs/test
+[2025-11-27 15:41:18] [INFO] [step1a] SLURM log directory: /scratch/project/bigdata_apple/logs/test
+[2025-11-27 15:41:18] [INFO] [step1a] Monitor with: squeue -u $USER
+[2025-11-27 15:41:18] [INFO] [step1a] Monitor with: squeue -u $USER
+[2025-11-27 15:41:18] [INFO] [step1a] Cancel with: scancel 18278237
+[2025-11-27 15:41:18] [INFO] [step1a] Cancel with: scancel 18278237
+[2025-11-27 15:41:18] [INFO] [step1a] View SLURM logs: ls /scratch/project/bigdata_apple/logs/test/
+[2025-11-27 15:41:18] [INFO] [step1a] View SLURM logs: ls /scratch/project/bigdata_apple/logs/test/
+[2025-11-27 15:41:18] [INFO] [step1a] Job tracking file created: /scratch/project/bigdata_apple/logs/test/job_18278237.info
+[2025-11-27 15:41:18] [INFO] [step1a] Job tracking file created: /scratch/project/bigdata_apple/logs/test/job_18278237.info
+[2025-11-27 15:41:18] [INFO] [gatk_master] Waiting for Step 1A to complete (poll 30s)...
+[2025-11-27 15:41:18] [INFO] [gatk_master] Waiting for Step 1A to complete (poll 30s)...
+[2025-11-27 15:41:18] [INFO] [gatk_master] Checking Step 1A completion status...
+[2025-11-27 15:41:18] [INFO] [gatk_master] Checking Step 1A completion status...
+[2025-11-27 15:41:18] [WARN] [gatk_master] Step 1A directory does not exist: /QRISdata/Q8367/WGS_Reference_Panel/test/5.Individual_VCF
+[2025-11-27 15:41:18] [WARN] [gatk_master] Step 1A directory does not exist: /QRISdata/Q8367/WGS_Reference_Panel/test/5.Individual_VCF
+[2025-11-27 15:41:18] [INFO] [gatk_master] … Step 1A status: Not Started @ Thu Nov 27 15:41:18 AEST 2025 (stall 1/10)
+[2025-11-27 15:41:18] [INFO] [gatk_master] … Step 1A status: Not Started @ Thu Nov 27 15:41:18 AEST 2025 (stall 1/10)
+[2025-11-27 15:41:48] [INFO] [gatk_master] Checking Step 1A completion status...
+[2025-11-27 15:41:48] [INFO] [gatk_master] Checking Step 1A completion status...
+[2025-11-27 15:41:48] [WARN] [gatk_master] Step 1A directory does not exist: /QRISdata/Q8367/WGS_Reference_Panel/test/5.Individual_VCF
+[2025-11-27 15:41:48] [WARN] [gatk_master] Step 1A directory does not exist: /QRISdata/Q8367/WGS_Reference_Panel/test/5.Individual_VCF
+[2025-11-27 15:41:48] [INFO] [gatk_master] … Step 1A status: Not Started @ Thu Nov 27 15:41:48 AEST 2025 (stall 2/10)
+[2025-11-27 15:41:48] [INFO] [gatk_master] … Step 1A status: Not Started @ Thu Nov 27 15:41:48 AEST 2025 (stall 2/10)
+[2025-11-27 15:42:18] [INFO] [gatk_master] Checking Step 1A completion status...
+[2025-11-27 15:42:18] [INFO] [gatk_master] Checking Step 1A completion status...
+[2025-11-27 15:42:18] [WARN] [gatk_master] Step 1A directory does not exist: /QRISdata/Q8367/WGS_Reference_Panel/test/5.Individual_VCF
+[2025-11-27 15:42:18] [WARN] [gatk_master] Step 1A directory does not exist: /QRISdata/Q8367/WGS_Reference_Panel/test/5.Individual_VCF
+[2025-11-27 15:42:18] [INFO] [gatk_master] … Step 1A status: Not Started @ Thu Nov 27 15:42:18 AEST 2025 (stall 3/10)
+[2025-11-27 15:42:18] [INFO] [gatk_master] … Step 1A status: Not Started @ Thu Nov 27 15:42:18 AEST 2025 (stall 3/10)
+[2025-11-27 15:42:48] [INFO] [gatk_master] Checking Step 1A completion status...
+[2025-11-27 15:42:48] [INFO] [gatk_master] Checking Step 1A completion status...
+[2025-11-27 15:42:48] [INFO] [gatk_master] Step 1A not started: no VCF files found
+[2025-11-27 15:42:48] [INFO] [gatk_master] Step 1A not started: no VCF files found
+[2025-11-27 15:42:48] [INFO] [gatk_master] … Step 1A status: Not Started @ Thu Nov 27 15:42:48 AEST 2025 (stall 4/10)
+[2025-11-27 15:42:48] [INFO] [gatk_master] … Step 1A status: Not Started @ Thu Nov 27 15:42:48 AEST 2025 (stall 4/10)
+[2025-11-27 15:43:18] [INFO] [gatk_master] Checking Step 1A completion status...
+[2025-11-27 15:43:18] [INFO] [gatk_master] Checking Step 1A completion status...
+[2025-11-27 15:43:19] [INFO] [gatk_master] Step 1A not started: no VCF files found
+[2025-11-27 15:43:19] [INFO] [gatk_master] Step 1A not started: no VCF files found
+[2025-11-27 15:43:19] [INFO] [gatk_master] … Step 1A status: Not Started @ Thu Nov 27 15:43:19 AEST 2025 (stall 5/10)
+[2025-11-27 15:43:19] [INFO] [gatk_master] … Step 1A status: Not Started @ Thu Nov 27 15:43:19 AEST 2025 (stall 5/10)
+[2025-11-27 15:43:49] [INFO] [gatk_master] Checking Step 1A completion status...
+[2025-11-27 15:43:49] [INFO] [gatk_master] Checking Step 1A completion status...
+[2025-11-27 15:43:49] [INFO] [gatk_master] Step 1A not started: no VCF files found
+[2025-11-27 15:43:49] [INFO] [gatk_master] Step 1A not started: no VCF files found
+[2025-11-27 15:43:49] [INFO] [gatk_master] … Step 1A status: Not Started @ Thu Nov 27 15:43:49 AEST 2025 (stall 6/10)
+[2025-11-27 15:43:49] [INFO] [gatk_master] … Step 1A status: Not Started @ Thu Nov 27 15:43:49 AEST 2025 (stall 6/10)
+[2025-11-27 15:44:19] [INFO] [gatk_master] Checking Step 1A completion status...
+[2025-11-27 15:44:19] [INFO] [gatk_master] Checking Step 1A completion status...
+[2025-11-27 15:44:19] [INFO] [gatk_master] Step 1A not started: no VCF files found
+[2025-11-27 15:44:19] [INFO] [gatk_master] Step 1A not started: no VCF files found
+[2025-11-27 15:44:19] [INFO] [gatk_master] … Step 1A status: Not Started @ Thu Nov 27 15:44:19 AEST 2025 (stall 7/10)
+[2025-11-27 15:44:19] [INFO] [gatk_master] … Step 1A status: Not Started @ Thu Nov 27 15:44:19 AEST 2025 (stall 7/10)
+[2025-11-27 15:44:49] [INFO] [gatk_master] Checking Step 1A completion status...
+[2025-11-27 15:44:49] [INFO] [gatk_master] Checking Step 1A completion status...
+[2025-11-27 15:44:49] [INFO] [gatk_master] Step 1A not started: no VCF files found
+[2025-11-27 15:44:49] [INFO] [gatk_master] Step 1A not started: no VCF files found
+[2025-11-27 15:44:49] [INFO] [gatk_master] … Step 1A status: Not Started @ Thu Nov 27 15:44:49 AEST 2025 (stall 8/10)
+[2025-11-27 15:44:49] [INFO] [gatk_master] … Step 1A status: Not Started @ Thu Nov 27 15:44:49 AEST 2025 (stall 8/10)
+[2025-11-27 15:45:19] [INFO] [gatk_master] Checking Step 1A completion status...
+[2025-11-27 15:45:19] [INFO] [gatk_master] Checking Step 1A completion status...
+[2025-11-27 15:45:19] [INFO] [gatk_master] Step 1A not started: no VCF files found
+[2025-11-27 15:45:19] [INFO] [gatk_master] Step 1A not started: no VCF files found
+[2025-11-27 15:45:19] [INFO] [gatk_master] … Step 1A status: Not Started @ Thu Nov 27 15:45:19 AEST 2025 (stall 9/10)
+[2025-11-27 15:45:19] [INFO] [gatk_master] … Step 1A status: Not Started @ Thu Nov 27 15:45:19 AEST 2025 (stall 9/10)
+[2025-11-27 15:45:49] [INFO] [gatk_master] Checking Step 1A completion status...
+[2025-11-27 15:45:49] [INFO] [gatk_master] Checking Step 1A completion status...
+[2025-11-27 15:45:49] [INFO] [gatk_master] Step 1A not started: no VCF files found
+[2025-11-27 15:45:49] [INFO] [gatk_master] Step 1A not started: no VCF files found
+[2025-11-27 15:45:49] [INFO] [gatk_master] … Step 1A status: Not Started @ Thu Nov 27 15:45:49 AEST 2025 (stall 10/10)
+[2025-11-27 15:45:49] [INFO] [gatk_master] … Step 1A status: Not Started @ Thu Nov 27 15:45:49 AEST 2025 (stall 10/10)
+[2025-11-27 15:45:49] [ERROR] [gatk_master] Cancelling master job: Step 1A not detected as running after 10 polls.
+[2025-11-27 15:45:49] [ERROR] [gatk_master] Cancelling master job: Step 1A not detected as running after 10 polls.
+[2025-11-27 15:45:49] [WARN] [gatk_master] Issuing scancel for master job 18278196
+[2025-11-27 15:45:49] [WARN] [gatk_master] Issuing scancel for master job 18278196
+--------------------
+--------------------
+This is GATK_master_script_18278196.output
+Validating directory structure for: /QRISdata/Q8367/WGS_Reference_Panel/test
+Validating directory structure for: /QRISdata/Q8367/WGS_Reference_Panel/test
+✓ Directory exists: 1.FASTQ
+✓ Directory exists: 1.FASTQ
+✗ Missing directory: 2.FASTQC_pre_trimmed
+✗ Missing directory: 2.FASTQC_pre_trimmed
+✗ Missing directory: 3.FASTQC_post_trimmed
+✗ Missing directory: 3.FASTQC_post_trimmed
+✗ Missing directory: 4.BAM
+✗ Missing directory: 4.BAM
+✗ Missing directory: 5.Individual_VCF
+✗ Missing directory: 5.Individual_VCF
+✗ Missing directory: 6.genomicsdb_output
+✗ Missing directory: 6.genomicsdb_output
+✗ Missing directory: 7.Consolidated_VCF
+✗ Missing directory: 7.Consolidated_VCF
+✗ Missing directory: 8.Imputated_VCF_BEAGLE
+✗ Missing directory: 8.Imputated_VCF_BEAGLE
+✗ Missing directory: 9.Imputation_QC
+✗ Missing directory: 9.Imputation_QC
+✓ Found 2 paired-end sample files
+✓ Found 2 paired-end sample files
+Scanning for sample files in: /QRISdata/Q8367/WGS_Reference_Panel/test/1.FASTQ
+Scanning for sample files in: /QRISdata/Q8367/WGS_Reference_Panel/test/1.FASTQ
+✓ Valid sample: DRR183255
+✓ Valid sample: DRR183255
+✓ Valid sample: ERR6909357
+✓ Valid sample: ERR6909357
+✓ Created sample list with 2 samples: /scratch/project/bigdata_apple/gatk_pipeline/work/step1a/test/sample_list_test_20251127_154116.txt
+✓ Created sample list with 2 samples: /scratch/project/bigdata_apple/gatk_pipeline/work/step1a/test/sample_list_test_20251127_154116.txt
+✓ Step 1A submitted successfully!
+✓ Step 1A submitted successfully!
+Job ID: 18278237
+Array jobs: 0-0
+Monitor with: squeue -u $USER
+Cancel with: scancel 18278237
+View logs: ls /scratch/project/bigdata_apple/logs/test/
+Job ID: 18278237
+Array jobs: 0-0
+Monitor with: squeue -u $USER
+Cancel with: scancel 18278237
+View logs: ls /scratch/project/bigdata_apple/logs/test/
+--------------------
+--------------------
+This is pipeline_gatk_master_20251127_154116.log
+[2025-11-27 15:41:16] [INFO] [gatk_master] Logging system initialized for module: gatk_master
+[2025-11-27 15:41:16] [INFO] [gatk_master] Log type: pipeline
+[2025-11-27 15:41:16] [INFO] [gatk_master] Log file: /scratch/project/bigdata_apple/logs/test_20251127_154104/pipeline_gatk_master_20251127_154116.log
+[2025-11-27 15:41:16] [INFO] [gatk_master] Log level: INFO
+[2025-11-27 15:41:16] [INFO] [gatk_master] Master logging directory: /scratch/project/bigdata_apple/logs/test_20251127_154104
+[2025-11-27 15:41:16] [INFO] [gatk_master] 🧬 GATK master loop for dataset: test
+[2025-11-27 15:41:16] [INFO] [gatk_master] RDM base: /QRISdata/Q8367/WGS_Reference_Panel/test
+[2025-11-27 15:41:16] [INFO] [gatk_master] SLURM_JOB_ID: 18278196
+[2025-11-27 15:41:16] [INFO] [gatk_master] Interactive request detected: step1a
+[2025-11-27 15:41:16] [INFO] [gatk_master] 🚀 Running Step 1A per user request...
+[2025-11-27 15:41:18] [INFO] [gatk_master] Waiting for Step 1A to complete (poll 30s)...
+[2025-11-27 15:41:18] [INFO] [gatk_master] Checking Step 1A completion status...
+[2025-11-27 15:41:18] [WARN] [gatk_master] Step 1A directory does not exist: /QRISdata/Q8367/WGS_Reference_Panel/test/5.Individual_VCF
+[2025-11-27 15:41:18] [INFO] [gatk_master] … Step 1A status: Not Started @ Thu Nov 27 15:41:18 AEST 2025 (stall 1/10)
+[2025-11-27 15:41:48] [INFO] [gatk_master] Checking Step 1A completion status...
+[2025-11-27 15:41:48] [WARN] [gatk_master] Step 1A directory does not exist: /QRISdata/Q8367/WGS_Reference_Panel/test/5.Individual_VCF
+[2025-11-27 15:41:48] [INFO] [gatk_master] … Step 1A status: Not Started @ Thu Nov 27 15:41:48 AEST 2025 (stall 2/10)
+[2025-11-27 15:42:18] [INFO] [gatk_master] Checking Step 1A completion status...
+[2025-11-27 15:42:18] [WARN] [gatk_master] Step 1A directory does not exist: /QRISdata/Q8367/WGS_Reference_Panel/test/5.Individual_VCF
+[2025-11-27 15:42:18] [INFO] [gatk_master] … Step 1A status: Not Started @ Thu Nov 27 15:42:18 AEST 2025 (stall 3/10)
+[2025-11-27 15:42:48] [INFO] [gatk_master] Checking Step 1A completion status...
+[2025-11-27 15:42:48] [INFO] [gatk_master] Step 1A not started: no VCF files found
+[2025-11-27 15:42:48] [INFO] [gatk_master] … Step 1A status: Not Started @ Thu Nov 27 15:42:48 AEST 2025 (stall 4/10)
+[2025-11-27 15:43:18] [INFO] [gatk_master] Checking Step 1A completion status...
+[2025-11-27 15:43:19] [INFO] [gatk_master] Step 1A not started: no VCF files found
+[2025-11-27 15:43:19] [INFO] [gatk_master] … Step 1A status: Not Started @ Thu Nov 27 15:43:19 AEST 2025 (stall 5/10)
+[2025-11-27 15:43:49] [INFO] [gatk_master] Checking Step 1A completion status...
+[2025-11-27 15:43:49] [INFO] [gatk_master] Step 1A not started: no VCF files found
+[2025-11-27 15:43:49] [INFO] [gatk_master] … Step 1A status: Not Started @ Thu Nov 27 15:43:49 AEST 2025 (stall 6/10)
+[2025-11-27 15:44:19] [INFO] [gatk_master] Checking Step 1A completion status...
+[2025-11-27 15:44:19] [INFO] [gatk_master] Step 1A not started: no VCF files found
+[2025-11-27 15:44:19] [INFO] [gatk_master] … Step 1A status: Not Started @ Thu Nov 27 15:44:19 AEST 2025 (stall 7/10)
+[2025-11-27 15:44:49] [INFO] [gatk_master] Checking Step 1A completion status...
+[2025-11-27 15:44:49] [INFO] [gatk_master] Step 1A not started: no VCF files found
+[2025-11-27 15:44:49] [INFO] [gatk_master] … Step 1A status: Not Started @ Thu Nov 27 15:44:49 AEST 2025 (stall 8/10)
+[2025-11-27 15:45:19] [INFO] [gatk_master] Checking Step 1A completion status...
+[2025-11-27 15:45:19] [INFO] [gatk_master] Step 1A not started: no VCF files found
+[2025-11-27 15:45:19] [INFO] [gatk_master] … Step 1A status: Not Started @ Thu Nov 27 15:45:19 AEST 2025 (stall 9/10)
+[2025-11-27 15:45:49] [INFO] [gatk_master] Checking Step 1A completion status...
+[2025-11-27 15:45:49] [INFO] [gatk_master] Step 1A not started: no VCF files found
+[2025-11-27 15:45:49] [INFO] [gatk_master] … Step 1A status: Not Started @ Thu Nov 27 15:45:49 AEST 2025 (stall 10/10)
+[2025-11-27 15:45:49] [ERROR] [gatk_master] Cancelling master job: Step 1A not detected as running after 10 polls.
+[2025-11-27 15:45:49] [WARN] [gatk_master] Issuing scancel for master job 18278196
+--------------------
+--------------------
+This is pipeline_step1a_20251127_154116.log
+[2025-11-27 15:41:16] [INFO] [step1a] Logging system initialized for module: step1a
+[2025-11-27 15:41:16] [INFO] [step1a] Log type: pipeline
+[2025-11-27 15:41:16] [INFO] [step1a] Log file: /scratch/project/bigdata_apple/logs/test_20251127_154104/pipeline_step1a_20251127_154116.log
+[2025-11-27 15:41:16] [INFO] [step1a] Log level: INFO
+[2025-11-27 15:41:16] [INFO] [step1a] Starting Step 1A execution
+[2025-11-27 15:41:16] [INFO] [step1a] Dataset: test
+[2025-11-27 15:41:16] [INFO] [step1a] RDM Base Path: /QRISdata/Q8367/WGS_Reference_Panel/test
+[2025-11-27 15:41:16] [INFO] [step1a] Validating Step 1A inputs
+[2025-11-27 15:41:16] [INFO] [step1a] Validating directory structure for: /QRISdata/Q8367/WGS_Reference_Panel/test
+[2025-11-27 15:41:16] [INFO] [step1a] ✓ Directory exists: 1.FASTQ
+[2025-11-27 15:41:16] [INFO] [step1a] ✗ Missing directory: 2.FASTQC_pre_trimmed
+[2025-11-27 15:41:16] [INFO] [step1a] ✗ Missing directory: 3.FASTQC_post_trimmed
+[2025-11-27 15:41:16] [INFO] [step1a] ✗ Missing directory: 4.BAM
+[2025-11-27 15:41:16] [INFO] [step1a] ✗ Missing directory: 5.Individual_VCF
+[2025-11-27 15:41:16] [INFO] [step1a] ✗ Missing directory: 6.genomicsdb_output
+[2025-11-27 15:41:16] [INFO] [step1a] ✗ Missing directory: 7.Consolidated_VCF
+[2025-11-27 15:41:16] [INFO] [step1a] ✗ Missing directory: 8.Imputated_VCF_BEAGLE
+[2025-11-27 15:41:16] [INFO] [step1a] ✗ Missing directory: 9.Imputation_QC
+[2025-11-27 15:41:16] [INFO] [step1a] ✓ Found 2 paired-end sample files
+[2025-11-27 15:41:16] [INFO] [step1a] Step 1A input validation completed successfully
+[2025-11-27 15:41:16] [INFO] [step1a] Scanning for sample files in: /QRISdata/Q8367/WGS_Reference_Panel/test/1.FASTQ
+[2025-11-27 15:41:16] [INFO] [step1a] ✓ Valid sample: DRR183255
+[2025-11-27 15:41:16] [INFO] [step1a] ✓ Valid sample: ERR6909357
+[2025-11-27 15:41:16] [INFO] [step1a] ✓ Created sample list with 2 samples: /scratch/project/bigdata_apple/gatk_pipeline/work/step1a/test/sample_list_test_20251127_154116.txt
+[2025-11-27 15:41:16] [INFO] [step1a] Checking pipeline completion status...
+[2025-11-27 15:41:16] [INFO] [step1a] Pipeline completion summary - Completed: 0, Incomplete: 2, Total: 2
+[2025-11-27 15:41:16] [INFO] [step1a] No samples are complete - proceeding with full Step 1A run
+[2025-11-27 15:41:16] [INFO] [step1a] Creating Step 1A SLURM script
+[2025-11-27 15:41:16] [INFO] [step1a] Creating SLURM script: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1A_test_20251127_154116.sh
+[2025-11-27 15:41:16] [INFO] [step1a] ✓ Created SLURM script: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1A_test_20251127_154116.sh
+[2025-11-27 15:41:16] [INFO] [step1a]   Job name: Apple_GATK_1A_test
+[2025-11-27 15:41:16] [INFO] [step1a]   Array range: 0-1
+[2025-11-27 15:41:16] [INFO] [step1a]   SLURM config: 10 CPUs, 32G RAM, 200:00:00 time
+[2025-11-27 15:41:16] [INFO] [step1a] Waiting 2 seconds for filesystem sync...
+[2025-11-27 15:41:18] [INFO] [step1a] Submitting 1A job: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1A_test_20251127_154116.sh with parameters: /QRISdata/Q8367/WGS_Reference_Panel/test /scratch/project/bigdata_apple/gatk_pipeline/work/step1a/test/sample_list_test_20251127_154116.txt
+[2025-11-27 15:41:18] [INFO] [step1a] Created SLURM log directory: /scratch/project/bigdata_apple/logs/test
+[2025-11-27 15:41:18] [INFO] [step1a] 1A job submitted successfully - Job ID: 18278237
+[2025-11-27 15:41:18] [INFO] [step1a] SLURM job submitted successfully
+[2025-11-27 15:41:18] [INFO] [step1a] Job ID: 18278237
+[2025-11-27 15:41:18] [INFO] [step1a] SLURM script: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1A_test_20251127_154116.sh
+[2025-11-27 15:41:18] [INFO] [step1a] Sample count: 2
+[2025-11-27 15:41:18] [INFO] [step1a] SLURM log directory: /scratch/project/bigdata_apple/logs/test
+[2025-11-27 15:41:18] [INFO] [step1a] Monitor with: squeue -u $USER
+[2025-11-27 15:41:18] [INFO] [step1a] Cancel with: scancel 18278237
+[2025-11-27 15:41:18] [INFO] [step1a] View SLURM logs: ls /scratch/project/bigdata_apple/logs/test/
+[2025-11-27 15:41:18] [INFO] [step1a] Job tracking file created: /scratch/project/bigdata_apple/logs/test/job_18278237.info
+--------------------
+--------------------
+This is pipeline_step1a_20251127_154149.log
+[2025-11-27 15:41:49] [INFO] [step1a] Logging system initialized for module: step1a
+[2025-11-27 15:41:49] [INFO] [step1a] Log type: pipeline
+[2025-11-27 15:41:49] [INFO] [step1a] Log file: /scratch/project/bigdata_apple/logs/test_20251127_154104/pipeline_step1a_20251127_154149.log
+[2025-11-27 15:41:49] [INFO] [step1a] Log level: INFO
+[2025-11-27 15:41:49] [INFO] [step1a] Step 1A array task 1 processing sample ERR6909357
+[2025-11-27 15:41:49] [INFO] [step1a] Task 1: Waiting for shared reference files initialization
+[2025-11-27 15:41:49] [INFO] [step1a] Waiting for shared reference files initialization (timeout: 120s, polling every 3s)
+[2025-11-27 15:41:49] [INFO] [step1a] Logging system initialized for module: step1a
+[2025-11-27 15:41:49] [INFO] [step1a] Log type: pipeline
+[2025-11-27 15:41:49] [INFO] [step1a] Log file: /scratch/project/bigdata_apple/logs/test_20251127_154104/pipeline_step1a_20251127_154149.log
+[2025-11-27 15:41:49] [INFO] [step1a] Log level: INFO
+[2025-11-27 15:41:49] [INFO] [step1a] Step 1A array task 0 processing sample DRR183255
+[2025-11-27 15:41:49] [INFO] [step1a] Task 0: Setting up shared reference files and backup directories
+[2025-11-27 15:41:49] [INFO] [step1a] Setting up shared reference files for all array jobs
+[2025-11-27 15:41:49] [INFO] [step1a] Shared reference files already exist, skipping copy
+[2025-11-27 15:41:49] [INFO] [step1a] Backup directories initialized
+[2025-11-27 15:41:49] [INFO] [step1a] Executing Step 1A pipeline for sample: DRR183255
+[2025-11-27 15:41:49] [INFO] [step1a] Starting pipeline from step 1.
+[2025-11-27 15:41:49] [INFO] [step1a] Copying reference files to working directory
+[2025-11-27 15:42:04] [INFO] [step1a] Still waiting for shared reference files... (15/120s)
+[2025-11-27 15:42:19] [INFO] [step1a] Still waiting for shared reference files... (30/120s)
+[2025-11-27 15:42:34] [INFO] [step1a] Still waiting for shared reference files... (45/120s)
+[2025-11-27 15:42:49] [INFO] [step1a] Still waiting for shared reference files... (60/120s)
+[2025-11-27 15:43:04] [INFO] [step1a] Still waiting for shared reference files... (75/120s)
+[2025-11-27 15:43:19] [INFO] [step1a] Still waiting for shared reference files... (90/120s)
+[2025-11-27 15:43:34] [INFO] [step1a] Still waiting for shared reference files... (105/120s)
+[2025-11-27 15:43:49] [INFO] [step1a] Still waiting for shared reference files... (120/120s)
+[2025-11-27 15:43:49] [FATAL] [step1a] Timeout waiting for shared reference files initialization (120s exceeded)
+[2025-11-27 17:18:23] [INFO] [step1a] Reference files copied successfully
+[2025-11-27 17:18:23] [Verifying starting step: 1] [step1a] 
+[2025-11-27 17:18:23] [Step 1: WILL RUN] [step1a] 
+[2025-11-27 17:18:23] [INFO] [step1a] Starting step: Step 1: FastQC on raw reads
+[2025-11-27 17:18:23] [INFO] [step1a] Step started: Step 1: FastQC on raw reads at 2025-11-27 17:18:23
+[2025-11-27 17:18:23] [Running FastQC for sample: DRR183255 on 2 files] [step1a] 
+[2025-11-27 17:18:26] [FastQC completed successfully] [step1a] 
+[2025-11-27 17:18:26] [INFO] [step1a] Completed step: Step 1: FastQC on raw reads (Duration: 3s)
+[2025-11-27 17:18:26] [Verifying starting step: 2] [step1a] 
+[2025-11-27 17:18:26] [Step 2: WILL RUN] [step1a] 
+[2025-11-27 17:18:26] [INFO] [step1a] Starting step: Step 2: Read trimming with Trimmomatic
+[2025-11-27 17:18:26] [INFO] [step1a] Step started: Step 2: Read trimming with Trimmomatic at 2025-11-27 17:18:26
+[2025-11-27 17:18:26] [Running Trimmomatic for sample: DRR183255] [step1a] 
+[2025-11-27 17:18:27] [Trimmomatic completed successfully] [step1a] 
+[2025-11-27 17:18:27] [INFO] [step1a] Completed step: Step 2: Read trimming with Trimmomatic (Duration: 1s)
+[2025-11-27 17:18:27] [INFO] [step1a] Starting step: Step 2b: FastQC on trimmed reads
+[2025-11-27 17:18:27] [INFO] [step1a] Step started: Step 2b: FastQC on trimmed reads at 2025-11-27 17:18:27
+[2025-11-27 17:18:27] [Running FastQC for sample: DRR183255 on 2 files] [step1a] 
+[2025-11-27 17:18:29] [FastQC completed successfully] [step1a] 
+[2025-11-27 17:18:29] [INFO] [step1a] Completed step: Step 2b: FastQC on trimmed reads (Duration: 2s)
+[2025-11-27 17:18:29] [INFO] [step1a] Creating backup for step: Step 2: Trimmomatic
+[2025-11-27 17:18:29] [INFO] [step1a] Backup completed for step: Step 2: Trimmomatic (paired trimmed FASTQs and logs)
+[2025-11-27 17:18:29] [Verifying starting step: 3] [step1a] 
+[2025-11-27 17:18:29] [Step 3: WILL RUN] [step1a] 
+[2025-11-27 17:18:29] [INFO] [step1a] Starting step: Step 3: BWA alignment
+[2025-11-27 17:18:29] [INFO] [step1a] Step started: Step 3: BWA alignment at 2025-11-27 17:18:29
+[2025-11-27 17:18:29] [Running BWA alignment for sample: DRR183255] [step1a] 
+[2025-11-27 17:18:30] [FATAL] [step1a] BWA alignment failed
+--------------------
+--------------------

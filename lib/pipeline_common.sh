@@ -280,12 +280,168 @@ confirm() {
     done
 }
 
+# -----------------------------------------------------------------------------
+# Shared reference preparation (moved to master preflight)
+# -----------------------------------------------------------------------------
+shared_reference_base_path() {
+    local dataset_name="$1"
+    echo "${SCRATCH_BASE_PATH%/}/${dataset_name}_shared"
+}
+
+_require_source_file() {
+    local path="$1"
+    local label="$2"
+    if [ ! -f "${path}" ]; then
+        echo "${label} (${path})"
+    fi
+}
+
+validate_shared_reference_manifest() {
+    local dataset_name="$1"
+    local reference_genome="${2:-$(get_reference_fasta)}"
+    local known_sites="${3:-$(get_known_sites_vcf)}"
+    local adapter_file="${4:-$(get_adapter_fasta)}"
+
+    local shared_base
+    shared_base="$(shared_reference_base_path "${dataset_name}")"
+    local shared_ref_dir="${shared_base}/Reference_genome"
+    local shared_known_dir="${shared_base}/Known_sites"
+    local shared_adapter_dir="${shared_base}/Adapter_file"
+
+    local ref_basename known_sites_basename adapter_basename
+    ref_basename="$(basename "${reference_genome}")"
+    known_sites_basename="$(basename "${known_sites}")"
+    adapter_basename="$(basename "${adapter_file}")"
+    local ref_dict_basename="${reference_genome%.*}.dict"
+    ref_dict_basename="$(basename "${ref_dict_basename}")"
+
+    local missing=()
+    [ -f "${shared_ref_dir}/${ref_basename}" ] || missing+=("reference FASTA (${shared_ref_dir}/${ref_basename})")
+    [ -f "${shared_ref_dir}/${ref_basename}.fai" ] || missing+=("reference FASTA index (.fai)")
+    [ -f "${shared_ref_dir}/${ref_dict_basename}" ] || missing+=("reference dictionary (.dict)")
+    for ext in amb ann bwt pac sa; do
+        [ -f "${shared_ref_dir}/${ref_basename}.${ext}" ] || missing+=("BWA index .${ext}")
+    done
+    [ -f "${shared_known_dir}/${known_sites_basename}" ] || missing+=("known sites VCF (${shared_known_dir}/${known_sites_basename})")
+    local has_known_index="false"
+    for idx_ext in tbi idx; do
+        if [ -f "${shared_known_dir}/${known_sites_basename}.${idx_ext}" ]; then
+            has_known_index="true"
+            break
+        fi
+    done
+    if [ "${has_known_index}" != "true" ]; then
+        missing+=("known sites index (.tbi or .idx)")
+    fi
+    [ -f "${shared_adapter_dir}/${adapter_basename}" ] || missing+=("adapter FASTA (${shared_adapter_dir}/${adapter_basename})")
+
+    if [ ${#missing[@]} -gt 0 ]; then
+        log_error "Shared reference assets are incomplete for dataset ${dataset_name}: ${missing[*]}"
+        return 1
+    fi
+
+    return 0
+}
+
+ensure_shared_references_ready() {
+    local dataset_name="$1"
+    local reference_genome="${2:-$(get_reference_fasta)}"
+    local known_sites="${3:-$(get_known_sites_vcf)}"
+    local adapter_file="${4:-$(get_adapter_fasta)}"
+
+    if ! validate_shared_reference_manifest "${dataset_name}" "${reference_genome}" "${known_sites}" "${adapter_file}"; then
+        error_exit "Shared reference assets missing for dataset ${dataset_name}. Please rerun the master script to stage references."
+    fi
+}
+
+prepare_shared_reference_assets() {
+    local dataset_name="$1"
+    local reference_genome="${2:-$(get_reference_fasta)}"
+    local known_sites="${3:-$(get_known_sites_vcf)}"
+    local adapter_file="${4:-$(get_adapter_fasta)}"
+
+    if [ -z "${dataset_name:-}" ]; then
+        error_exit "prepare_shared_reference_assets requires a dataset name."
+    fi
+
+    local shared_base
+    shared_base="$(shared_reference_base_path "${dataset_name}")"
+    local shared_ref_dir="${shared_base}/Reference_genome"
+    local shared_known_dir="${shared_base}/Known_sites"
+    local shared_adapter_dir="${shared_base}/Adapter_file"
+    local marker_file="${shared_base}/.initialized"
+
+    if validate_shared_reference_manifest "${dataset_name}" "${reference_genome}" "${known_sites}" "${adapter_file}"; then
+        log_info "Shared reference assets already prepared at ${shared_base}"
+        return 0
+    fi
+
+    if [ "${PIPELINE_DRY_RUN:-false}" = "true" ]; then
+        log_info "[dry-run] Would stage shared reference assets to ${shared_base}"
+        return 0
+    fi
+
+    local missing_sources=()
+    local source_missing
+    source_missing="$(_require_source_file "${reference_genome}" "reference FASTA")"; [ -n "${source_missing}" ] && missing_sources+=("${source_missing}")
+    source_missing="$(_require_source_file "${reference_genome}.fai" "reference FASTA index (.fai)")"; [ -n "${source_missing}" ] && missing_sources+=("${source_missing}")
+    local ref_dict="${reference_genome%.*}.dict"
+    source_missing="$(_require_source_file "${ref_dict}" "reference dictionary (.dict)")"; [ -n "${source_missing}" ] && missing_sources+=("${source_missing}")
+    for ext in amb ann bwt pac sa; do
+        source_missing="$(_require_source_file "${reference_genome}.${ext}" "BWA index .${ext}")"; [ -n "${source_missing}" ] && missing_sources+=("${source_missing}")
+    done
+    source_missing="$(_require_source_file "${known_sites}" "known sites VCF")"; [ -n "${source_missing}" ] && missing_sources+=("${source_missing}")
+    local known_sites_index=""
+    if [ -f "${known_sites}.tbi" ]; then
+        known_sites_index="${known_sites}.tbi"
+    elif [ -f "${known_sites}.idx" ]; then
+        known_sites_index="${known_sites}.idx"
+    fi
+    if [ -z "${known_sites_index}" ]; then
+        missing_sources+=("known sites index (.tbi or .idx)")
+    fi
+    source_missing="$(_require_source_file "${adapter_file}" "adapter FASTA")"; [ -n "${source_missing}" ] && missing_sources+=("${source_missing}")
+
+    if [ ${#missing_sources[@]} -gt 0 ]; then
+        error_exit "Cannot stage shared references; missing source files: ${missing_sources[*]}"
+    fi
+
+    log_info "Staging shared reference assets to ${shared_base}"
+    mkdir -p "${shared_ref_dir}" "${shared_known_dir}" "${shared_adapter_dir}"
+    rm -f "${marker_file}"
+
+    rsync -rhPt "${reference_genome}" "${shared_ref_dir}/" || error_exit "Failed to copy reference FASTA to shared location"
+    rsync -rhPt "${reference_genome}.fai" "${shared_ref_dir}/" || error_exit "Failed to copy reference FASTA index (.fai) to shared location"
+    rsync -rhPt "${ref_dict}" "${shared_ref_dir}/" || error_exit "Failed to copy reference dictionary (.dict) to shared location"
+    for ext in amb ann bwt pac sa alt; do
+        if [ -f "${reference_genome}.${ext}" ]; then
+            rsync -rhPt "${reference_genome}.${ext}" "${shared_ref_dir}/" || error_exit "Failed to copy BWA index .${ext} to shared location"
+        fi
+    done
+
+    rsync -rhPt "${known_sites}" "${shared_known_dir}/" || error_exit "Failed to copy known sites VCF to shared location"
+    if [ -n "${known_sites_index}" ]; then
+        rsync -rhPt "${known_sites_index}" "${shared_known_dir}/" || error_exit "Failed to copy known sites index to shared location"
+    fi
+
+    rsync -rhPt "${adapter_file}" "${shared_adapter_dir}/" || error_exit "Failed to copy adapter FASTA to shared location"
+
+    if ! validate_shared_reference_manifest "${dataset_name}" "${reference_genome}" "${known_sites}" "${adapter_file}"; then
+        error_exit "Shared reference assets still incomplete after staging to ${shared_base}"
+    fi
+
+    touch "${marker_file}"
+    log_info "Shared reference assets prepared at ${shared_base}"
+}
+
 # Function to run Step 1A (calls modular backend)
 run_step1a() {
     local dataset_name="$1"
     local rdm_base_path="$2"
     local prev_log_override="${PIPELINE_LOG_DIR_OVERRIDE:-}"
     
+    prepare_shared_reference_assets "${dataset_name}"
+
     if [ "${PIPELINE_DRY_RUN:-false}" = "true" ]; then
         echo "[dry-run] Step 1A would run for ${dataset_name} (${rdm_base_path})."
         return 0
@@ -311,6 +467,8 @@ run_step1b() {
     local dataset_name="$1"
     local rdm_base_path="$2"
     local prev_log_override="${PIPELINE_LOG_DIR_OVERRIDE:-}"
+
+    prepare_shared_reference_assets "${dataset_name}"
     
     if [ "${PIPELINE_DRY_RUN:-false}" = "true" ]; then
         echo "[dry-run] Step 1B would run for ${dataset_name}."

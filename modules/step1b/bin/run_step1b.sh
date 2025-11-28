@@ -25,6 +25,7 @@ fi
 source "${PIPELINE_ROOT}/lib/logging.sh"
 source "${PIPELINE_ROOT}/lib/slurm.sh"
 source "${PIPELINE_ROOT}/lib/validation.sh"
+source "${PIPELINE_ROOT}/lib/pipeline_common.sh"
 source "${STEP1B_MODULE_DIR}/lib/functions.sh"
 source "${PIPELINE_ROOT}/config/pipeline_config.sh"
 
@@ -40,29 +41,21 @@ stage_step1b_reference_assets() {
     local ref_basename
     ref_basename="$(basename "${reference_genome}")"
 
-    local shared_base="${SCRATCH_BASE_PATH%/}/${dataset_name}_shared"
+    local shared_base="$(_shared_base_for_dataset "${dataset_name}")"
     local shared_ref_dir="${shared_base}/Reference_genome"
     local shared_candidate="${shared_ref_dir}/${ref_basename}"
 
-    mkdir -p "${shared_ref_dir}"
+    if command -v ensure_shared_references_ready >/dev/null 2>&1; then
+        ensure_shared_references_ready "${dataset_name}" "${reference_genome}"
+    fi
 
     if [ -f "${shared_candidate}" ]; then
-        log_info "Using shared reference genome at ${shared_candidate}"
+        log_info "Using staged reference genome at ${shared_candidate}"
         echo "${shared_candidate}"
         return 0
     fi
 
-    local source_dir="${PIPELINE_REFERENCE_DIR:-$(dirname "${reference_genome}")}"
-    log_warn "Shared reference missing; rsync from ${source_dir}"
-    if ! rsync -rhPt "${source_dir%/}/" "${shared_ref_dir}/"; then
-        error_exit "Failed to copy reference genome directory from ${source_dir} to ${shared_ref_dir}. Set PIPELINE_REFERENCE_DIR correctly."
-    fi
-
-    if [ ! -f "${shared_candidate}" ]; then
-        error_exit "Reference genome ${ref_basename} still missing after rsync. Verify PIPELINE_REFERENCE_FASTA."
-    fi
-
-    echo "${shared_candidate}"
+    error_exit "Reference genome ${shared_candidate} is missing. Please rerun the master script to stage shared references."
 }
 
 ensure_reference_index_present() {
@@ -207,6 +200,8 @@ main() {
         STEP1B_LAST_ERROR="Reference genome not found: ${reference_genome}"
         exit 1
     fi
+
+    prepare_shared_reference_assets "${dataset_name}" "${reference_genome}"
 
     local staged_reference
     staged_reference="$(stage_step1b_reference_assets "${reference_genome}" "${dataset_name}")"

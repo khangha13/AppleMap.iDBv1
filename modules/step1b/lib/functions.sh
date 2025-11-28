@@ -12,35 +12,26 @@ ensure_step1b_workdir() {
     mkdir -p "${workdir}/logs"
 }
 
+_shared_base_for_dataset() {
+    local dataset_name="$1"
+    if command -v shared_reference_base_path >/dev/null 2>&1; then
+        shared_reference_base_path "${dataset_name}"
+    else
+        echo "${SCRATCH_BASE_PATH%/}/${dataset_name}_shared"
+    fi
+}
+
 # Utility: setup shared reference genome for array jobs (task 0 only)
 setup_shared_reference_genome() {
     local dataset_name="$1"
     local reference_genome="$2"
     
-    # Create shared directory
-    local shared_base="${SCRATCH_BASE_PATH%/}/${dataset_name}_shared"
-    local shared_ref_dir="${shared_base}/Reference_genome"
-    local source_dir="${PIPELINE_REFERENCE_DIR:-$(dirname "${reference_genome}")}"
-    local ref_basename
-    ref_basename="$(basename "${reference_genome}")"
-    
-    mkdir -p "${shared_ref_dir}"
-    
-    if [ -f "${shared_ref_dir}/${ref_basename}" ]; then
-        log_info "Shared reference genome already exists at ${shared_ref_dir}; verifying assets..."
+    log_info "Shared reference genome is staged by the master script; validating manifest for ${dataset_name}"
+    if command -v ensure_shared_references_ready >/dev/null 2>&1; then
+        ensure_shared_references_ready "${dataset_name}" "${reference_genome}"
     else
-        log_info "Shared reference genome missing; rsync from ${source_dir}."
-        if ! rsync -rhPt "${source_dir%/}/" "${shared_ref_dir}/"; then
-            error_exit "Failed to copy reference genome directory to shared location (${source_dir} -> ${shared_ref_dir}). Verify PIPELINE_REFERENCE_DIR."
-        fi
+        wait_for_shared_reference_genome "${dataset_name}" "${reference_genome}"
     fi
-    
-    if [ ! -f "${shared_ref_dir}/${ref_basename}" ]; then
-        error_exit "Shared reference genome setup incomplete - ${shared_ref_dir}/${ref_basename} missing. Update PIPELINE_REFERENCE_FASTA."
-    fi
-    
-            touch "${shared_base}/.initialized"
-    log_info "Shared reference genome is ready at ${shared_ref_dir}"
 }
 
 # Utility: get path to shared reference genome if it exists
@@ -48,13 +39,8 @@ get_shared_reference_path() {
     local dataset_name="$1"
     local reference_genome="$2"
     
-    # Only check for shared files in array job context
-    if [ -z "${SLURM_ARRAY_TASK_ID:-}" ]; then
-        echo ""
-        return 0
-    fi
-    
-    local shared_base="${SCRATCH_BASE_PATH%/}/${dataset_name}_shared"
+    local shared_base
+    shared_base="$(_shared_base_for_dataset "${dataset_name}")"
     local shared_ref_dir="${shared_base}/Reference_genome"
     
     local ref_basename
@@ -76,37 +62,15 @@ wait_for_shared_reference_genome() {
         return 0
     fi
     
-    local shared_base="${SCRATCH_BASE_PATH%/}/${dataset_name}_shared"
-    local marker_file="${shared_base}/.initialized"
-    local timeout="${PIPELINE_SHARED_REF_TIMEOUT:-120}"
-    local poll_interval="${PIPELINE_SHARED_REF_POLL_INTERVAL:-3}"
-    local elapsed=0
-    
-    log_info "Waiting for shared reference genome initialization (timeout: ${timeout}s, polling every ${poll_interval}s)"
-    
-    while [ $elapsed -lt $timeout ]; do
-        # Check marker file exists
-        if [ -f "${marker_file}" ]; then
-            # Verify actual reference genome exists (not just marker)
-            local ref_basename
-            ref_basename="$(basename "${reference_genome}")"
-            
-            if [ -f "${shared_base}/Reference_genome/${ref_basename}" ]; then
-                log_info "Shared reference genome is ready (waited ${elapsed}s)"
-                return 0
-            fi
-        fi
-        
-        sleep "$poll_interval"
-        elapsed=$((elapsed + poll_interval))
-        
-        # Log progress every 15 seconds
-        if [ $((elapsed % 15)) -eq 0 ]; then
-            log_info "Still waiting for shared reference genome... (${elapsed}/${timeout}s)"
-        fi
-    done
-    
-    error_exit "Timeout waiting for shared reference genome initialization (${timeout}s exceeded)"
+    local shared_base
+    shared_base="$(_shared_base_for_dataset "${dataset_name}")"
+
+    if [ -f "${shared_base}/Reference_genome/$(basename "${reference_genome}")" ]; then
+        log_info "Shared reference genome is ready at ${shared_base}"
+        return 0
+    fi
+
+    error_exit "Shared reference genome is not available for dataset ${dataset_name}. Please rerun the master script to stage references."
 }
 
 # Copy reference genome files to working directory (matching original script approach)
@@ -116,9 +80,13 @@ copy_reference_genome_to_workdir() {
     local workdir="$2"
     local dataset_name="${3:-}"
     
+    if [ -n "${dataset_name}" ] && command -v ensure_shared_references_ready >/dev/null 2>&1; then
+        ensure_shared_references_ready "${dataset_name}" "${reference_genome}"
+    fi
+
     # Check if shared reference genome exists (for array jobs)
     local shared_ref_path
-    if [ -n "${dataset_name}" ] && [ -n "${SLURM_ARRAY_TASK_ID:-}" ]; then
+    if [ -n "${dataset_name}" ]; then
         shared_ref_path="$(get_shared_reference_path "${dataset_name}" "${reference_genome}")"
     else
         shared_ref_path=""

@@ -40,6 +40,7 @@ export PIPELINE_ROOT
 STEP1B_MODULE_DIR="${PIPELINE_ROOT}/modules/step1b"
 
 source "${PIPELINE_ROOT}/config/pipeline_config.sh"
+source "${PIPELINE_ROOT}/lib/pipeline_common.sh"
 source "${STEP1B_MODULE_DIR}/lib/functions.sh"
 source "${STEP1B_MODULE_DIR}/bin/run_step1b.sh"
 
@@ -71,24 +72,8 @@ trap 'step1b_array_exit_trap' EXIT
 # Extract dataset name from DATASET_PATH for shared reference setup
 DATASET_NAME="$(basename "${DATASET_PATH}")"
 
-# Task coordination: Task 0 sets up shared reference genome, other tasks wait
-if [ "${SLURM_ARRAY_TASK_ID}" -eq 0 ]; then
-    log_info "Task 0: Setting up shared reference genome"
-    
-    # Get reference genome path
-    ref_genome="$(get_reference_fasta)"
-    
-    # Setup shared reference genome (only task 0)
-    setup_shared_reference_genome "${DATASET_NAME}" "${ref_genome}"
-else
-    # Other tasks: wait for shared reference genome to be initialized
-    log_info "Task ${SLURM_ARRAY_TASK_ID}: Waiting for shared reference genome initialization"
-    
-    # Get reference genome path for waiting
-    ref_genome="$(get_reference_fasta)"
-    
-    # Wait for shared reference genome (with timeout and polling)
-    wait_for_shared_reference_genome "${DATASET_NAME}" "${ref_genome}"
-fi
+ref_genome="$(get_reference_fasta)"
+
+ensure_shared_references_ready "${DATASET_NAME}" "${ref_genome}"
 
 execute_step1b_pipeline "${chromosome}" "${DATASET_PATH}" "${DATASET_NAME}"

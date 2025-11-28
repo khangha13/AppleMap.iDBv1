@@ -18,6 +18,15 @@ ensure_sample_directories() {
         "${rdm_base}/9.Metrics/${sample}"
 }
 
+_shared_base_for_dataset() {
+    local dataset_name="$1"
+    if command -v shared_reference_base_path >/dev/null 2>&1; then
+        shared_reference_base_path "${dataset_name}"
+    else
+        echo "${SCRATCH_BASE_PATH%/}/${dataset_name}_shared"
+    fi
+}
+
 # Utility: setup shared reference files for array jobs (task 0 only)
 setup_shared_reference_files() {
     local dataset_name="$1"
@@ -25,87 +34,12 @@ setup_shared_reference_files() {
     local known_sites="$3"
     local adapter_file="$4"
     
-    # Only run if this is task 0
-    if [ "${SLURM_ARRAY_TASK_ID:-}" != "0" ]; then
-        return 0
-    fi
-    
-    log_info "Setting up shared reference files for all array jobs"
-    
-    # Create shared directories
-    local shared_base="${SCRATCH_BASE_PATH%/}/${dataset_name}_shared"
-    local shared_ref_dir="${shared_base}/Reference_genome"
-    local shared_known_dir="${shared_base}/Known_sites"
-    local shared_adapter_dir="${shared_base}/Adapter_file"
-    
-    mkdir -p "${shared_ref_dir}" "${shared_known_dir}" "${shared_adapter_dir}"
-    
-    # Get basenames
-    local ref_basename known_sites_basename adapter_basename
-    ref_basename="$(basename "${reference_genome}")"
-    known_sites_basename="$(basename "${known_sites}")"
-    adapter_basename="$(basename "${adapter_file}")"
-    
-    # Check if reference files already exist in shared location
-    if [ -f "${shared_ref_dir}/${ref_basename}" ]; then
-        log_info "Shared reference files already exist, skipping copy"
+    log_info "Shared reference files are staged by the master script; validating manifest for ${dataset_name}"
+    if command -v ensure_shared_references_ready >/dev/null 2>&1; then
+        ensure_shared_references_ready "${dataset_name}" "${reference_genome}" "${known_sites}" "${adapter_file}"
     else
-        log_info "Copying reference genome and indices to shared directory"
-        rsync -rhivPt "${reference_genome}" "${shared_ref_dir}/" || error_exit "Failed to copy reference genome to shared directory"
-        
-        # Copy reference index (.fai) if it exists
-        if [ -f "${reference_genome}.fai" ]; then
-            rsync -rhivPt "${reference_genome}.fai" "${shared_ref_dir}/" || log_info "Warning: Failed to copy reference genome index (.fai), continuing anyway"
-        fi
-        
-        # Copy BWA index files if they exist
-        for ext in amb ann bwt pac sa alt; do
-            if [ -f "${reference_genome}.${ext}" ]; then
-                rsync -rhivPt "${reference_genome}.${ext}" "${shared_ref_dir}/" || log_info "Warning: Failed to copy reference genome BWA index (.${ext}), continuing anyway"
-            fi
-        done
-        
-        # Copy reference dictionary (.dict) if it exists
-        local ref_dict="${reference_genome%.*}.dict"
-        if [ -f "${ref_dict}" ]; then
-            rsync -rhivPt "${ref_dict}" "${shared_ref_dir}/" || log_info "Warning: Failed to copy reference genome dictionary (.dict), continuing anyway"
-        fi
-        
-        log_info "Copying known sites to shared directory"
-        rsync -rhivPt "${known_sites}" "${shared_known_dir}/" || error_exit "Failed to copy known sites VCF to shared directory"
-        
-        # Copy known sites index (.tbi) if it exists
-        if [ -f "${known_sites}.tbi" ]; then
-            rsync -rhivPt "${known_sites}.tbi" "${shared_known_dir}/" || log_info "Warning: Failed to copy known sites VCF index (.tbi), continuing anyway"
-        fi
-        # Copy known sites index (.idx) if it exists
-        if [ -f "${known_sites}.idx" ]; then
-            rsync -rhivPt "${known_sites}.idx" "${shared_known_dir}/" || log_info "Warning: Failed to copy known sites VCF index (.idx), continuing anyway"
-        fi
-        
-        log_info "Copying adapter file to shared directory"
-        rsync -rhivPt "${adapter_file}" "${shared_adapter_dir}/" || error_exit "Failed to copy adapter file to shared directory"
-        
-        # Verify all files exist before creating marker
-        if [ -f "${shared_ref_dir}/${ref_basename}" ] && \
-           [ -f "${shared_known_dir}/${known_sites_basename}" ] && \
-           [ -f "${shared_adapter_dir}/${adapter_basename}" ]; then
-            # Create marker file AFTER all files are verified to exist
-            touch "${shared_base}/.initialized"
-            log_info "Shared reference files setup completed"
-        else
-            error_exit "Shared reference files setup incomplete - some files missing"
-        fi
-    fi
-    
-    # Ensure known sites indexes exist in shared directory even if files already existed previously
-    if [ -f "${shared_known_dir}/${known_sites_basename}" ]; then
-        if [ ! -f "${shared_known_dir}/${known_sites_basename}.tbi" ] && [ -f "${known_sites}.tbi" ]; then
-            rsync -rhivPt "${known_sites}.tbi" "${shared_known_dir}/" || log_info "Warning: Failed to copy known sites VCF index (.tbi), continuing anyway"
-        fi
-        if [ ! -f "${shared_known_dir}/${known_sites_basename}.idx" ] && [ -f "${known_sites}.idx" ]; then
-            rsync -rhivPt "${known_sites}.idx" "${shared_known_dir}/" || log_info "Warning: Failed to copy known sites VCF index (.idx), continuing anyway"
-        fi
+        log_warn "ensure_shared_references_ready is unavailable; falling back to basic presence checks"
+        wait_for_shared_reference_files "${dataset_name}" "${reference_genome}" "${known_sites}" "${adapter_file}"
     fi
 }
 
@@ -116,13 +50,8 @@ get_shared_reference_paths() {
     local known_sites="$3"
     local adapter_file="$4"
     
-    # Only check for shared files in array job context
-    if [ -z "${SLURM_ARRAY_TASK_ID:-}" ]; then
-        echo ""
-        return 0
-    fi
-    
-    local shared_base="${SCRATCH_BASE_PATH%/}/${dataset_name}_shared"
+    local shared_base
+    shared_base="$(_shared_base_for_dataset "${dataset_name}")"
     local shared_ref_dir="${shared_base}/Reference_genome"
     local shared_known_dir="${shared_base}/Known_sites"
     local shared_adapter_dir="${shared_base}/Adapter_file"
@@ -153,42 +82,18 @@ wait_for_shared_reference_files() {
     if [ "${SLURM_ARRAY_TASK_ID:-}" = "0" ]; then
         return 0
     fi
-    
-    local shared_base="${SCRATCH_BASE_PATH%/}/${dataset_name}_shared"
-    local marker_file="${shared_base}/.initialized"
-    local timeout="${PIPELINE_SHARED_REF_TIMEOUT:-120}"
-    local poll_interval="${PIPELINE_SHARED_REF_POLL_INTERVAL:-3}"
-    local elapsed=0
-    
-    log_info "Waiting for shared reference files initialization (timeout: ${timeout}s, polling every ${poll_interval}s)"
-    
-    while [ $elapsed -lt $timeout ]; do
-        # Check marker file exists
-        if [ -f "${marker_file}" ]; then
-            # Verify actual reference files exist (not just marker)
-            local ref_basename known_sites_basename adapter_basename
-            ref_basename="$(basename "${reference_genome}")"
-            known_sites_basename="$(basename "${known_sites}")"
-            adapter_basename="$(basename "${adapter_file}")"
-            
-            if [ -f "${shared_base}/Reference_genome/${ref_basename}" ] && \
-               [ -f "${shared_base}/Known_sites/${known_sites_basename}" ] && \
-               [ -f "${shared_base}/Adapter_file/${adapter_basename}" ]; then
-                log_info "Shared reference files are ready (waited ${elapsed}s)"
-                return 0
-            fi
-        fi
-        
-        sleep "$poll_interval"
-        elapsed=$((elapsed + poll_interval))
-        
-        # Log progress every 15 seconds
-        if [ $((elapsed % 15)) -eq 0 ]; then
-            log_info "Still waiting for shared reference files... (${elapsed}/${timeout}s)"
-        fi
-    done
-    
-    error_exit "Timeout waiting for shared reference files initialization (${timeout}s exceeded)"
+
+    local shared_base
+    shared_base="$(_shared_base_for_dataset "${dataset_name}")"
+
+    if [ -f "${shared_base}/Reference_genome/$(basename "${reference_genome}")" ] && \
+       [ -f "${shared_base}/Known_sites/$(basename "${known_sites}")" ] && \
+       [ -f "${shared_base}/Adapter_file/$(basename "${adapter_file}")" ]; then
+        log_info "Shared reference files are ready at ${shared_base}"
+        return 0
+    fi
+
+    error_exit "Shared reference files are not available for dataset ${dataset_name}. Please rerun the master script to stage references."
 }
 
 # Utility: copy all reference files to working directory (matching original script approach)
@@ -199,9 +104,13 @@ copy_reference_files_to_workdir() {
     local adapter_file="$3"
     local dataset_name="${4:-}"
     
+    if [ -n "${dataset_name}" ] && command -v ensure_shared_references_ready >/dev/null 2>&1; then
+        ensure_shared_references_ready "${dataset_name}" "${reference_genome}" "${known_sites}" "${adapter_file}"
+    fi
+
     # Check if shared reference files exist (for array jobs)
     local shared_paths
-    if [ -n "${dataset_name}" ] && [ -n "${SLURM_ARRAY_TASK_ID:-}" ]; then
+    if [ -n "${dataset_name}" ]; then
         shared_paths="$(get_shared_reference_paths "${dataset_name}" "${reference_genome}" "${known_sites}" "${adapter_file}")"
     else
         shared_paths=""

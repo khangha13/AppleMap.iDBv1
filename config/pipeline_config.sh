@@ -20,6 +20,12 @@ else
 fi
 export PIPELINE_ROOT
 
+if [ "${PIPELINE_CONFIG_SOURCED:-false}" = "true" ]; then
+    return 0 2>/dev/null || exit 0
+fi
+PIPELINE_CONFIG_SOURCED="true"
+export PIPELINE_CONFIG_SOURCED
+
 ENV_FILE="${SCRIPT_DIR}/environment.sh"
 ENV_TEMPLATE="${SCRIPT_DIR}/environment.template.sh"
 

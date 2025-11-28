@@ -23,6 +23,7 @@ export PIPELINE_ROOT
 source "${PIPELINE_ROOT}/lib/logging.sh"
 source "${PIPELINE_ROOT}/lib/slurm.sh"
 source "${PIPELINE_ROOT}/lib/validation.sh"
+source "${PIPELINE_ROOT}/lib/pipeline_common.sh"
 source "${STEP1A_MODULE_DIR}/lib/functions.sh"
 source "${PIPELINE_ROOT}/config/pipeline_config.sh"
 
@@ -58,6 +59,8 @@ main() {
     
     # Validate inputs
     validate_step1a_inputs "$rdm_base_path"
+
+    prepare_shared_reference_assets "${dataset_name}"
     
     local scratch_sample_dir="${PIPELINE_WORK_DIR%/}/step1a/${dataset_name}"
     mkdir -p "${scratch_sample_dir}"

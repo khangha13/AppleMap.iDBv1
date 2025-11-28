@@ -37,6 +37,7 @@ export PIPELINE_ROOT
 STEP1A_MODULE_DIR="${PIPELINE_ROOT}/modules/step1a"
 
 source "${PIPELINE_ROOT}/config/pipeline_config.sh"
+source "${PIPELINE_ROOT}/lib/pipeline_common.sh"
 source "${STEP1A_MODULE_DIR}/lib/functions.sh"
 source "${STEP1A_MODULE_DIR}/bin/run_step1a.sh"
 
@@ -68,33 +69,18 @@ log_info "Step 1A array task ${SLURM_ARRAY_TASK_ID} processing sample ${SAMPLE}"
 # Extract dataset name from DATASET_PATH for shared reference setup
 DATASET_NAME="$(basename "${DATASET_PATH}")"
 
-# Task coordination: Task 0 sets up shared reference files, other tasks wait
+ref_genome="$(get_reference_fasta)"
+known_sites="$(get_known_sites_vcf)"
+adapter_file="$(get_adapter_fasta)"
+
+ensure_shared_references_ready "${DATASET_NAME}" "${ref_genome}" "${known_sites}" "${adapter_file}"
+
+# Task 0 can still initialize shared backup directories
 if [ "${SLURM_ARRAY_TASK_ID}" -eq 0 ]; then
-    log_info "Task 0: Setting up shared reference files and backup directories"
-    
-    # Get reference paths
-    ref_genome="$(get_reference_fasta)"
-    known_sites="$(get_known_sites_vcf)"
-    adapter_file="$(get_adapter_fasta)"
-    
-    # Setup shared reference files (only task 0)
-    setup_shared_reference_files "${DATASET_NAME}" "${ref_genome}" "${known_sites}" "${adapter_file}"
-    
-    # Create backup directories for all samples
+    log_info "Task 0: Initializing backup directories"
     backup_base="${SCRATCH_BASE_PATH%/}/${DATASET_NAME}_backup"
     mkdir -p "${backup_base}"
     log_info "Backup directories initialized"
-else
-    # Other tasks: wait for shared reference files to be initialized
-    log_info "Task ${SLURM_ARRAY_TASK_ID}: Waiting for shared reference files initialization"
-    
-    # Get reference paths for waiting
-    ref_genome="$(get_reference_fasta)"
-    known_sites="$(get_known_sites_vcf)"
-    adapter_file="$(get_adapter_fasta)"
-    
-    # Wait for shared reference files (with timeout and polling)
-    wait_for_shared_reference_files "${DATASET_NAME}" "${ref_genome}" "${known_sites}" "${adapter_file}"
 fi
 
 execute_step1a_pipeline "${SAMPLE}" "${DATASET_PATH}" "${DATASET_NAME}"

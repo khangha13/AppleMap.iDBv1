@@ -621,6 +621,44 @@ From `HPC_MIGRATION_SUMMARY.md` and companions:
 - When feeding Python via heredoc, always pass `-` (or `-c`) to avoid Python
   interpreting positional arguments as a script file.
 
+### 5.10 Shared reference staging + duplicated config logs (2025‑11‑27)
+
+**Symptom**
+
+- Step 1A array jobs emitted duplicated `[pipeline_config]` blocks at startup.
+- Array task 0 staged shared reference files while others polled `.initialized`;
+  when the marker existed but files were incomplete, tasks either timed out or
+  continued without indexes (BWA alignment later failed).
+
+**Root cause**
+
+- `config/pipeline_config.sh` was sourced multiple times per process, re‑printing
+  its verbose environment summary.
+- Reference staging lived inside Step 1A/1B array task 0 with only a marker
+  guard (no manifest), so partial copies looked “ready” to other tasks.
+
+**Fix**
+
+- `pipeline_config.sh` now short-circuits on re-source via
+  `PIPELINE_CONFIG_SOURCED`, preventing duplicate config banners.
+- Shared reference staging moved to a **master preflight**:
+  - `prepare_shared_reference_assets` in `lib/pipeline_common.sh` stages once per
+    dataset before Step 1A/1B submission.
+  - Enforces a manifest: FASTA + `.fai` + `.dict` + BWA indexes (`.amb/.ann/.bwt/.pac/.sa`),
+    known sites VCF + `.tbi/.idx`, adapter FASTA.
+  - Copies into `${SCRATCH_BASE_PATH}/${dataset}_shared/` and validates before
+    writing `.initialized`.
+- Array templates now only validate (`ensure_shared_references_ready`) and fail
+  fast if assets are missing—no timeouts/polling inside workers.
+- `run_step1a.sh` / `run_step1b.sh` and their master wrappers call the preflight
+  so direct module invocations also stage references.
+
+**AI guidance**
+
+- Keep shared asset staging in the master layer; workers should only validate
+  and symlink/copy. Treat missing indexes as configuration errors, not retry
+  candidates.
+
 ---
 
 ## 6. Configuration & Troubleshooting Checklist
