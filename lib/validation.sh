@@ -101,6 +101,14 @@ check_step1a_status() {
                 return
             fi
         done < "${job_file}"
+        # If squeue is unavailable or jobs already exited, fall through to output check
+    fi
+
+    # If a running flag exists but we cannot confirm via squeue, treat as Running
+    if [ -f "${running_flag}" ]; then
+        log_info "Step 1A marked running (flag present: ${running_flag})"
+        echo "Running"
+        return
     fi
 
     # Normalize path (trim CRs and trailing whitespace) and remove trailing slash

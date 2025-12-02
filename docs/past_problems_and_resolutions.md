@@ -686,6 +686,44 @@ From `HPC_MIGRATION_SUMMARY.md` and companions:
 - After jobs exit, validate outputs against expected samples; fail fast with a flag and message rather than looping.
 - Keep config/log init idempotent when sourcing from `/var/spool` copies to avoid duplicate banners.
 
+### 5.12 Step 1A perceived “Not Started” during execution (2025‑12‑01)
+
+**Symptom**
+
+- Master cancelled itself after several polls reporting “Step 1A Not Started” even though the Step 1A array (job 18371961) was submitted and running.
+- No advancement to Step 1B.
+
+**Root cause**
+
+- The master wait loop relied solely on `check_step1a_status`, which only looks for VCF outputs; while the array was running, no outputs existed yet, so status stayed “Not Started”.
+- Running/failure flags and job IDs were not consulted before triggering the stall limit.
+
+**Fix**
+
+- Step 1A status now uses the recorded job IDs and running flag to report `Running` when arrays are in Slurm; if `squeue` is unavailable but the running flag exists, it still reports `Running`.
+- Master wait for Step 1A is queue- then output-driven (no stall limit): wait while job IDs are in Slurm; once they leave the queue, validate per-sample VCF outputs; if missing, write a failure flag/message and stop; if complete, clear running/failed flags and advance to Step 1B.
+
+**AI guidance**
+
+- Always couple polling to both scheduler state (job IDs) and output validation; do not rely on output presence alone while jobs may still be running.
+
+### 5.13 Master now defaults to self-submit (2026‑01‑XX)
+
+**Change**
+
+- `bin/gatk_pipeline.sh` now defaults to submitting itself via `sbatch` so the master survives logout.
+- New flags to control this: `--submit-self[=bool]` (default true) and `--no-submit` (alias for `--submit-self=false`). The legacy `--submit` remains as an explicit opt-in.
+- Self-submit only triggers when *not* already inside Slurm (`SLURM_JOB_ID` empty) and when a dataset is provided; otherwise the script runs locally as before.
+
+**Why**
+
+- Users logging out during long Step 1A/1B runs would kill the master loop. Defaulting to self-submit keeps orchestration in Slurm where it won’t die with the login shell.
+
+**AI guidance**
+
+- If you need the master to stay local (e.g., site disallows job-within-job), pass `--no-submit`/`--submit-self=false`.
+- When adding new submission paths, preserve the guard rails: do not re-self-submit when already inside Slurm; always export `PIPELINE_ROOT` in sbatch wrappers; ensure dataset is set before self-submit to avoid empty `sbatch` calls.
+
 ---
 
 ## 6. Configuration & Troubleshooting Checklist

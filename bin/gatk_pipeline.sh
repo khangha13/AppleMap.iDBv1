@@ -64,6 +64,19 @@ source "${PIPELINE_ROOT}/lib/slurm.sh"
 source "${PIPELINE_ROOT}/lib/pipeline_common.sh"
 source "${PIPELINE_ROOT}/config/pipeline_config.sh"
 
+# Guard: ensure pipeline_state_dir is available (self-submit copies can lose function scope if sourcing fails)
+if ! command -v pipeline_state_dir >/dev/null 2>&1; then
+    echo "[gatk_pipeline.sh] Warning: pipeline_state_dir not found after sourcing libs; defining fallback." >&2
+    pipeline_state_dir() {
+        local dataset_name="$1"
+        if [ -n "${MASTER_LOG_DIR:-}" ]; then
+            echo "${MASTER_LOG_DIR}"
+        else
+            echo "${LOG_BASE_PATH%/}/${dataset_name}"
+        fi
+    }
+fi
+
 MASTER_RUN_STAMP="${MASTER_RUN_STAMP:-$(date +%Y%m%d_%H%M%S)}"
 MASTER_LOG_DIR="${MASTER_LOG_DIR:-}"
 MASTER_LOG_FILE="${MASTER_LOG_FILE:-}"
@@ -147,6 +160,9 @@ submit_self() {
     if [ -z "${DATASET:-}" ]; then
         echo "❌ DATASET is required before submitting to Slurm." >&2
         exit 1
+    fi
+    if [ -z "${PIPELINE_ROOT:-}" ]; then
+        resolve_pipeline_root
     fi
 
     ensure_master_logging "${DATASET}" "prepare"
@@ -269,6 +285,7 @@ wait_for_step1a_outputs() {
     state_dir="$(_step_state_dir "${dataset_name}")"
     mkdir -p "${state_dir}"
     local job_file="${state_dir}/step1a_job_id.txt"
+    local running_flag="${state_dir}/step1a_running.flag"
     local heartbeat=0
 
     while true; do
@@ -276,6 +293,14 @@ wait_for_step1a_outputs() {
             if [ $((heartbeat % 5)) -eq 0 ]; then
                 log_info "… Step 1A still running (job IDs from ${job_file})"
             fi
+            heartbeat=$((heartbeat + 1))
+            sleep "${poll_interval_seconds}"
+            continue
+        fi
+
+        # If we can't see jobs in Slurm but a running flag remains, allow one extra poll before declaring incomplete
+        if [ -f "${running_flag}" ] && [ $heartbeat -eq 0 ]; then
+            log_info "Step 1A jobs not in queue but running flag exists; one more poll before validating outputs."
             heartbeat=$((heartbeat + 1))
             sleep "${poll_interval_seconds}"
             continue
@@ -436,7 +461,9 @@ Options:
   -i, --interactive         Force interactive mode
       --dry-run             Show actions without submitting jobs
   -q, --quiet               Suppress banners/prompts where possible
-      --submit              Submit this script to Slurm (self-submit mode)
+      --submit              Submit this script to Slurm (self-submit mode; default)
+      --submit-self[=bool]  Control self-submit (default true; use false to run locally)
+      --no-submit           Disable self-submit (alias for --submit-self=false)
       --as-sbatch           Internal flag: indicates running inside Slurm allocation
   -h, --help                Show this message and exit
 USAGE
@@ -518,7 +545,7 @@ REQUESTED_STEP="auto"
 FORCE_INTERACTIVE=false
 PIPELINE_DRY_RUN="false"
 PIPELINE_QUIET="false"
-SUBMIT_MODE=false
+SUBMIT_MODE=true
 AS_SBATCH=false
 
 while [[ $# -gt 0 ]]; do
@@ -537,6 +564,18 @@ while [[ $# -gt 0 ]]; do
             PIPELINE_QUIET="true"; shift;;
         --submit)
             SUBMIT_MODE=true; shift;;
+        --submit-self|--submit_self)
+            SUBMIT_MODE=true; shift;;
+        --submit-self=*|--submit_self=*)
+            val="${1#*=}"
+            if [ "${val}" = "false" ]; then
+                SUBMIT_MODE=false
+            else
+                SUBMIT_MODE=true
+            fi
+            shift;;
+        --no-submit|--no_submit)
+            SUBMIT_MODE=false; shift;;
         --as-sbatch)
             AS_SBATCH=true; shift;;
         --interactive-action)
@@ -552,8 +591,8 @@ done
 
 export PIPELINE_DRY_RUN PIPELINE_QUIET
 
-# If explicitly asked to submit, do so and exit
-if $SUBMIT_MODE; then
+# Default to self-submit unless disabled or already inside Slurm; fall back to interactive when no dataset provided
+if $SUBMIT_MODE && ! $AS_SBATCH && [ -z "${SLURM_JOB_ID:-}" ] && [ -n "${DATASET:-}" ]; then
     submit_self
     exit 0
 fi

@@ -662,6 +662,12 @@ copy_results_to_rdm() {
     log_message "Copying results to RDM for sample: $sample"
     
     ensure_sample_directories "$rdm_base_path" "$sample"
+
+    # Copy original sorted BAM (pre-dedup) if present
+    if [ -f "${sample}_sorted.bam" ]; then
+        rsync -rhivPt "${sample}_sorted.bam" "${rdm_base_path}/4.BAM/${sample}/" || error_exit "Failed to copy BAM file to RDM"
+        rsync -rhivPt "${sample}_sorted.bam.bai" "${rdm_base_path}/4.BAM/${sample}/" || error_exit "Failed to copy BAM index to RDM"
+    fi
     
     # Copy BAM files
     if [ -f "${sample}_recal.bam" ]; then
