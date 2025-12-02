@@ -27,6 +27,18 @@ source "${PIPELINE_ROOT}/lib/pipeline_common.sh"
 source "${STEP1A_MODULE_DIR}/lib/functions.sh"
 source "${PIPELINE_ROOT}/config/pipeline_config.sh"
 
+# Guard: ensure pipeline_state_dir exists even if libraries weren’t loaded in sbatch spool
+if ! command -v pipeline_state_dir >/dev/null 2>&1; then
+    pipeline_state_dir() {
+        local dataset_name="$1"
+        if [ -n "${LOG_BASE_PATH:-}" ]; then
+            echo "${LOG_BASE_PATH%/}/${dataset_name}"
+        else
+            echo "/tmp/${dataset_name}"
+        fi
+    }
+fi
+
 LAST_STEP1A_ARRAY_MAX=0
 
 # Main Step 1A execution function
@@ -167,7 +179,8 @@ main() {
         log_slurm_submission "$job_id" "$slurm_script" "$dataset_name" "$sample_count"
 
         local state_dir
-        state_dir="$(pipeline_state_dir "${dataset_name}")"
+        # Normalize state dir to LOG_BASE_PATH/<dataset> so master can find job IDs
+        local state_dir="${LOG_BASE_PATH%/}/${dataset_name}"
         mkdir -p "${state_dir}"
         printf '%s\n' "${job_id}" > "${state_dir}/step1a_job_id.txt"
         printf '%s\n' "${sample_list_file}" > "${state_dir}/step1a_samples.list"

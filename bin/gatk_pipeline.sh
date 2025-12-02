@@ -257,12 +257,12 @@ wait_until_complete() {
 
 _step_state_dir() {
     local dataset_name="$1"
-    pipeline_state_dir "${dataset_name}"
+    echo "${LOG_BASE_PATH%/}/${dataset_name}"
 }
 
 step1a_job_file() {
     local dataset_name="$1"
-    echo "$(_step_state_dir "${dataset_name}")/step1a_job_id.txt"
+    echo "${LOG_BASE_PATH%/}/${dataset_name}/step1a_job_id.txt"
 }
 
 _job_ids_active() {
@@ -286,9 +286,11 @@ wait_for_step1a_outputs() {
     mkdir -p "${state_dir}"
     local job_file="${state_dir}/step1a_job_id.txt"
     local running_flag="${state_dir}/step1a_running.flag"
+    local sample_list_file="${state_dir}/step1a_samples.list"
     local heartbeat=0
 
     while true; do
+        # Wait on real Slurm state first if job IDs are present
         if _job_ids_active "${job_file}"; then
             if [ $((heartbeat % 5)) -eq 0 ]; then
                 log_info "… Step 1A still running (job IDs from ${job_file})"
@@ -298,7 +300,7 @@ wait_for_step1a_outputs() {
             continue
         fi
 
-        # If we can't see jobs in Slurm but a running flag remains, allow one extra poll before declaring incomplete
+        # If we can't see jobs in Slurm but a running flag remains, allow one extra poll before validating outputs
         if [ -f "${running_flag}" ] && [ $heartbeat -eq 0 ]; then
             log_info "Step 1A jobs not in queue but running flag exists; one more poll before validating outputs."
             heartbeat=$((heartbeat + 1))
@@ -314,12 +316,30 @@ wait_for_step1a_outputs() {
             return 0
         fi
 
-        local missing
-        missing="$(get_incomplete_samples "${rdm_base}")"
-        local msg="Step 1A incomplete after jobs left queue."
-        if [ -n "${missing}" ]; then
-            msg+=" Missing samples: ${missing//$'\n'/, }"
+        # Validate expected per-sample outputs (genotyped VCFs) using the recorded sample list
+        if [ ! -f "${sample_list_file}" ]; then
+            log_error "Step 1A sample list missing: ${sample_list_file}"
+            printf '%s\n' "Step 1A sample list missing: ${sample_list_file}" > "${state_dir}/step1a_failed.flag"
+            return 1
         fi
+
+        local missing_samples=()
+        while IFS= read -r sample || [ -n "${sample}" ]; do
+            [ -n "${sample}" ] || continue
+            local vcf="${rdm_base%/}/5.Individual_VCF/${sample}_genotyped.vcf.gz"
+            local tbi="${vcf}.tbi"
+            if [ ! -f "${vcf}" ] || [ ! -f "${tbi}" ]; then
+                missing_samples+=( "${sample}" )
+            fi
+        done < "${sample_list_file}"
+
+        if [ ${#missing_samples[@]} -eq 0 ]; then
+            rm -f "${state_dir}/step1a_running.flag" "${state_dir}/step1a_failed.flag" 2>/dev/null || true
+            log_info "Step 1A outputs verified as complete."
+            return 0
+        fi
+
+        local msg="Step 1A incomplete after jobs left queue. Missing genotyped VCFs for: ${missing_samples[*]}"
         log_error "${msg}"
         printf '%s\n' "${msg}" > "${state_dir}/step1a_failed.flag"
         return 1
