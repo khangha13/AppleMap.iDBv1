@@ -3,7 +3,7 @@
 # Patch malformed VCF rows by padding missing fields with placeholders.
 # - Preserves all records: sets FORMAT to GT if missing and fills sample columns with ./.
 # - Reports how many rows were patched and percentage of total.
-# Dependencies: bcftools, bgzip, tabix
+# Dependencies: bgzip, tabix (assumed available on compute nodes). Will load bcftools if missing.
 # =============================================================================
 set -euo pipefail
 
@@ -29,7 +29,19 @@ fi
 INPUT="$1"
 OUTPUT="${2:-${INPUT%.vcf.gz}.fixed.vcf.gz}"
 
-for tool in bcftools bgzip tabix; do
+# Ensure bcftools is available; load specific module if needed
+BCFTOOLS_BIN="${BCFTOOLS_BIN:-bcftools}"
+if ! command -v "${BCFTOOLS_BIN}" >/dev/null 2>&1; then
+    if command -v module >/dev/null 2>&1; then
+        module load bcftools/1.18-gcc-12.3.0 >/dev/null 2>&1 || true
+    fi
+fi
+if ! command -v "${BCFTOOLS_BIN}" >/dev/null 2>&1; then
+    echo "[FATAL] bcftools not found in PATH (after attempting module load bcftools/1.18-gcc-12.3.0)." >&2
+    exit 1
+fi
+
+for tool in bgzip tabix; do
     if ! command -v "${tool}" >/dev/null 2>&1; then
         echo "[FATAL] ${tool} not found in PATH." >&2
         exit 1
@@ -63,7 +75,8 @@ echo "[INFO] Samples: ${sample_count} | Expected columns: ${expected_cols}"
 echo "[INFO] Total data rows: ${total_rows}"
 echo "[INFO] Malformed rows (NF < ${expected_cols}): ${malformed_rows}"
 
-tmp_out="$(mktemp)"
+tmp_base="${TMPDIR:-/tmp}"
+tmp_out="$(mktemp "${tmp_base%/}/fixvcfXXXXXX")"
 trap 'rm -f "${tmp_out}"' EXIT
 
 zcat "${INPUT}" 2>/dev/null | \
@@ -89,7 +102,7 @@ bgzip -c "${tmp_out}" > "${OUTPUT}"
 tabix -f "${OUTPUT}"
 
 # Verify patched file
-if ! bcftools view -Ov -o /dev/null "${OUTPUT}" >/dev/null 2>&1; then
+if ! "${BCFTOOLS_BIN}" view -Ov -o /dev/null "${OUTPUT}" >/dev/null 2>&1; then
     echo "[FATAL] Patched VCF failed validation: ${OUTPUT}" >&2
     exit 1
 fi

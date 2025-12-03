@@ -60,6 +60,15 @@ if [ -z "${BEAGLE_JAR}" ] || [ ! -f "${BEAGLE_JAR}" ]; then
     error_exit "Beagle jar not found. Set BEAGLE_JAR or load the beagle module."
 fi
 
+# Ensure bcftools is available (module load if needed)
+BCFTOOLS_BIN="${BCFTOOLS_BIN:-bcftools}"
+if ! command -v "${BCFTOOLS_BIN}" >/dev/null 2>&1; then
+    module load bcftools/1.18-gcc-12.3.0 >/dev/null 2>&1 || log_warn "Unable to load bcftools/1.18-gcc-12.3.0; assuming bcftools is already available on compute node."
+fi
+if ! command -v "${BCFTOOLS_BIN}" >/dev/null 2>&1; then
+    error_exit "bcftools not found in PATH. Install or load bcftools/1.18-gcc-12.3.0."
+fi
+
 WORK_TMPDIR="${TMPDIR:-$(mktemp -d "${SCRATCH_BASE_PATH%/}/step1c_XXXXXX")}"
 mkdir -p "${WORK_TMPDIR}"
 
@@ -75,7 +84,7 @@ while IFS= read -r vcf_path; do
     base_name="$(basename "${vcf_path}")"
     local_name="${base_name}"
     # Validate VCF structure before copying; if malformed, attempt auto-fix
-    if ! bcftools view -Ov -o /dev/null "${vcf_path}" 2>/dev/null; then
+    if ! "${BCFTOOLS_BIN}" view -Ov -o /dev/null "${vcf_path}" 2>/dev/null; then
         log_warn "VCF failed validation (malformed): ${vcf_path}; attempting to auto-fix with padding."
         if [ ! -x "${FIX_VCF_SCRIPT}" ]; then
             error_exit "Auto-fix script not found or not executable: ${FIX_VCF_SCRIPT}"
