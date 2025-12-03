@@ -787,6 +787,20 @@ From `HPC_MIGRATION_SUMMARY.md` and companions:
 
 - Do not hand-edit malformed consolidated VCFs; rerun Step 1B to produce clean inputs, exclude Chr00 from Step 1C, and keep a preflight validator before Beagle to catch corrupt files early.
 
+### 5.18 Ad-hoc padding for malformed VCF rows (2025‑12‑04)
+
+**Symptom**
+
+- Needed to proceed despite malformed consolidated VCF rows (NF < expected columns) that blocked Beagle.
+
+**Fix**
+
+- Added `modules/step1c/bin/fix_vcf_fill_missing.sh` to patch rows in place: ensures 9+ columns, sets FORMAT to `GT` if missing, and pads sample genotype columns with `./.`. Reports how many rows were patched and their percentage, then bgzips/tabixes the fixed VCF. Integrated into Step 1C job template: malformed VCFs are auto-fixed in the working directory before Beagle runs.
+
+**AI guidance**
+
+- Use the padding script only when upstream regeneration is not feasible; it preserves records by inserting missing genotypes rather than dropping lines. Still prefer rerunning Step 1B/Step 1A when possible.
+
 **AI guidance**
 
 - If you need the master to stay local (e.g., site disallows job-within-job), pass `--no-submit`/`--submit-self=false`.

@@ -43,6 +43,7 @@ else
 fi
 export PIPELINE_ROOT
 STEP1C_MODULE_DIR="${PIPELINE_ROOT}/modules/step1c"
+FIX_VCF_SCRIPT="${STEP1C_MODULE_DIR}/bin/fix_vcf_fill_missing.sh"
 
 source "${PIPELINE_ROOT}/config/pipeline_config.sh"
 source "${PIPELINE_ROOT}/lib/logging.sh"
@@ -71,13 +72,25 @@ rsync -rhivPt "${REFERENCE_FASTA%.*}.dict" "${WORK_TMPDIR}/" || true
 VCF_PREFIXES=()
 while IFS= read -r vcf_path; do
     [ -z "${vcf_path}" ] && continue
-    # Validate VCF structure before copying
+    base_name="$(basename "${vcf_path}")"
+    local_name="${base_name}"
+    # Validate VCF structure before copying; if malformed, attempt auto-fix
     if ! bcftools view -Ov -o /dev/null "${vcf_path}" 2>/dev/null; then
-        error_exit "VCF failed validation (malformed): ${vcf_path}"
+        log_warn "VCF failed validation (malformed): ${vcf_path}; attempting to auto-fix with padding."
+        if [ ! -x "${FIX_VCF_SCRIPT}" ]; then
+            error_exit "Auto-fix script not found or not executable: ${FIX_VCF_SCRIPT}"
+        fi
+        fixed_base="${base_name%.vcf.gz}.fixed.vcf.gz"
+        fixed_path="${WORK_TMPDIR}/${fixed_base}"
+        if ! "${FIX_VCF_SCRIPT}" "${vcf_path}" "${fixed_path}"; then
+            error_exit "Auto-fix failed for ${vcf_path}"
+        fi
+        local_name="${fixed_base}"
+    else
+        rsync -rhivPt "${vcf_path}" "${WORK_TMPDIR}/"
+        rsync -rhivPt "${vcf_path}.tbi" "${WORK_TMPDIR}/" || log_warn "Missing index for ${vcf_path}"
     fi
-    rsync -rhivPt "${vcf_path}" "${WORK_TMPDIR}/"
-    rsync -rhivPt "${vcf_path}.tbi" "${WORK_TMPDIR}/" || log_warn "Missing index for ${vcf_path}"
-    VCF_PREFIXES+=("$(basename "${vcf_path}")")
+    VCF_PREFIXES+=("${local_name}")
 done < "${VCF_MANIFEST}"
 
 LOCAL_MANIFEST="${WORK_TMPDIR}/vcf_manifest.txt"
