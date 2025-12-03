@@ -83,6 +83,8 @@ STEP1C_ACCOUNT=""          # Optional: override default account (leave empty to 
 STEP1C_PARTITION=""       # Optional: override default partition (leave empty to use PIPELINE_SLURM_PARTITION)
 STEP1C_NODES=""           # Optional: override default nodes (leave empty to use PIPELINE_SLURM_NODES)
 STEP1C_NTASKS=""          # Optional: override default ntasks (leave empty to use PIPELINE_SLURM_NTASKS)
+# Beagle self-imputation (true enables impute=true; false = phasing-only/impute=false)
+STEP1C_SELF_IMPUTE="false"
 
 # Step 1D (QC analysis)
 STEP1D_CPUS=16

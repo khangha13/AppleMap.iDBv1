@@ -57,11 +57,30 @@ main() {
         exit 1
     fi
 
+    local phase_default="y"
+    local phase_response
+    read -p "Phasing-only mode? (y/n) [${phase_default}]: " phase_response
+    phase_response=${phase_response:-${phase_default}}
+    phase_response=$(echo "${phase_response}" | tr '[:upper:]' '[:lower:]')
+    local self_impute_flag="false"
+    case "${phase_response}" in
+        y|yes)
+            self_impute_flag="false"
+            ;;
+        n|no)
+            self_impute_flag="true"
+            ;;
+        *)
+            echo "⚠️  Unrecognized response. Defaulting to phasing-only (impute=false)."
+            self_impute_flag="false"
+            ;;
+    esac
+
     echo "\n🗂️  Joint VCFs discovered:"
     find "${rdm_base_path}/7.Consolidated_VCF" -maxdepth 1 -name '*.vcf.gz' -type f | head -n 10 | sed 's/^/  • /'
 
     if confirm_action "Proceed with Step 1C submission?"; then
-        GENE_MAP_FILE="${gene_map}" STEP1C_OUTPUT_DIR="${STEP1C_OUTPUT_DIR}" \
+        GENE_MAP_FILE="${gene_map}" STEP1C_OUTPUT_DIR="${STEP1C_OUTPUT_DIR}" STEP1C_SELF_IMPUTE="${self_impute_flag}" \
             bash "${PIPELINE_ROOT}/wrappers/sbatch/step1c_submit.sh" "${dataset_name}" "${rdm_base_path}"
     else
         echo "Operation cancelled."

@@ -73,10 +73,27 @@ main() {
     local thread_count="${STEP1C_CPUS_PER_TASK:-8}"
     local memory_string="${STEP1C_MEMORY:-48G}"
     local memory_gb="${memory_string%G}"
+    local self_impute="${STEP1C_SELF_IMPUTE:-false}"
+    local self_impute_lc
+    self_impute_lc="$(echo "${self_impute}" | tr '[:upper:]' '[:lower:]')"
+    local impute_flag
+    case "${self_impute_lc}" in
+        true|1|yes|y)
+            impute_flag="true"
+            ;;
+        false|0|no|n|"")
+            impute_flag="false"
+            ;;
+        *)
+            log_warn "Unrecognized STEP1C_SELF_IMPUTE=${self_impute}; defaulting to false (phasing-only)."
+            impute_flag="false"
+            ;;
+    esac
+    log_info "Step 1C Beagle mode: self-impute=${impute_flag}"
 
     local cmd_args=("${rdm_base_path}" "${manifest_file}" "${output_dir}" "${reference_genome}"
                     "${gene_map_file}" "${dataset_name}_beagle" "${thread_count}"
-                    "${memory_gb}")
+                    "${memory_gb}" "${impute_flag}")
 
     local job_id
     job_id=$(submit_job "${slurm_script}" "${cmd_args[*]}" "${dataset_name}" "1C")

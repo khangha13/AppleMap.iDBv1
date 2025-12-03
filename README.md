@@ -68,6 +68,7 @@ bash bin/gatk_pipeline.sh -d <dataset> -s 1b      # 1a/1b/1c/1d/full/auto
 - Consumes consolidated VCFs from `7.Consolidated_VCF/`; writes imputed outputs to `8.Imputated_VCF_BEAGLE/` (override with `STEP1C_OUTPUT_DIR`).
 - Submit: `bash wrappers/sbatch/step1c_submit.sh <dataset> <rdm_base>`.
 - Defaults: 8 CPUs, 48G, 48h.
+- Imputation toggle: `STEP1C_SELF_IMPUTE` (default `false`) controls Beagle's `impute=` flag (`false` = phasing-only; `true` = impute untyped markers).
 - Outputs: Beagle-imputed VCFs + `.tbi` in `8.Imputated_VCF_BEAGLE/`.
 
 ### Step 1D – QC and PCA
@@ -100,6 +101,7 @@ Use these when you want to drive a single module yourself rather than letting th
 - Slurm wrapper:  
   `bash wrappers/sbatch/step1c_submit.sh <dataset> <rdm_base>`
   - Consumes `7.Consolidated_VCF/`; output goes to `8.Imputated_VCF_BEAGLE/` unless `STEP1C_OUTPUT_DIR` is set.
+  - Imputation toggle: export `STEP1C_SELF_IMPUTE=true` to run Beagle with `impute=true`; default `false` (phasing-only/impute=false). Interactive wrapper prompts `Phasing-only mode? (y/n)`.
 - Interactive helper: `bash wrappers/interactive/step1c_interactive.sh`
   - Prompts for dataset and launches imputation.
 

@@ -110,6 +110,7 @@ Each major step can override CPUs, memory, time limits, and array settings.
 | `STEP1C_PARTITION` | `PIPELINE_SLURM_PARTITION` | Partition. |
 | `STEP1C_NODES` | `PIPELINE_SLURM_NODES` | Nodes per job. |
 | `STEP1C_NTASKS` | `PIPELINE_SLURM_NTASKS` | Tasks per job. |
+| `STEP1C_SELF_IMPUTE` | `false` | Controls Beagle `impute=` flag. `false` = phasing-only (`impute=false`); `true` = self-impute untyped markers (`impute=true`). |
 
 Actual imputation logic and Beagle-specific tuning currently live in `modules/step1c/templates/step1c_job.sh`.
 
@@ -368,5 +369,4 @@ There are three common ways to change pipeline behaviour:
    - Changes here will affect all subsequent runs unless overridden by environment variables.
 
 When in doubt, prefer setting values in `environment.sh` for site-specific paths and in `pipeline_config.sh` for logical defaults, and reserve per-job exports for exceptional cases.
-
 

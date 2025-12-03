@@ -10,6 +10,21 @@ GENE_MAP_FILE="$5"
 OUTPUT_PREFIX="$6"
 THREADS="$7"
 MEMORY_GB="$8"
+IMPUTE_FLAG="${9:-false}"
+
+impute_flag_lc="$(echo "${IMPUTE_FLAG}" | tr '[:upper:]' '[:lower:]')"
+case "${impute_flag_lc}" in
+    true|1|yes|y)
+        IMPUTE_FLAG="true"
+        ;;
+    false|0|no|n|"")
+        IMPUTE_FLAG="false"
+        ;;
+    *)
+        echo "[step1c_job] ⚠️  Unrecognized impute flag '${IMPUTE_FLAG}', defaulting to false (phasing-only)." >&2
+        IMPUTE_FLAG="false"
+        ;;
+esac
 
 if [ -n "${PIPELINE_ROOT:-}" ]; then
     if [ -d "${PIPELINE_ROOT}" ]; then
@@ -29,6 +44,7 @@ source "${PIPELINE_ROOT}/lib/logging.sh"
 source "${STEP1C_MODULE_DIR}/lib/functions.sh"
 
 init_logging "step1c" "job"
+log_info "Beagle impute flag: ${IMPUTE_FLAG} (false = phasing-only)"
 
 # Load Beagle (fixed version for pipeline reproducibility)
 module load beagle/5.4.22jul22.46e-java-11 >/dev/null 2>&1 || log_warn "Unable to load beagle/5.4.22jul22.46e-java-11 module; ensure beagle.jar is accessible."
@@ -75,6 +91,7 @@ java ${JAVA_MEM} -jar "${BEAGLE_JAR}" \
     gt="${LOCAL_MANIFEST}" \
     out="${WORK_TMPDIR}/${OUTPUT_PREFIX}" \
     nthreads="${THREADS}" \
+    impute="${IMPUTE_FLAG}" \
     window=3 overlap=0.3 ne=100000 seed=2025 \
     ${local_map_arg}
 
