@@ -1,7 +1,5 @@
-[uqpha1@bunya2 logs]$ cd test_20251202_150542/
-[uqpha1@bunya2 test_20251202_150542]$ ls
-GATK_master_script_18404021.error  GATK_master_script_18404021.output  pipeline_gatk_master_20251202_150613.log  pipeline_step1a_20251202_150614.log  step1a_failed.flag
-[uqpha1@bunya2 test_20251202_150542]$ cat GATK_master_script_18404021*
+[uqpha1@bunya2 test_20251202_150904]$ for f in GATK_master_script_1840431*; do echo "this is ${f}"; cat $f;  echo "---"; done 
+this is GATK_master_script_18404311.error
 [pipeline_config] ⚠️  PIPELINE_CONFIG_SOURCED was true but required paths were empty; reloading config.
 [pipeline_config] ℹ️  Environment source: /home/uqpha1/AppleMap.iDBv1/config/environment.sh
 [pipeline_config] ℹ️  PIPELINE_REFERENCE_FASTA: /QRISdata/Q8367/Reference_Genome/GDDH13_1-1_formatted.fasta
@@ -9,23 +7,205 @@ GATK_master_script_18404021.error  GATK_master_script_18404021.output  pipeline_
 [pipeline_config] ℹ️  PIPELINE_KNOWN_SITES_VCF: /QRISdata/Q8367/Known_Sites/Final_DB_Known-sites_Filtered_by_480K_Unique_HD.vcf
 [pipeline_config] ℹ️  Set REFERENCE_GENOME from PIPELINE_REFERENCE_FASTA: /QRISdata/Q8367/Reference_Genome/GDDH13_1-1_formatted.fasta
 [gatk_pipeline.sh] Warning: pipeline_state_dir not found after sourcing libs; defining fallback.
-[2025-12-02 15:06:13] [INFO] [gatk_master] Logging system initialized for module: gatk_master
-[2025-12-02 15:06:13] [INFO] [gatk_master] Log type: pipeline
-[2025-12-02 15:06:13] [INFO] [gatk_master] Log file: /scratch/project/bigdata_apple/logs/test_20251202_150542/pipeline_gatk_master_20251202_150613.log
-[2025-12-02 15:06:13] [INFO] [gatk_master] Log level: INFO
-[2025-12-02 15:06:14] [INFO] [gatk_master] Master logging directory: /scratch/project/bigdata_apple/logs/test_20251202_150542
-[2025-12-02 15:06:14] [INFO] [gatk_master] 🧬 GATK master loop for dataset: test
-[2025-12-02 15:06:14] [INFO] [gatk_master] 🧬 GATK master loop for dataset: test
-[2025-12-02 15:06:14] [INFO] [gatk_master] RDM base: /QRISdata/Q8367/WGS_Reference_Panel/test
-[2025-12-02 15:06:14] [INFO] [gatk_master] RDM base: /QRISdata/Q8367/WGS_Reference_Panel/test
-[2025-12-02 15:06:14] [INFO] [gatk_master] SLURM_JOB_ID: 18404021
-[2025-12-02 15:06:14] [INFO] [gatk_master] SLURM_JOB_ID: 18404021
-[2025-12-02 15:06:14] [INFO] [gatk_master] Interactive request detected: step1a
-[2025-12-02 15:06:14] [INFO] [gatk_master] Interactive request detected: step1a
-[2025-12-02 15:06:14] [INFO] [gatk_master] 🚀 Running Step 1A per user request...
-[2025-12-02 15:06:14] [INFO] [gatk_master] 🚀 Running Step 1A per user request...
-[2025-12-02 15:06:14] [INFO] [gatk_master] Shared reference assets already prepared at /scratch/project/bigdata_apple/test_shared
-[2025-12-02 15:06:14] [INFO] [gatk_master] Shared reference assets already prepared at /scratch/project/bigdata_apple/test_shared
+[2025-12-02 15:09:17] [INFO] [gatk_master] Logging system initialized for module: gatk_master
+[2025-12-02 15:09:17] [INFO] [gatk_master] Log type: pipeline
+[2025-12-02 15:09:17] [INFO] [gatk_master] Log file: /scratch/project/bigdata_apple/logs/test_20251202_150904/pipeline_gatk_master_20251202_150917.log
+[2025-12-02 15:09:17] [INFO] [gatk_master] Log level: INFO
+[2025-12-02 15:09:17] [INFO] [gatk_master] Master logging directory: /scratch/project/bigdata_apple/logs/test_20251202_150904
+[2025-12-02 15:09:17] [INFO] [gatk_master] 🧬 GATK master loop for dataset: test
+[2025-12-02 15:09:17] [INFO] [gatk_master] 🧬 GATK master loop for dataset: test
+[2025-12-02 15:09:17] [INFO] [gatk_master] RDM base: /QRISdata/Q8367/WGS_Reference_Panel/test
+[2025-12-02 15:09:17] [INFO] [gatk_master] RDM base: /QRISdata/Q8367/WGS_Reference_Panel/test
+[2025-12-02 15:09:17] [INFO] [gatk_master] SLURM_JOB_ID: 18404311
+[2025-12-02 15:09:17] [INFO] [gatk_master] SLURM_JOB_ID: 18404311
+[2025-12-02 15:09:17] [INFO] [gatk_master] Interactive request detected: step1a
+[2025-12-02 15:09:17] [INFO] [gatk_master] Interactive request detected: step1a
+[2025-12-02 15:09:17] [INFO] [gatk_master] 🚀 Running Step 1A per user request...
+[2025-12-02 15:09:17] [INFO] [gatk_master] 🚀 Running Step 1A per user request...
+[2025-12-02 15:09:17] [INFO] [gatk_master] Shared reference assets already prepared at /scratch/project/bigdata_apple/test_shared
+[2025-12-02 15:09:17] [INFO] [gatk_master] Shared reference assets already prepared at /scratch/project/bigdata_apple/test_shared
+[pipeline_config] ⚠️  PIPELINE_CONFIG_SOURCED was true but required paths were empty; reloading config.
+[pipeline_config] ⚠️  PIPELINE_CONFIG_SOURCED was true but required paths were empty; reloading config.
+[pipeline_config] ℹ️  Environment source: /home/uqpha1/AppleMap.iDBv1/config/environment.sh
+[pipeline_config] ℹ️  Environment source: /home/uqpha1/AppleMap.iDBv1/config/environment.sh
+[pipeline_config] ℹ️  PIPELINE_REFERENCE_FASTA: /QRISdata/Q8367/Reference_Genome/GDDH13_1-1_formatted.fasta
+[pipeline_config] ℹ️  PIPELINE_ADAPTER_FASTA: /QRISdata/Q8367/Liao_2021_adapter/TruSeq2-PE.fa
+[pipeline_config] ℹ️  PIPELINE_KNOWN_SITES_VCF: /QRISdata/Q8367/Known_Sites/Final_DB_Known-sites_Filtered_by_480K_Unique_HD.vcf
+[pipeline_config] ℹ️  PIPELINE_REFERENCE_FASTA: /QRISdata/Q8367/Reference_Genome/GDDH13_1-1_formatted.fasta
+[pipeline_config] ℹ️  PIPELINE_ADAPTER_FASTA: /QRISdata/Q8367/Liao_2021_adapter/TruSeq2-PE.fa
+[pipeline_config] ℹ️  PIPELINE_KNOWN_SITES_VCF: /QRISdata/Q8367/Known_Sites/Final_DB_Known-sites_Filtered_by_480K_Unique_HD.vcf
+[pipeline_config] ℹ️  Set REFERENCE_GENOME from PIPELINE_REFERENCE_FASTA: /QRISdata/Q8367/Reference_Genome/GDDH13_1-1_formatted.fasta
+[pipeline_config] ℹ️  Set REFERENCE_GENOME from PIPELINE_REFERENCE_FASTA: /QRISdata/Q8367/Reference_Genome/GDDH13_1-1_formatted.fasta
+[2025-12-02 15:09:17] [INFO] [step1a] Logging system initialized for module: step1a
+[2025-12-02 15:09:17] [INFO] [step1a] Logging system initialized for module: step1a
+[2025-12-02 15:09:17] [INFO] [step1a] Log type: pipeline
+[2025-12-02 15:09:17] [INFO] [step1a] Log type: pipeline
+[2025-12-02 15:09:17] [INFO] [step1a] Log file: /scratch/project/bigdata_apple/logs/test_20251202_150904/pipeline_step1a_20251202_150917.log
+[2025-12-02 15:09:17] [INFO] [step1a] Log file: /scratch/project/bigdata_apple/logs/test_20251202_150904/pipeline_step1a_20251202_150917.log
+[2025-12-02 15:09:17] [INFO] [step1a] Log level: INFO
+[2025-12-02 15:09:17] [INFO] [step1a] Log level: INFO
+[2025-12-02 15:09:17] [INFO] [step1a] Starting Step 1A execution
+[2025-12-02 15:09:17] [INFO] [step1a] Starting Step 1A execution
+[2025-12-02 15:09:17] [INFO] [step1a] Dataset: test
+[2025-12-02 15:09:17] [INFO] [step1a] Dataset: test
+[2025-12-02 15:09:17] [INFO] [step1a] RDM Base Path: /QRISdata/Q8367/WGS_Reference_Panel/test
+[2025-12-02 15:09:17] [INFO] [step1a] RDM Base Path: /QRISdata/Q8367/WGS_Reference_Panel/test
+[2025-12-02 15:09:17] [INFO] [step1a] Validating Step 1A inputs
+[2025-12-02 15:09:17] [INFO] [step1a] Validating Step 1A inputs
+[2025-12-02 15:09:17] [INFO] [step1a] Validating directory structure for: /QRISdata/Q8367/WGS_Reference_Panel/test
+[2025-12-02 15:09:17] [INFO] [step1a] Validating directory structure for: /QRISdata/Q8367/WGS_Reference_Panel/test
+[2025-12-02 15:09:17] [INFO] [step1a] ✓ Directory exists: 1.FASTQ
+[2025-12-02 15:09:17] [INFO] [step1a] ✓ Directory exists: 1.FASTQ
+[2025-12-02 15:09:17] [INFO] [step1a] ✓ Directory exists: 2.FASTQC_pre_trimmed
+[2025-12-02 15:09:17] [INFO] [step1a] ✓ Directory exists: 2.FASTQC_pre_trimmed
+[2025-12-02 15:09:17] [INFO] [step1a] ✓ Directory exists: 3.FASTQC_post_trimmed
+[2025-12-02 15:09:17] [INFO] [step1a] ✓ Directory exists: 3.FASTQC_post_trimmed
+[2025-12-02 15:09:17] [INFO] [step1a] ✗ Missing directory: 4.BAM
+[2025-12-02 15:09:17] [INFO] [step1a] ✗ Missing directory: 4.BAM
+[2025-12-02 15:09:17] [INFO] [step1a] ✗ Missing directory: 5.Individual_VCF
+[2025-12-02 15:09:17] [INFO] [step1a] ✗ Missing directory: 5.Individual_VCF
+[2025-12-02 15:09:17] [INFO] [step1a] ✗ Missing directory: 6.genomicsdb_output
+[2025-12-02 15:09:17] [INFO] [step1a] ✗ Missing directory: 6.genomicsdb_output
+[2025-12-02 15:09:17] [INFO] [step1a] ✗ Missing directory: 7.Consolidated_VCF
+[2025-12-02 15:09:17] [INFO] [step1a] ✗ Missing directory: 7.Consolidated_VCF
+[2025-12-02 15:09:17] [INFO] [step1a] ✗ Missing directory: 8.Imputated_VCF_BEAGLE
+[2025-12-02 15:09:17] [INFO] [step1a] ✗ Missing directory: 8.Imputated_VCF_BEAGLE
+[2025-12-02 15:09:17] [INFO] [step1a] ✗ Missing directory: 9.Imputation_QC
+[2025-12-02 15:09:17] [INFO] [step1a] ✗ Missing directory: 9.Imputation_QC
+[2025-12-02 15:09:17] [INFO] [step1a] ✓ Found 2 paired-end sample files
+[2025-12-02 15:09:17] [INFO] [step1a] ✓ Found 2 paired-end sample files
+[2025-12-02 15:09:17] [INFO] [step1a] Step 1A input validation completed successfully
+[2025-12-02 15:09:17] [INFO] [step1a] Step 1A input validation completed successfully
+[2025-12-02 15:09:17] [INFO] [step1a] Shared reference assets already prepared at /scratch/project/bigdata_apple/test_shared
+[2025-12-02 15:09:17] [INFO] [step1a] Shared reference assets already prepared at /scratch/project/bigdata_apple/test_shared
+[2025-12-02 15:09:17] [INFO] [step1a] Scanning for sample files in: /QRISdata/Q8367/WGS_Reference_Panel/test/1.FASTQ
+[2025-12-02 15:09:17] [INFO] [step1a] Scanning for sample files in: /QRISdata/Q8367/WGS_Reference_Panel/test/1.FASTQ
+[2025-12-02 15:09:17] [INFO] [step1a] ✓ Valid sample: DRR183255
+[2025-12-02 15:09:17] [INFO] [step1a] ✓ Valid sample: DRR183255
+[2025-12-02 15:09:17] [INFO] [step1a] ✓ Valid sample: ERR6909357
+[2025-12-02 15:09:17] [INFO] [step1a] ✓ Valid sample: ERR6909357
+[2025-12-02 15:09:17] [INFO] [step1a] ✓ Created sample list with 2 samples: /scratch/project/bigdata_apple/gatk_pipeline/work/step1a/test/sample_list_test_20251202_150917.txt
+[2025-12-02 15:09:17] [INFO] [step1a] ✓ Created sample list with 2 samples: /scratch/project/bigdata_apple/gatk_pipeline/work/step1a/test/sample_list_test_20251202_150917.txt
+[2025-12-02 15:09:17] [INFO] [step1a] Checking pipeline completion status...
+[2025-12-02 15:09:17] [INFO] [step1a] Checking pipeline completion status...
+[2025-12-02 15:09:17] [INFO] [step1a] Pipeline completion summary - Completed: 0, Incomplete: 2, Total: 2
+[2025-12-02 15:09:17] [INFO] [step1a] Pipeline completion summary - Completed: 0, Incomplete: 2, Total: 2
+[2025-12-02 15:09:17] [INFO] [step1a] No samples are complete - proceeding with full Step 1A run
+[2025-12-02 15:09:17] [INFO] [step1a] No samples are complete - proceeding with full Step 1A run
+[2025-12-02 15:09:17] [INFO] [step1a] Creating Step 1A SLURM script
+[2025-12-02 15:09:17] [INFO] [step1a] Creating Step 1A SLURM script
+[2025-12-02 15:09:19] [INFO] [step1a] Creating SLURM script: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1A_test_20251202_150919.sh
+[2025-12-02 15:09:19] [INFO] [step1a] Creating SLURM script: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1A_test_20251202_150919.sh
+[2025-12-02 15:09:19] [INFO] [step1a] ✓ Created SLURM script: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1A_test_20251202_150919.sh
+[2025-12-02 15:09:19] [INFO] [step1a] ✓ Created SLURM script: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1A_test_20251202_150919.sh
+[2025-12-02 15:09:19] [INFO] [step1a]   Job name: Apple_GATK_1A_test
+[2025-12-02 15:09:19] [INFO] [step1a]   Job name: Apple_GATK_1A_test
+[2025-12-02 15:09:19] [INFO] [step1a]   Array range: 0-1
+[2025-12-02 15:09:19] [INFO] [step1a]   Array range: 0-1
+[2025-12-02 15:09:19] [INFO] [step1a]   SLURM config: 10 CPUs, 32G RAM, 200:00:00 time
+[2025-12-02 15:09:19] [INFO] [step1a]   SLURM config: 10 CPUs, 32G RAM, 200:00:00 time
+[2025-12-02 15:09:19] [INFO] [step1a] Waiting 2 seconds for filesystem sync...
+[2025-12-02 15:09:19] [INFO] [step1a] Waiting 2 seconds for filesystem sync...
+[2025-12-02 15:09:21] [INFO] [step1a] Submitting 1A job: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1A_test_20251202_150919.sh with parameters: /QRISdata/Q8367/WGS_Reference_Panel/test /scratch/project/bigdata_apple/gatk_pipeline/work/step1a/test/sample_list_test_20251202_150917.txt
+[2025-12-02 15:09:21] [INFO] [step1a] Submitting 1A job: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1A_test_20251202_150919.sh with parameters: /QRISdata/Q8367/WGS_Reference_Panel/test /scratch/project/bigdata_apple/gatk_pipeline/work/step1a/test/sample_list_test_20251202_150917.txt
+[2025-12-02 15:09:21] [INFO] [step1a] Created SLURM log directory: /scratch/project/bigdata_apple/logs/test
+[2025-12-02 15:09:21] [INFO] [step1a] Created SLURM log directory: /scratch/project/bigdata_apple/logs/test
+[2025-12-02 15:09:21] [INFO] [step1a] 1A job submitted successfully - Job ID: 18404352
+[2025-12-02 15:09:21] [INFO] [step1a] 1A job submitted successfully - Job ID: 18404352
+[2025-12-02 15:09:21] [INFO] [step1a] SLURM job submitted successfully
+[2025-12-02 15:09:21] [INFO] [step1a] SLURM job submitted successfully
+[2025-12-02 15:09:21] [INFO] [step1a] Job ID: 18404352
+[2025-12-02 15:09:21] [INFO] [step1a] Job ID: 18404352
+[2025-12-02 15:09:21] [INFO] [step1a] SLURM script: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1A_test_20251202_150919.sh
+[2025-12-02 15:09:21] [INFO] [step1a] SLURM script: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1A_test_20251202_150919.sh
+[2025-12-02 15:09:21] [INFO] [step1a] Sample count: 2
+[2025-12-02 15:09:21] [INFO] [step1a] Sample count: 2
+[2025-12-02 15:09:21] [INFO] [step1a] SLURM log directory: /scratch/project/bigdata_apple/logs/test
+[2025-12-02 15:09:21] [INFO] [step1a] SLURM log directory: /scratch/project/bigdata_apple/logs/test
+[2025-12-02 15:09:21] [INFO] [step1a] Monitor with: squeue -u $USER
+[2025-12-02 15:09:21] [INFO] [step1a] Monitor with: squeue -u $USER
+[2025-12-02 15:09:21] [INFO] [step1a] Cancel with: scancel 18404352
+[2025-12-02 15:09:21] [INFO] [step1a] Cancel with: scancel 18404352
+[2025-12-02 15:09:21] [INFO] [step1a] View SLURM logs: ls /scratch/project/bigdata_apple/logs/test/
+[2025-12-02 15:09:21] [INFO] [step1a] View SLURM logs: ls /scratch/project/bigdata_apple/logs/test/
+[2025-12-02 15:09:21] [INFO] [step1a] Job tracking file created: /scratch/project/bigdata_apple/logs/test/job_18404352.info
+[2025-12-02 15:09:21] [INFO] [step1a] Job tracking file created: /scratch/project/bigdata_apple/logs/test/job_18404352.info
+[2025-12-02 15:09:21] [INFO] [step1a] Recorded Step 1A job ID to /scratch/project/bigdata_apple/logs/test/step1a_job_id.txt
+[2025-12-02 15:09:21] [INFO] [step1a] Recorded Step 1A job ID to /scratch/project/bigdata_apple/logs/test/step1a_job_id.txt
+[2025-12-02 15:09:21] [INFO] [gatk_master] … Step 1A still running (job IDs from /scratch/project/bigdata_apple/logs/test/step1a_job_id.txt)
+[2025-12-02 15:09:21] [INFO] [gatk_master] … Step 1A still running (job IDs from /scratch/project/bigdata_apple/logs/test/step1a_job_id.txt)
+[2025-12-02 15:11:51] [INFO] [gatk_master] … Step 1A still running (job IDs from /scratch/project/bigdata_apple/logs/test/step1a_job_id.txt)
+[2025-12-02 15:11:51] [INFO] [gatk_master] … Step 1A still running (job IDs from /scratch/project/bigdata_apple/logs/test/step1a_job_id.txt)
+[2025-12-02 15:14:21] [INFO] [gatk_master] … Step 1A still running (job IDs from /scratch/project/bigdata_apple/logs/test/step1a_job_id.txt)
+[2025-12-02 15:14:21] [INFO] [gatk_master] … Step 1A still running (job IDs from /scratch/project/bigdata_apple/logs/test/step1a_job_id.txt)
+[2025-12-02 15:16:53] [INFO] [gatk_master] … Step 1A still running (job IDs from /scratch/project/bigdata_apple/logs/test/step1a_job_id.txt)
+[2025-12-02 15:16:53] [INFO] [gatk_master] … Step 1A still running (job IDs from /scratch/project/bigdata_apple/logs/test/step1a_job_id.txt)
+[2025-12-02 15:19:26] [INFO] [gatk_master] … Step 1A still running (job IDs from /scratch/project/bigdata_apple/logs/test/step1a_job_id.txt)
+[2025-12-02 15:19:26] [INFO] [gatk_master] … Step 1A still running (job IDs from /scratch/project/bigdata_apple/logs/test/step1a_job_id.txt)
+[2025-12-02 15:20:27] [INFO] [gatk_master] Checking Step 1A completion status...
+[2025-12-02 15:20:27] [INFO] [gatk_master] Checking Step 1A completion status...
+[2025-12-02 15:20:27] [INFO] [gatk_master] Step 1A complete: 2 genotyped VCF files
+[2025-12-02 15:20:27] [INFO] [gatk_master] Step 1A complete: 2 genotyped VCF files
+[2025-12-02 15:20:27] [INFO] [gatk_master] Step 1A outputs verified as complete.
+[2025-12-02 15:20:27] [INFO] [gatk_master] Step 1A outputs verified as complete.
+[2025-12-02 15:20:27] [INFO] [gatk_master] Checking Step 1A completion status...
+[2025-12-02 15:20:27] [INFO] [gatk_master] Checking Step 1A completion status...
+[2025-12-02 15:20:27] [INFO] [gatk_master] Step 1A complete: 2 genotyped VCF files
+[2025-12-02 15:20:27] [INFO] [gatk_master] Step 1A complete: 2 genotyped VCF files
+[2025-12-02 15:20:27] [INFO] [gatk_master] ✅ Step 1A already complete.
+[2025-12-02 15:20:27] [INFO] [gatk_master] ✅ Step 1A already complete.
+[2025-12-02 15:20:27] [INFO] [gatk_master] Checking Step 1B completion status...
+[2025-12-02 15:20:27] [INFO] [gatk_master] Checking Step 1B completion status...
+[2025-12-02 15:20:27] [WARN] [gatk_master] Step 1B directory does not exist: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF
+[2025-12-02 15:20:27] [WARN] [gatk_master] Step 1B directory does not exist: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF
+[2025-12-02 15:20:27] [INFO] [gatk_master] 🚀 Submitting Step 1B…
+[2025-12-02 15:20:27] [INFO] [gatk_master] 🚀 Submitting Step 1B…
+[2025-12-02 15:20:27] [INFO] [gatk_master] Shared reference assets already prepared at /scratch/project/bigdata_apple/test_shared
+[2025-12-02 15:20:27] [INFO] [gatk_master] Shared reference assets already prepared at /scratch/project/bigdata_apple/test_shared
+[pipeline_config] ⚠️  PIPELINE_CONFIG_SOURCED was true but required paths were empty; reloading config.
+[pipeline_config] ⚠️  PIPELINE_CONFIG_SOURCED was true but required paths were empty; reloading config.
+[pipeline_config] ℹ️  Environment source: /home/uqpha1/AppleMap.iDBv1/config/environment.sh
+[pipeline_config] ℹ️  Environment source: /home/uqpha1/AppleMap.iDBv1/config/environment.sh
+[pipeline_config] ℹ️  PIPELINE_REFERENCE_FASTA: /QRISdata/Q8367/Reference_Genome/GDDH13_1-1_formatted.fasta
+[pipeline_config] ℹ️  PIPELINE_ADAPTER_FASTA: /QRISdata/Q8367/Liao_2021_adapter/TruSeq2-PE.fa
+[pipeline_config] ℹ️  PIPELINE_KNOWN_SITES_VCF: /QRISdata/Q8367/Known_Sites/Final_DB_Known-sites_Filtered_by_480K_Unique_HD.vcf
+[pipeline_config] ℹ️  PIPELINE_REFERENCE_FASTA: /QRISdata/Q8367/Reference_Genome/GDDH13_1-1_formatted.fasta
+[pipeline_config] ℹ️  PIPELINE_ADAPTER_FASTA: /QRISdata/Q8367/Liao_2021_adapter/TruSeq2-PE.fa
+[pipeline_config] ℹ️  PIPELINE_KNOWN_SITES_VCF: /QRISdata/Q8367/Known_Sites/Final_DB_Known-sites_Filtered_by_480K_Unique_HD.vcf
+[pipeline_config] ℹ️  Set REFERENCE_GENOME from PIPELINE_REFERENCE_FASTA: /QRISdata/Q8367/Reference_Genome/GDDH13_1-1_formatted.fasta
+[pipeline_config] ℹ️  Set REFERENCE_GENOME from PIPELINE_REFERENCE_FASTA: /QRISdata/Q8367/Reference_Genome/GDDH13_1-1_formatted.fasta
+[2025-12-02 15:20:27] [INFO] [gatk_master] Waiting for Step 1B to complete (poll 30s)...
+[2025-12-02 15:20:27] [INFO] [gatk_master] Waiting for Step 1B to complete (poll 30s)...
+[2025-12-02 15:20:27] [INFO] [gatk_master] Checking Step 1B completion status...
+[2025-12-02 15:20:27] [INFO] [gatk_master] Checking Step 1B completion status...
+[2025-12-02 15:20:27] [WARN] [gatk_master] Step 1B directory does not exist: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF
+[2025-12-02 15:20:27] [WARN] [gatk_master] Step 1B directory does not exist: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF
+[2025-12-02 15:20:27] [INFO] [gatk_master] … Step 1B status: Not Started @ Tue Dec  2 15:20:27 AEST 2025 (stall 1/10)
+[2025-12-02 15:20:27] [INFO] [gatk_master] … Step 1B status: Not Started @ Tue Dec  2 15:20:27 AEST 2025 (stall 1/10)
+[2025-12-02 15:20:57] [INFO] [gatk_master] Checking Step 1B completion status...
+[2025-12-02 15:20:57] [INFO] [gatk_master] Checking Step 1B completion status...
+[2025-12-02 15:20:57] [WARN] [gatk_master] Step 1B directory does not exist: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF
+[2025-12-02 15:20:57] [WARN] [gatk_master] Step 1B directory does not exist: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF
+[2025-12-02 15:20:57] [INFO] [gatk_master] … Step 1B status: Not Started @ Tue Dec  2 15:20:57 AEST 2025 (stall 2/10)
+[2025-12-02 15:20:57] [INFO] [gatk_master] … Step 1B status: Not Started @ Tue Dec  2 15:20:57 AEST 2025 (stall 2/10)
+[2025-12-02 15:21:27] [INFO] [gatk_master] Checking Step 1B completion status...
+[2025-12-02 15:21:27] [INFO] [gatk_master] Checking Step 1B completion status...
+[2025-12-02 15:21:27] [INFO] [gatk_master] Step 1B still running (tracking flag: /scratch/project/bigdata_apple/logs/test_20251202_150904/step1b_running.flag)
+[2025-12-02 15:21:27] [INFO] [gatk_master] Step 1B still running (tracking flag: /scratch/project/bigdata_apple/logs/test_20251202_150904/step1b_running.flag)
+[2025-12-02 15:21:27] [WARN] [gatk_master] … Step 1B status (unknown='Running'), waiting… @ Tue Dec  2 15:21:27 AEST 2025 (stall 3/10)
+[2025-12-02 15:21:27] [WARN] [gatk_master] … Step 1B status (unknown='Running'), waiting… @ Tue Dec  2 15:21:27 AEST 2025 (stall 3/10)
+[2025-12-02 15:21:57] [INFO] [gatk_master] Checking Step 1B completion status...
+[2025-12-02 15:21:57] [INFO] [gatk_master] Checking Step 1B completion status...
+[2025-12-02 15:21:57] [INFO] [gatk_master] Step 1B complete: 10 consolidated VCF files
+[2025-12-02 15:21:57] [INFO] [gatk_master] Step 1B complete: 10 consolidated VCF files
+[2025-12-02 15:21:58] [INFO] [gatk_master] ✅ Step 1B complete.
+[2025-12-02 15:21:58] [INFO] [gatk_master] ✅ Step 1B complete.
+[2025-12-02 15:21:58] [INFO] [gatk_master] Checking Step 1C (Beagle) completion status...
+[2025-12-02 15:21:58] [INFO] [gatk_master] Checking Step 1C (Beagle) completion status...
+[2025-12-02 15:21:58] [WARN] [gatk_master] Step 1C output directory does not exist: /QRISdata/Q8367/WGS_Reference_Panel/test/8.Imputated_VCF_BEAGLE
+[2025-12-02 15:21:58] [WARN] [gatk_master] Step 1C output directory does not exist: /QRISdata/Q8367/WGS_Reference_Panel/test/8.Imputated_VCF_BEAGLE
+[2025-12-02 15:21:58] [INFO] [gatk_master] 🚀 Submitting Step 1C…
+[2025-12-02 15:21:58] [INFO] [gatk_master] 🚀 Submitting Step 1C…
 [pipeline_config] ⚠️  PIPELINE_CONFIG_SOURCED was true but required paths were empty; reloading config.
 [pipeline_config] ⚠️  PIPELINE_CONFIG_SOURCED was true but required paths were empty; reloading config.
 [pipeline_config] ℹ️  Environment source: /home/uqpha1/AppleMap.iDBv1/config/environment.sh
@@ -38,108 +218,28 @@ GATK_master_script_18404021.error  GATK_master_script_18404021.output  pipeline_
 [pipeline_config] ℹ️  PIPELINE_KNOWN_SITES_VCF: /QRISdata/Q8367/Known_Sites/Final_DB_Known-sites_Filtered_by_480K_Unique_HD.vcf
 [pipeline_config] ℹ️  Set REFERENCE_GENOME from PIPELINE_REFERENCE_FASTA: /QRISdata/Q8367/Reference_Genome/GDDH13_1-1_formatted.fasta
 [pipeline_config] ℹ️  Set REFERENCE_GENOME from PIPELINE_REFERENCE_FASTA: /QRISdata/Q8367/Reference_Genome/GDDH13_1-1_formatted.fasta
-[2025-12-02 15:06:14] [INFO] [step1a] Logging system initialized for module: step1a
-[2025-12-02 15:06:14] [INFO] [step1a] Logging system initialized for module: step1a
-[2025-12-02 15:06:14] [INFO] [step1a] Log type: pipeline
-[2025-12-02 15:06:14] [INFO] [step1a] Log type: pipeline
-[2025-12-02 15:06:14] [INFO] [step1a] Log file: /scratch/project/bigdata_apple/logs/test_20251202_150542/pipeline_step1a_20251202_150614.log
-[2025-12-02 15:06:14] [INFO] [step1a] Log file: /scratch/project/bigdata_apple/logs/test_20251202_150542/pipeline_step1a_20251202_150614.log
-[2025-12-02 15:06:14] [INFO] [step1a] Log level: INFO
-[2025-12-02 15:06:14] [INFO] [step1a] Log level: INFO
-[2025-12-02 15:06:14] [INFO] [step1a] Starting Step 1A execution
-[2025-12-02 15:06:14] [INFO] [step1a] Starting Step 1A execution
-[2025-12-02 15:06:14] [INFO] [step1a] Dataset: test
-[2025-12-02 15:06:14] [INFO] [step1a] Dataset: test
-[2025-12-02 15:06:14] [INFO] [step1a] RDM Base Path: /QRISdata/Q8367/WGS_Reference_Panel/test
-[2025-12-02 15:06:14] [INFO] [step1a] RDM Base Path: /QRISdata/Q8367/WGS_Reference_Panel/test
-[2025-12-02 15:06:14] [INFO] [step1a] Validating Step 1A inputs
-[2025-12-02 15:06:14] [INFO] [step1a] Validating Step 1A inputs
-[2025-12-02 15:06:14] [INFO] [step1a] Validating directory structure for: /QRISdata/Q8367/WGS_Reference_Panel/test
-[2025-12-02 15:06:14] [INFO] [step1a] Validating directory structure for: /QRISdata/Q8367/WGS_Reference_Panel/test
-[2025-12-02 15:06:14] [INFO] [step1a] ✓ Directory exists: 1.FASTQ
-[2025-12-02 15:06:14] [INFO] [step1a] ✓ Directory exists: 1.FASTQ
-[2025-12-02 15:06:14] [INFO] [step1a] ✓ Directory exists: 2.FASTQC_pre_trimmed
-[2025-12-02 15:06:14] [INFO] [step1a] ✓ Directory exists: 2.FASTQC_pre_trimmed
-[2025-12-02 15:06:14] [INFO] [step1a] ✓ Directory exists: 3.FASTQC_post_trimmed
-[2025-12-02 15:06:14] [INFO] [step1a] ✓ Directory exists: 3.FASTQC_post_trimmed
-[2025-12-02 15:06:14] [INFO] [step1a] ✗ Missing directory: 4.BAM
-[2025-12-02 15:06:14] [INFO] [step1a] ✗ Missing directory: 4.BAM
-[2025-12-02 15:06:14] [INFO] [step1a] ✗ Missing directory: 5.Individual_VCF
-[2025-12-02 15:06:14] [INFO] [step1a] ✗ Missing directory: 5.Individual_VCF
-[2025-12-02 15:06:14] [INFO] [step1a] ✗ Missing directory: 6.genomicsdb_output
-[2025-12-02 15:06:14] [INFO] [step1a] ✗ Missing directory: 6.genomicsdb_output
-[2025-12-02 15:06:14] [INFO] [step1a] ✗ Missing directory: 7.Consolidated_VCF
-[2025-12-02 15:06:14] [INFO] [step1a] ✗ Missing directory: 7.Consolidated_VCF
-[2025-12-02 15:06:14] [INFO] [step1a] ✗ Missing directory: 8.Imputated_VCF_BEAGLE
-[2025-12-02 15:06:14] [INFO] [step1a] ✗ Missing directory: 8.Imputated_VCF_BEAGLE
-[2025-12-02 15:06:14] [INFO] [step1a] ✗ Missing directory: 9.Imputation_QC
-[2025-12-02 15:06:14] [INFO] [step1a] ✗ Missing directory: 9.Imputation_QC
-[2025-12-02 15:06:14] [INFO] [step1a] ✓ Found 2 paired-end sample files
-[2025-12-02 15:06:14] [INFO] [step1a] ✓ Found 2 paired-end sample files
-[2025-12-02 15:06:14] [INFO] [step1a] Step 1A input validation completed successfully
-[2025-12-02 15:06:14] [INFO] [step1a] Step 1A input validation completed successfully
-[2025-12-02 15:06:14] [INFO] [step1a] Shared reference assets already prepared at /scratch/project/bigdata_apple/test_shared
-[2025-12-02 15:06:14] [INFO] [step1a] Shared reference assets already prepared at /scratch/project/bigdata_apple/test_shared
-[2025-12-02 15:06:14] [INFO] [step1a] Scanning for sample files in: /QRISdata/Q8367/WGS_Reference_Panel/test/1.FASTQ
-[2025-12-02 15:06:14] [INFO] [step1a] Scanning for sample files in: /QRISdata/Q8367/WGS_Reference_Panel/test/1.FASTQ
-[2025-12-02 15:06:14] [INFO] [step1a] ✓ Valid sample: DRR183255
-[2025-12-02 15:06:14] [INFO] [step1a] ✓ Valid sample: DRR183255
-[2025-12-02 15:06:14] [INFO] [step1a] ✓ Valid sample: ERR6909357
-[2025-12-02 15:06:14] [INFO] [step1a] ✓ Valid sample: ERR6909357
-[2025-12-02 15:06:14] [INFO] [step1a] ✓ Created sample list with 2 samples: /scratch/project/bigdata_apple/gatk_pipeline/work/step1a/test/sample_list_test_20251202_150614.txt
-[2025-12-02 15:06:14] [INFO] [step1a] ✓ Created sample list with 2 samples: /scratch/project/bigdata_apple/gatk_pipeline/work/step1a/test/sample_list_test_20251202_150614.txt
-[2025-12-02 15:06:14] [INFO] [step1a] Checking pipeline completion status...
-[2025-12-02 15:06:14] [INFO] [step1a] Checking pipeline completion status...
-[2025-12-02 15:06:14] [INFO] [step1a] Pipeline completion summary - Completed: 0, Incomplete: 2, Total: 2
-[2025-12-02 15:06:14] [INFO] [step1a] Pipeline completion summary - Completed: 0, Incomplete: 2, Total: 2
-[2025-12-02 15:06:14] [INFO] [step1a] No samples are complete - proceeding with full Step 1A run
-[2025-12-02 15:06:14] [INFO] [step1a] No samples are complete - proceeding with full Step 1A run
-[2025-12-02 15:06:14] [INFO] [step1a] Creating Step 1A SLURM script
-[2025-12-02 15:06:14] [INFO] [step1a] Creating Step 1A SLURM script
-[2025-12-02 15:06:15] [INFO] [step1a] Creating SLURM script: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1A_test_20251202_150615.sh
-[2025-12-02 15:06:15] [INFO] [step1a] Creating SLURM script: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1A_test_20251202_150615.sh
-[2025-12-02 15:06:16] [INFO] [step1a] ✓ Created SLURM script: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1A_test_20251202_150615.sh
-[2025-12-02 15:06:16] [INFO] [step1a] ✓ Created SLURM script: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1A_test_20251202_150615.sh
-[2025-12-02 15:06:16] [INFO] [step1a]   Job name: Apple_GATK_1A_test
-[2025-12-02 15:06:16] [INFO] [step1a]   Job name: Apple_GATK_1A_test
-[2025-12-02 15:06:16] [INFO] [step1a]   Array range: 0-1
-[2025-12-02 15:06:16] [INFO] [step1a]   Array range: 0-1
-[2025-12-02 15:06:16] [INFO] [step1a]   SLURM config: 10 CPUs, 32G RAM, 200:00:00 time
-[2025-12-02 15:06:16] [INFO] [step1a]   SLURM config: 10 CPUs, 32G RAM, 200:00:00 time
-[2025-12-02 15:06:16] [INFO] [step1a] Waiting 2 seconds for filesystem sync...
-[2025-12-02 15:06:16] [INFO] [step1a] Waiting 2 seconds for filesystem sync...
-[2025-12-02 15:06:18] [INFO] [step1a] Submitting 1A job: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1A_test_20251202_150615.sh with parameters: /QRISdata/Q8367/WGS_Reference_Panel/test /scratch/project/bigdata_apple/gatk_pipeline/work/step1a/test/sample_list_test_20251202_150614.txt
-[2025-12-02 15:06:18] [INFO] [step1a] Submitting 1A job: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1A_test_20251202_150615.sh with parameters: /QRISdata/Q8367/WGS_Reference_Panel/test /scratch/project/bigdata_apple/gatk_pipeline/work/step1a/test/sample_list_test_20251202_150614.txt
-[2025-12-02 15:06:18] [INFO] [step1a] Created SLURM log directory: /scratch/project/bigdata_apple/logs/test
-[2025-12-02 15:06:18] [INFO] [step1a] Created SLURM log directory: /scratch/project/bigdata_apple/logs/test
-[2025-12-02 15:06:18] [INFO] [step1a] 1A job submitted successfully - Job ID: 18404064
-[2025-12-02 15:06:18] [INFO] [step1a] 1A job submitted successfully - Job ID: 18404064
-[2025-12-02 15:06:18] [INFO] [step1a] SLURM job submitted successfully
-[2025-12-02 15:06:18] [INFO] [step1a] SLURM job submitted successfully
-[2025-12-02 15:06:18] [INFO] [step1a] Job ID: 18404064
-[2025-12-02 15:06:18] [INFO] [step1a] Job ID: 18404064
-[2025-12-02 15:06:18] [INFO] [step1a] SLURM script: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1A_test_20251202_150615.sh
-[2025-12-02 15:06:18] [INFO] [step1a] SLURM script: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1A_test_20251202_150615.sh
-[2025-12-02 15:06:18] [INFO] [step1a] Sample count: 2
-[2025-12-02 15:06:18] [INFO] [step1a] Sample count: 2
-[2025-12-02 15:06:18] [INFO] [step1a] SLURM log directory: /scratch/project/bigdata_apple/logs/test
-[2025-12-02 15:06:18] [INFO] [step1a] SLURM log directory: /scratch/project/bigdata_apple/logs/test
-[2025-12-02 15:06:18] [INFO] [step1a] Monitor with: squeue -u $USER
-[2025-12-02 15:06:18] [INFO] [step1a] Monitor with: squeue -u $USER
-[2025-12-02 15:06:18] [INFO] [step1a] Cancel with: scancel 18404064
-[2025-12-02 15:06:18] [INFO] [step1a] Cancel with: scancel 18404064
-[2025-12-02 15:06:18] [INFO] [step1a] View SLURM logs: ls /scratch/project/bigdata_apple/logs/test/
-[2025-12-02 15:06:18] [INFO] [step1a] View SLURM logs: ls /scratch/project/bigdata_apple/logs/test/
-[2025-12-02 15:06:18] [INFO] [step1a] Job tracking file created: /scratch/project/bigdata_apple/logs/test/job_18404064.info
-[2025-12-02 15:06:18] [INFO] [step1a] Job tracking file created: /scratch/project/bigdata_apple/logs/test/job_18404064.info
-[2025-12-02 15:06:18] [INFO] [step1a] Recorded Step 1A job ID to /scratch/project/bigdata_apple/logs/test/step1a_job_id.txt
-[2025-12-02 15:06:18] [INFO] [step1a] Recorded Step 1A job ID to /scratch/project/bigdata_apple/logs/test/step1a_job_id.txt
-[2025-12-02 15:06:18] [INFO] [gatk_master] Checking Step 1A completion status...
-[2025-12-02 15:06:18] [INFO] [gatk_master] Checking Step 1A completion status...
-[2025-12-02 15:06:18] [WARN] [gatk_master] Step 1A directory does not exist: /QRISdata/Q8367/WGS_Reference_Panel/test/5.Individual_VCF
-[2025-12-02 15:06:18] [WARN] [gatk_master] Step 1A directory does not exist: /QRISdata/Q8367/WGS_Reference_Panel/test/5.Individual_VCF
-[2025-12-02 15:06:18] [ERROR] [gatk_master] Step 1A sample list missing: /scratch/project/bigdata_apple/logs/test_20251202_150542/step1a_samples.list
-[2025-12-02 15:06:18] [ERROR] [gatk_master] Step 1A sample list missing: /scratch/project/bigdata_apple/logs/test_20251202_150542/step1a_samples.list
+[2025-12-02 15:21:58] [INFO] [step1c] Logging system initialized for module: step1c
+[2025-12-02 15:21:58] [INFO] [step1c] Logging system initialized for module: step1c
+[2025-12-02 15:21:58] [INFO] [step1c] Log type: pipeline
+[2025-12-02 15:21:58] [INFO] [step1c] Log type: pipeline
+[2025-12-02 15:21:58] [INFO] [step1c] Log file: /scratch/project/bigdata_apple/logs/test_20251202_150904/pipeline_step1c_20251202_152158.log
+[2025-12-02 15:21:58] [INFO] [step1c] Log file: /scratch/project/bigdata_apple/logs/test_20251202_150904/pipeline_step1c_20251202_152158.log
+[2025-12-02 15:21:58] [INFO] [step1c] Log level: INFO
+[2025-12-02 15:21:58] [INFO] [step1c] Log level: INFO
+[2025-12-02 15:21:58] [INFO] [step1c] Detected 10 joint VCF files for imputation.
+[2025-12-02 15:21:58] [INFO] [step1c] Detected 10 joint VCF files for imputation.
+[2025-12-02 15:21:58] [INFO] [step1c] Creating SLURM script: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1C_test_20251202_152158.sh
+[2025-12-02 15:21:58] [INFO] [step1c] Creating SLURM script: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1C_test_20251202_152158.sh
+[2025-12-02 15:21:58] [ERROR] [step1c] SLURM template not found: /home/uqpha1/AppleMap.iDBv1/config/../templates/step1c_job.sh
+[2025-12-02 15:21:58] [ERROR] [step1c] SLURM template not found: /home/uqpha1/AppleMap.iDBv1/config/../templates/step1c_job.sh
+[2025-12-02 15:21:58] [ERROR] [step1c] Generated Step 1C SLURM script not found: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1C_test_20251202_152158.sh
+[2025-12-02 15:21:58] [ERROR] [step1c] Generated Step 1C SLURM script not found: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1C_test_20251202_152158.sh
+[2025-12-02 15:21:58] [ERROR] [gatk_master] Step 1C submission wrapper exited with code 1.
+[2025-12-02 15:21:58] [ERROR] [gatk_master] Step 1C submission wrapper exited with code 1.
+[2025-12-02 15:21:58] [ERROR] [gatk_master] ❌ Step 1C submission failed; aborting master loop.
+[2025-12-02 15:21:58] [ERROR] [gatk_master] ❌ Step 1C submission failed; aborting master loop.
+---
+this is GATK_master_script_18404311.output
 Validating directory structure for: /QRISdata/Q8367/WGS_Reference_Panel/test
 Validating directory structure for: /QRISdata/Q8367/WGS_Reference_Panel/test
 ✓ Directory exists: 1.FASTQ
@@ -168,17 +268,29 @@ Scanning for sample files in: /QRISdata/Q8367/WGS_Reference_Panel/test/1.FASTQ
 ✓ Valid sample: DRR183255
 ✓ Valid sample: ERR6909357
 ✓ Valid sample: ERR6909357
-✓ Created sample list with 2 samples: /scratch/project/bigdata_apple/gatk_pipeline/work/step1a/test/sample_list_test_20251202_150614.txt
-✓ Created sample list with 2 samples: /scratch/project/bigdata_apple/gatk_pipeline/work/step1a/test/sample_list_test_20251202_150614.txt
+✓ Created sample list with 2 samples: /scratch/project/bigdata_apple/gatk_pipeline/work/step1a/test/sample_list_test_20251202_150917.txt
+✓ Created sample list with 2 samples: /scratch/project/bigdata_apple/gatk_pipeline/work/step1a/test/sample_list_test_20251202_150917.txt
 ✓ Step 1A submitted successfully!
 ✓ Step 1A submitted successfully!
-Job ID: 18404064
+Job ID: 18404352
 Array jobs: 0-0
 Monitor with: squeue -u $USER
-Cancel with: scancel 18404064
+Cancel with: scancel 18404352
 View logs: ls /scratch/project/bigdata_apple/logs/test/
-Job ID: 18404064
+Job ID: 18404352
 Array jobs: 0-0
 Monitor with: squeue -u $USER
-Cancel with: scancel 18404064
+Cancel with: scancel 18404352
 View logs: ls /scratch/project/bigdata_apple/logs/test/
+[step1b_submit] Dataset: test
+[step1b_submit] Dataset: test
+[step1b_submit] RDM dataset path: /QRISdata/Q8367/WGS_Reference_Panel/test
+[step1b_submit] Log directory: /scratch/project/bigdata_apple/logs/test_20251202_150904
+[step1b_submit] RDM dataset path: /QRISdata/Q8367/WGS_Reference_Panel/test
+[step1b_submit] Log directory: /scratch/project/bigdata_apple/logs/test_20251202_150904
+[step1b_submit] ✅ Step 1B job submitted (Job ID: 18405376).
+[step1b_submit] ✅ Step 1B job submitted (Job ID: 18405376).
+[step1b_submit]    stdout: /scratch/project/bigdata_apple/logs/test_20251202_150904/step1b_master_20251202_152027_18405376.output
+[step1b_submit]    stderr: /scratch/project/bigdata_apple/logs/test_20251202_150904/step1b_master_20251202_152027_18405376.error
+[step1b_submit]    stdout: /scratch/project/bigdata_apple/logs/test_20251202_150904/step1b_master_20251202_152027_18405376.output
+[step1b_submit]    stderr: /scratch/project/bigdata_apple/logs/test_20251202_150904/step1b_master_20251202_152027_18405376.error
