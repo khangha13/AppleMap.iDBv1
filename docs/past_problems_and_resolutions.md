@@ -795,7 +795,7 @@ From `HPC_MIGRATION_SUMMARY.md` and companions:
 
 **Fix**
 
-- Added `modules/step1c/bin/fix_vcf_fill_missing.sh` to patch rows in place: ensures 9+ columns, sets FORMAT to `GT` if missing, and pads sample genotype columns with `./.`. Reports how many rows were patched and their percentage, then bgzips/tabixes the fixed VCF. Integrated into Step 1C job template: malformed VCFs are auto-fixed in the working directory before Beagle runs.
+- Added `modules/step1c/bin/fix_vcf_fill_missing.sh` to patch rows in place: ensures 9+ columns, sets FORMAT to `GT` if missing, and pads sample genotype columns with `./.`. Reports how many rows were patched and their percentage, then bgzips/tabixes the fixed VCF. Integrated into Step 1C job template: all VCFs are auto-fixed in the working directory before Beagle runs, so Beagle always sees padded inputs even if bcftools validation passes.
 
 **AI guidance**
 
