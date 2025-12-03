@@ -755,6 +755,38 @@ From `HPC_MIGRATION_SUMMARY.md` and companions:
 
 - For optional positional arguments, preserve empty slots (e.g., via sentinels or arrays) so later parameters don’t shift into the wrong position.
 
+### 5.16 TMPDIR cleanup handled by HPC (2025‑12‑03)
+
+**Symptom**
+
+- After a Beagle failure, the job attempted to remove its working directory (`/scratch/temp/...`) and logged `rm: cannot remove ...: Permission denied`.
+
+**Root cause**
+
+- The Step 1C job template registered a trap to `rm -rf "${WORK_TMPDIR}"` on EXIT. On this cluster, `TMPDIR` is managed by the scheduler, and the job lacked permission to delete the scheduler-provided path, producing noisy errors.
+
+**Fix**
+
+- Removed the cleanup trap; rely on HPC/TMPDIR policy for temporary directory lifecycle.
+
+**AI guidance**
+
+- When HPC provides `TMPDIR`, avoid adding traps that forcibly remove it; let the scheduler handle cleanup to prevent spurious permission errors.
+
+### 5.17 Malformed Step 1C VCFs (2025‑12‑04)
+
+**Symptom**
+
+- Beagle aborted with `VCF record format error` on `ChrXX_consolidated.vcf.gz` (insufficient columns/invalid records). Cleaning attempts downstream were brittle.
+
+**Fix**
+
+- Regenerate Step 1B outputs (Chr01–Chr17) and filter the Step 1C manifest to exclude Chr00. Added preflight validation (`bcftools view -Ov -o /dev/null`) on each VCF before Beagle to fail fast with a clear message.
+
+**AI guidance**
+
+- Do not hand-edit malformed consolidated VCFs; rerun Step 1B to produce clean inputs, exclude Chr00 from Step 1C, and keep a preflight validator before Beagle to catch corrupt files early.
+
 **AI guidance**
 
 - If you need the master to stay local (e.g., site disallows job-within-job), pass `--no-submit`/`--submit-self=false`.

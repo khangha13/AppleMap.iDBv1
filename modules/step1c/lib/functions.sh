@@ -34,10 +34,13 @@ create_vcf_manifest() {
     local manifest_path="$2"
 
     local joint_dir="${rdm_base_path}/7.Consolidated_VCF"
-    find "${joint_dir}" -maxdepth 1 -name '*.vcf.gz' -type f | sort > "${manifest_path}"
+    # Include only Chr01–Chr17; drop Chr00 and any non-standard files
+    find "${joint_dir}" -maxdepth 1 -type f -name 'Chr[0-1][0-9]*.vcf.gz' \
+        | grep -E '/Chr(0[1-9]|1[0-7])\.vcf\.gz$' \
+        | sort > "${manifest_path}"
 
     if [ ! -s "${manifest_path}" ]; then
-        error_exit "VCF manifest ${manifest_path} is empty."
+        error_exit "VCF manifest ${manifest_path} is empty (no Chr01–Chr17 VCFs found)."
     fi
 }
 

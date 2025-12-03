@@ -194,7 +194,7 @@ STEP1B_NTASKS="${STEP1B_NTASKS:-$PIPELINE_SLURM_NTASKS}"
 # -----------------------------------------------------------------------------
 # Reference chromosome list (apple-specific default)
 # -----------------------------------------------------------------------------
-PIPELINE_CHROMOSOME_LIST="${PIPELINE_CHROMOSOME_LIST:-Chr00 Chr01 Chr02 Chr03 Chr04 Chr05 Chr06 Chr07 Chr08 Chr09 Chr10 Chr11 Chr12 Chr13 Chr14 Chr15 Chr16 Chr17}"
+PIPELINE_CHROMOSOME_LIST="${PIPELINE_CHROMOSOME_LIST:-Chr01 Chr02 Chr03 Chr04 Chr05 Chr06 Chr07 Chr08 Chr09 Chr10 Chr11 Chr12 Chr13 Chr14 Chr15 Chr16 Chr17}"
 # shellcheck disable=SC2206
 PIPELINE_CHROMOSOMES=(${PIPELINE_CHROMOSOME_LIST})
 

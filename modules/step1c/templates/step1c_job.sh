@@ -60,7 +60,6 @@ if [ -z "${BEAGLE_JAR}" ] || [ ! -f "${BEAGLE_JAR}" ]; then
 fi
 
 WORK_TMPDIR="${TMPDIR:-$(mktemp -d "${SCRATCH_BASE_PATH%/}/step1c_XXXXXX")}"
-trap 'rm -rf "${WORK_TMPDIR}"' EXIT
 mkdir -p "${WORK_TMPDIR}"
 
 log_info "Using working directory: ${WORK_TMPDIR}"
@@ -72,6 +71,10 @@ rsync -rhivPt "${REFERENCE_FASTA%.*}.dict" "${WORK_TMPDIR}/" || true
 VCF_PREFIXES=()
 while IFS= read -r vcf_path; do
     [ -z "${vcf_path}" ] && continue
+    # Validate VCF structure before copying
+    if ! bcftools view -Ov -o /dev/null "${vcf_path}" 2>/dev/null; then
+        error_exit "VCF failed validation (malformed): ${vcf_path}"
+    fi
     rsync -rhivPt "${vcf_path}" "${WORK_TMPDIR}/"
     rsync -rhivPt "${vcf_path}.tbi" "${WORK_TMPDIR}/" || log_warn "Missing index for ${vcf_path}"
     VCF_PREFIXES+=("$(basename "${vcf_path}")")
