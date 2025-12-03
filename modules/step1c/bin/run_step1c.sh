@@ -5,6 +5,7 @@
 
 STEP1C_BIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STEP1C_MODULE_DIR="$(cd "${STEP1C_BIN_DIR}/.." && pwd)"
+STEP1C_TEMPLATE_DIR="${STEP1C_MODULE_DIR}/templates"
 if [ -n "${PIPELINE_ROOT:-}" ]; then
     if [ -d "${PIPELINE_ROOT}" ]; then
         PIPELINE_ROOT="$(cd "${PIPELINE_ROOT}" && pwd)"
@@ -16,7 +17,6 @@ else
     PIPELINE_ROOT="$(cd "${STEP1C_BIN_DIR}/../../.." && pwd)"
 fi
 export PIPELINE_ROOT
-SCRIPT_DIR="${STEP1C_BIN_DIR}"
 
 source "${PIPELINE_ROOT}/lib/logging.sh"
 source "${PIPELINE_ROOT}/lib/slurm.sh"
@@ -123,7 +123,13 @@ create_step1c_slurm_script() {
 
     mkdir -p "${PIPELINE_SLURM_SCRIPT_DIR}"
     local slurm_script="${PIPELINE_SLURM_SCRIPT_DIR}/Apple_GATK_1C_${dataset_name}_$(date +%Y%m%d_%H%M%S).sh"
-    local template="${SCRIPT_DIR}/../templates/step1c_job.sh"
+    local template="${STEP1C_TEMPLATE_DIR}/step1c_job.sh"
+
+    if [ ! -f "${template}" ]; then
+        log_error "SLURM template not found: ${template}"
+        return 1
+    fi
+    log_info "Using Step 1C template: ${template}"
 
     local config_string="job_name=Apple_GATK_1C_${dataset_name}
 account=${config_map[ACCOUNT]}

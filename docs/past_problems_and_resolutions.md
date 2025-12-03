@@ -719,6 +719,24 @@ From `HPC_MIGRATION_SUMMARY.md` and companions:
 
 - Users logging out during long Step 1A/1B runs would kill the master loop. Defaulting to self-submit keeps orchestration in Slurm where it won’t die with the login shell.
 
+### 5.14 Step 1C template path clobbered by config `SCRIPT_DIR` (2025‑12‑03)
+
+**Symptom**
+
+- `run_step1c.sh` logged `SLURM template not found: .../config/../templates/step1c_job.sh` and aborted submission.
+
+**Root cause**
+
+- `run_step1c.sh` set `SCRIPT_DIR` to its `bin` dir, but sourcing `config/pipeline_config.sh` redefined `SCRIPT_DIR` to the config dir. The template path was then built from the wrong location (mirrors the Step 1B issue in §5.8).
+
+**Fix**
+
+- Introduced step-scoped path variables (`STEP1C_TEMPLATE_DIR`) and build the template path as `${PIPELINE_ROOT}/modules/step1c/templates/step1c_job.sh` with an existence check and log. Avoids reusing `SCRIPT_DIR` and uses absolute paths so SLURM spool copies work.
+
+**AI guidance**
+
+- When sourcing shared config, never rely on `SCRIPT_DIR` for module-local paths; use step-prefixed variables anchored at `${PIPELINE_ROOT}` for templates and assets.
+
 **AI guidance**
 
 - If you need the master to stay local (e.g., site disallows job-within-job), pass `--no-submit`/`--submit-self=false`.
