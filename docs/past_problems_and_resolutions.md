@@ -737,6 +737,24 @@ From `HPC_MIGRATION_SUMMARY.md` and companions:
 
 - When sourcing shared config, never rely on `SCRIPT_DIR` for module-local paths; use step-prefixed variables anchored at `${PIPELINE_ROOT}` for templates and assets.
 
+### 5.15 Step 1C argument shift when gene map omitted (2025‑12‑03)
+
+**Symptom**
+
+- Beagle job failed with `Invalid maximum heap size: -Xmxfalseg` and exited before running; working dir cleanup also failed due to early exit.
+
+**Root cause**
+
+- The Step 1C wrapper expanded positional arguments without preserving empty fields. When `GENE_MAP_FILE` was empty, the argument list shifted, placing the `impute` flag into the `MEMORY_GB` slot, producing `-Xmxfalseg`.
+
+**Fix**
+
+- Send a sentinel (`__NO_GENE_MAP__`) for the optional gene map so positional arguments stay aligned; the job template strips the sentinel back to empty. Prevents downstream arguments (memory/impute) from shifting.
+
+**AI guidance**
+
+- For optional positional arguments, preserve empty slots (e.g., via sentinels or arrays) so later parameters don’t shift into the wrong position.
+
 **AI guidance**
 
 - If you need the master to stay local (e.g., site disallows job-within-job), pass `--no-submit`/`--submit-self=false`.

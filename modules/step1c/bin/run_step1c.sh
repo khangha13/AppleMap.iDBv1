@@ -91,8 +91,11 @@ main() {
     esac
     log_info "Step 1C Beagle mode: self-impute=${impute_flag}"
 
+    # Preserve positional args even when gene map is omitted
+    local gene_map_arg="${gene_map_file:-__NO_GENE_MAP__}"
+
     local cmd_args=("${rdm_base_path}" "${manifest_file}" "${output_dir}" "${reference_genome}"
-                    "${gene_map_file}" "${dataset_name}_beagle" "${thread_count}"
+                    "${gene_map_arg}" "${dataset_name}_beagle" "${thread_count}"
                     "${memory_gb}" "${impute_flag}")
 
     local job_id

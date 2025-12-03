@@ -12,6 +12,11 @@ THREADS="$7"
 MEMORY_GB="$8"
 IMPUTE_FLAG="${9:-false}"
 
+# Decode sentinel for omitted gene map (preserves argument positions)
+if [ "${GENE_MAP_FILE}" = "__NO_GENE_MAP__" ]; then
+    GENE_MAP_FILE=""
+fi
+
 impute_flag_lc="$(echo "${IMPUTE_FLAG}" | tr '[:upper:]' '[:lower:]')"
 case "${impute_flag_lc}" in
     true|1|yes|y)
