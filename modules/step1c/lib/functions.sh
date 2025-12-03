@@ -34,9 +34,12 @@ create_vcf_manifest() {
     local manifest_path="$2"
 
     local joint_dir="${rdm_base_path}/7.Consolidated_VCF"
-    # Include only Chr01–Chr17; drop Chr00 and any non-standard files
-    find "${joint_dir}" -maxdepth 1 -type f -name 'Chr[0-1][0-9]*.vcf.gz' \
-        | grep -E '/Chr(0[1-9]|1[0-7])\.vcf\.gz$' \
+    # Include only Chr01–Chr17; allow suffixes like _consolidated before .vcf.gz
+    find "${joint_dir}" -maxdepth 1 -type f -name 'Chr*.vcf.gz' \
+        | awk -F/ '{
+            base=$NF;
+            if (base ~ /^Chr(0[1-9]|1[0-7]).*\.vcf\.gz$/) print;
+        }' \
         | sort > "${manifest_path}"
 
     if [ ! -s "${manifest_path}" ]; then
