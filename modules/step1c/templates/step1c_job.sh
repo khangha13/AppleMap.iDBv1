@@ -84,11 +84,11 @@ while IFS= read -r vcf_path; do
     base_name="$(basename "${vcf_path}")"
     fixed_base="${base_name%.vcf.gz}.fixed.vcf.gz"
     fixed_path="${WORK_TMPDIR}/${fixed_base}"
-    if [ ! -x "${FIX_VCF_SCRIPT}" ]; then
-        error_exit "Auto-fix script not found or not executable: ${FIX_VCF_SCRIPT}"
+    if [ ! -f "${FIX_VCF_SCRIPT}" ]; then
+        error_exit "Auto-fix script not found: ${FIX_VCF_SCRIPT}"
     fi
     log_info "Auto-fixing VCF: ${vcf_path} -> ${fixed_path}"
-    if ! "${FIX_VCF_SCRIPT}" "${vcf_path}" "${fixed_path}"; then
+    if ! bash "${FIX_VCF_SCRIPT}" "${vcf_path}" "${fixed_path}"; then
         error_exit "Auto-fix failed for ${vcf_path}"
     fi
     local_name="${fixed_base}"
