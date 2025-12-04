@@ -237,6 +237,18 @@ copy_consolidated_vcf() {
 
     log_info "Copying ${chromosome} consolidated VCF to ${destination}"
 
+    local validator="${PIPELINE_ROOT}/modules/step1b/bin/validate_consolidated_vcf.sh"
+    local validate_log="$(dirname "${output_file}")/logs/${chromosome}_validate.log"
+    mkdir -p "$(dirname "${validate_log}")"
+    if [ -x "${validator}" ]; then
+        log_info "Validating consolidated VCF before copy: ${output_file}"
+        if ! bash "${validator}" "${output_file}" > "${validate_log}" 2>&1; then
+            error_exit "Validation failed for ${output_file}. See ${validate_log}"
+        fi
+    else
+        log_warn "Validator script not executable: ${validator}; skipping Step 1B VCF validation."
+    fi
+
     rsync -rhivPt "${output_file}" "${destination}/" || error_exit "Failed to copy VCF for ${chromosome}"
     if [ -f "${output_file}.tbi" ]; then
         rsync -rhivPt "${output_file}.tbi" "${destination}/" || error_exit "Failed to copy VCF index for ${chromosome}"

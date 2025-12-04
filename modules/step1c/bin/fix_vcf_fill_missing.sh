@@ -11,13 +11,15 @@ usage() {
     cat <<'EOF'
 Usage: fix_vcf_fill_missing.sh <input.vcf.gz> [output.vcf.gz]
 
-Repairs malformed VCF rows by ensuring at least 9 columns (CHROM..FORMAT) and
-one genotype column per sample, filling missing values with ./.
+Repairs malformed VCF rows by:
+  - Normalising whitespace to strict tab delimiters
+  - Ensuring FORMAT is populated
+  - Padding genotype columns with ./.
 
 Outputs:
-  - Writes patched VCF (bgzip-compressed) to the given output path, or
-    <input>.fixed.vcf.gz if not specified.
-  - Prints a summary of total rows and how many were patched.
+  - Writes a bgzip-compressed, tabix-indexed VCF to the provided output path
+    (defaults to <input>.fixed.vcf.gz).
+  - Prints a summary of totals and how many rows required patching.
 EOF
 }
 
@@ -29,21 +31,17 @@ fi
 INPUT="$1"
 OUTPUT="${2:-${INPUT%.vcf.gz}.fixed.vcf.gz}"
 
-# Ensure bcftools is available; load specific module if needed
+# Ensure required tools exist
 BCFTOOLS_BIN="${BCFTOOLS_BIN:-bcftools}"
 if ! command -v "${BCFTOOLS_BIN}" >/dev/null 2>&1; then
     if command -v module >/dev/null 2>&1; then
         module load bcftools/1.18-gcc-12.3.0 >/dev/null 2>&1 || true
     fi
 fi
-if ! command -v "${BCFTOOLS_BIN}" >/dev/null 2>&1; then
-    echo "[FATAL] bcftools not found in PATH (after attempting module load bcftools/1.18-gcc-12.3.0)." >&2
-    exit 1
-fi
 
-for tool in bgzip tabix; do
+for tool in "${BCFTOOLS_BIN}" bgzip tabix python3; do
     if ! command -v "${tool}" >/dev/null 2>&1; then
-        echo "[FATAL] ${tool} not found in PATH." >&2
+        echo "[FATAL] Required tool not found in PATH: ${tool}" >&2
         exit 1
     fi
 done
@@ -53,61 +51,73 @@ if [ ! -f "${INPUT}" ]; then
     exit 1
 fi
 
-# Extract header to determine sample count
-header_line=$(zcat "${INPUT}" 2>/dev/null | awk 'BEGIN{FS="\t"} /^#CHROM/ {print; exit}')
-if [ -z "${header_line}" ]; then
-    echo "[FATAL] #CHROM header not found in ${INPUT}" >&2
-    exit 1
-fi
-header_fields=$(printf "%s" "${header_line}" | awk '{print NF}')
-if [ "${header_fields}" -lt 9 ]; then
-    echo "[FATAL] Header has fewer than 9 columns: ${header_fields}" >&2
-    exit 1
-fi
-sample_count=$((header_fields - 9))
-expected_cols=$((9 + sample_count))
-
-total_rows=$(zcat "${INPUT}" 2>/dev/null | awk '!/^#/ {c++} END{print c+0}')
-malformed_rows=$(zcat "${INPUT}" 2>/dev/null | awk -v expected="${expected_cols}" 'BEGIN{FS="\t"} !/^#/ && NF<expected {c++} END{print c+0}')
-
-echo "[INFO] Input: ${INPUT}"
-echo "[INFO] Samples: ${sample_count} | Expected columns: ${expected_cols}"
-echo "[INFO] Total data rows: ${total_rows}"
-echo "[INFO] Malformed rows (NF < ${expected_cols}): ${malformed_rows}"
-
 tmp_base="${TMPDIR:-/tmp}"
 tmp_out="$(mktemp "${tmp_base%/}/fixvcfXXXXXX")"
-trap 'rm -f "${tmp_out}"' EXIT
+meta_out="$(mktemp "${tmp_base%/}/fixvcf_metaXXXXXX")"
+trap 'rm -f "${tmp_out}" "${meta_out}"' EXIT
 
-zcat "${INPUT}" 2>/dev/null | \
-awk -v expected="${expected_cols}" 'BEGIN{FS="[ \t]+"; OFS="\t"}
-    /^#/ {print; next}
-    {
-        # Normalize into exactly expected columns, replacing missing fields with placeholders
-        chrom = ($1==""?".":$1);
-        pos   = ($2==""?"0":$2);
-        id    = ($3==""?".":$3);
-        ref   = ($4==""?"N":$4);
-        alt   = ($5==""?"<X>":$5);
-        qual  = ($6==""?".":$6);
-        filter= ($7==""?".":$7);
-        info  = ($8==""?".":$8);
-        format= ($9==""?"GT":$9);
-        out_fields[1]=chrom; out_fields[2]=pos; out_fields[3]=id;
-        out_fields[4]=ref; out_fields[5]=alt; out_fields[6]=qual;
-        out_fields[7]=filter; out_fields[8]=info; out_fields[9]=format;
-        for (i=10; i<=expected; i++) {
-            out_fields[i] = (i<=NF ? $i : "./.");
-        }
-        for (i=1; i<=expected; i++) {
-            if (i>1) printf OFS;
-            printf "%s", out_fields[i];
-        }
-        printf "\n";
-        delete out_fields;
-    }' > "${tmp_out}"
+python3 - "$INPUT" "$tmp_out" "$meta_out" <<'PY'
+import gzip
+import sys
 
-# Compress with bgzip; fallback to bcftools view -Oz if bgzip crashes
+input_path, output_path, meta_path = sys.argv[1:4]
+
+header_fields = None
+total_rows = 0
+patched_rows = 0
+
+with gzip.open(input_path, "rt", encoding="utf-8", errors="replace") as fin, \
+        open(output_path, "w", encoding="utf-8") as fout:
+    for raw in fin:
+        if raw.startswith("#"):
+            line = raw.rstrip("\r\n")
+            fout.write(line + "\n")
+            if raw.startswith("#CHROM"):
+                header_fields = line.split("\t")
+            continue
+
+        if header_fields is None:
+            raise SystemExit("[FATAL] #CHROM header not found before data lines")
+
+        total_rows += 1
+        expected_cols = len(header_fields)
+        tokens = raw.rstrip("\r\n")
+
+        if "\t" in tokens:
+            fields = tokens.split("\t")
+        else:
+            fields = tokens.split()
+
+        if len(fields) != expected_cols:
+            patched_rows += 1
+
+        if len(fields) < expected_cols:
+            fields.extend([""] * (expected_cols - len(fields)))
+        elif len(fields) > expected_cols:
+            fields = fields[:expected_cols]
+
+        # Normalise critical columns
+        fields[0] = fields[0] or "."
+        fields[1] = fields[1] or "0"
+        fields[2] = fields[2] or "."
+        fields[3] = fields[3] or "N"
+        fields[4] = fields[4] or "<X>"
+        fields[5] = fields[5] or "."
+        fields[6] = fields[6] or "."
+        fields[7] = fields[7] or "."
+        fields[8] = fields[8] or "GT"
+
+        for idx in range(9, expected_cols):
+            fields[idx] = fields[idx] or "./."
+
+        fout.write("\t".join(fields) + "\n")
+
+with open(meta_path, "w", encoding="utf-8") as meta:
+    meta.write(f"{len(header_fields or [])}\n")
+    meta.write(f"{total_rows}\n")
+    meta.write(f"{patched_rows}\n")
+PY
+
 if ! bgzip -c "${tmp_out}" > "${OUTPUT}"; then
     echo "[WARN] bgzip failed on ${tmp_out}; attempting bcftools view -Oz fallback." >&2
     if ! "${BCFTOOLS_BIN}" view -Oz -o "${OUTPUT}" "${tmp_out}"; then
@@ -117,22 +127,24 @@ if ! bgzip -c "${tmp_out}" > "${OUTPUT}"; then
 fi
 tabix -f "${OUTPUT}"
 
-# Verify patched file
 if ! "${BCFTOOLS_BIN}" view -Ov -o /dev/null "${OUTPUT}" >/dev/null 2>&1; then
     echo "[FATAL] Patched VCF failed validation: ${OUTPUT}" >&2
     exit 1
 fi
-# Ensure no rows remain short on columns
-if ! zcat "${OUTPUT}" 2>/dev/null | awk -v expected="${expected_cols}" 'BEGIN{FS="\t"} !/^#/ && NF<expected {exit 1}' ; then
-    echo "[FATAL] Patched VCF still contains rows with <${expected_cols} columns: ${OUTPUT}" >&2
-    exit 1
+
+header_cols=$(sed -n '1p' "${meta_out}")
+total_rows=$(sed -n '2p' "${meta_out}")
+patched_rows=$(sed -n '3p' "${meta_out}")
+
+echo "[INFO] Input: ${INPUT}"
+echo "[INFO] Header columns: ${header_cols}"
+echo "[INFO] Total data rows: ${total_rows}"
+echo "[INFO] Rows patched: ${patched_rows}"
+
+percent="0.00"
+if [ "${total_rows}" -gt 0 ]; then
+    percent=$(awk -v total="${total_rows}" -v patched="${patched_rows}" 'BEGIN{if (total>0) printf "%.2f", (patched/total*100); else print "0.00"}')
 fi
 
 echo "[INFO] Patched VCF written: ${OUTPUT}"
-patched_rows=${malformed_rows}
-if [ "${total_rows}" -gt 0 ]; then
-    percent=$(awk -v total="${total_rows}" -v patched="${patched_rows}" 'BEGIN{if (total>0) printf "%.2f", (patched/total*100); else print "0.00"}')
-else
-    percent="0.00"
-fi
-echo "[INFO] Patched rows: ${patched_rows}/${total_rows} (${percent}%)"
+echo "[INFO] Patched rows percentage: ${percent}%"

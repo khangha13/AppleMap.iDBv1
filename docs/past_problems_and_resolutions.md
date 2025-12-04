@@ -815,10 +815,58 @@ From `HPC_MIGRATION_SUMMARY.md` and companions:
 
 - Align with Beagle tutorial: normalize + SNP-only + consistent contigs/headers + sorted VCF. Add a fatal validator before Beagle if any record has fewer columns than the header; don’t rely on Beagle to surface format issues.
 
+### 5.20 Persistent Beagle format errors & mitigation attempts (2025‑12‑04)
+
+**Symptom**
+
+- Beagle continued to report `VCF record format error (ninthTabPos)` on Chr01 even after multiple cleanup passes; indicates at least one record still lacks the expected tab-separated fields.
+
+**Mitigations attempted**
+
+- Auto-fix every VCF (pad missing fields, ensure FORMAT=GT, fill genotypes).
+- Normalize + SNP-only filter via bcftools (`norm -m -any -f <ref> | view -v snps -m2 -M2`).
+- Rename contigs `Chr01–Chr17` to numeric and inject matching `##contig` header lines from the reference `.fai`.
+- Multiple validation/drop stages: final padding, dropping NF<expected rows with logs, strict header-derived column validation, and a final cleaned/sorted VCF for Beagle.
+- Added compressor fallback (bcftools view -Oz) when bgzip crashed.
+
+**Status / guidance**
+
+- If errors persist, inspect the validator/dropped-row logs to identify the offending line; regenerate upstream (Step1B/Step1A) if the source is too corrupted. The current pipeline fails fast with a clear message before Beagle when malformed rows remain.
+
 **AI guidance**
 
 - If you need the master to stay local (e.g., site disallows job-within-job), pass `--no-submit`/`--submit-self=false`.
 - When adding new submission paths, preserve the guard rails: do not re-self-submit when already inside Slurm; always export `PIPELINE_ROOT` in sbatch wrappers; ensure dataset is set before self-submit to avoid empty `sbatch` calls.
+
+### 5.21 Step 1C ninthTabPos hardening + Step 1B VCF gate (2025‑12‑04)
+
+**Symptom**
+
+- Even after padding/clean-up, Step 1C still failed at Beagle launch with `VCF record format error (ninthTabPos)` on the cleaned `.beagle.vcf.gz` files.
+- Root cause was hidden whitespace/column mismatches that survived the legacy `fix_vcf_fill_missing.sh` (it split on `[ \t]+`, masking malformed rows) plus missing validation upstream in Step 1B.
+
+**Fix**
+
+1. **Instrumentation + capture**
+   - `modules/step1c/templates/step1c_job.sh` now derives `DATASET_NAME`, supports `STEP1C_DEBUG_BEAGLE=true`, and copies every `${WORK_TMPDIR}/*.beagle.vcf.gz` (and `.tbi`) into `${LOG_BASE_PATH}/${dataset}/step1c_debug/<timestamp>/` before Beagle runs.
+   - Each Beagle input is validated with the new `modules/step1c/bin/debug_beagle_vcf.sh`; failures stop the job with a pointer to the per-file `.validate.log`.
+
+2. **Stricter repair pipeline**
+   - `modules/step1c/bin/fix_vcf_fill_missing.sh` was rewritten in Python to normalise whitespace, enforce tab-delimited fields, guarantee non-empty FORMAT/genotype columns, and emit deterministic patched files.
+   - Step 1C prep stores the final per-chromosome `.beagle.vcf.gz` paths and, when debug is enabled, ships them to a safe log location for offline inspection.
+
+3. **Upstream guard rails (Step 1B)**
+   - Added `modules/step1b/bin/validate_consolidated_vcf.sh`, which runs `bcftools view` plus the Beagle validator against every `ChrXX_consolidated.vcf.gz`.
+   - `copy_consolidated_vcf` refuses to copy outputs that fail validation, logging details to `${workdir}/logs/<Chr>_validate.log` so bad chromosomes are caught immediately after GenotypeGVCFs.
+
+4. **Tests & fixtures**
+   - New `test/fixtures/malformed_chr01.vcf` plus `test/test_vcf_repairs.sh` exercise the repair + validator combo (skips automatically when bgzip/tabix/python3 are unavailable).
+
+**AI guidance**
+
+- Always run `test/test_vcf_repairs.sh` after touching Step 1C repair code; it ensures malformed rows fail validation pre-fix and pass post-fix.
+- Enable `STEP1C_DEBUG_BEAGLE=true` on first runs for any dataset. The captured Beagle inputs/validate logs make debugging painless if Beagle still complains.
+- Treat `modules/step1b/bin/validate_consolidated_vcf.sh` failures as fatal—rerun the offending chromosome(s) through Step 1B or Step 1A rather than trying to hand-edit VCFs.
 
 ---
 

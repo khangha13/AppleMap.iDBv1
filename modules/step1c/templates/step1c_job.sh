@@ -3,6 +3,7 @@
 set -euo pipefail
 
 DATASET_PATH="$1"
+DATASET_NAME="$(basename "${DATASET_PATH}")"
 VCF_MANIFEST="$2"
 OUTPUT_DIR="$3"
 REFERENCE_FASTA="$4"
@@ -89,6 +90,7 @@ LOCAL_REF_FAI="${LOCAL_REF}.fai"
 numeric_contig_header="${WORK_TMPDIR}/contigs_numeric.header.txt"
 
 VCF_PREFIXES=()
+BEAGLE_VCF_PATHS=()
 while IFS= read -r vcf_path; do
     [ -z "${vcf_path}" ] && continue
     base_name="$(basename "${vcf_path}")"
@@ -223,10 +225,43 @@ while IFS= read -r vcf_path; do
 
     local_name="${beagle_base}"
     VCF_PREFIXES+=("${local_name}")
+    BEAGLE_VCF_PATHS+=("${beagle_path}")
 done < "${VCF_MANIFEST}"
 
 LOCAL_MANIFEST="${WORK_TMPDIR}/vcf_manifest.txt"
 printf '%s\n' "${VCF_PREFIXES[@]}" > "${LOCAL_MANIFEST}"
+
+if [ "${STEP1C_DEBUG_BEAGLE:-false}" = "true" ]; then
+    debug_root="${LOG_BASE_PATH%/}/${DATASET_NAME}/step1c_debug"
+    timestamp="$(date +%Y%m%d_%H%M%S)"
+    debug_dir="${debug_root}/${timestamp}"
+    mkdir -p "${debug_dir}"
+    log_info "STEP1C_DEBUG_BEAGLE enabled; copying Beagle inputs to ${debug_dir}"
+    for path in "${BEAGLE_VCF_PATHS[@]}"; do
+        if [ -f "${path}" ]; then
+            rsync -rhivPt "${path}" "${debug_dir}/"
+            if [ -f "${path}.tbi" ]; then
+                rsync -rhivPt "${path}.tbi" "${debug_dir}/"
+            fi
+        else
+            log_warn "Expected Beagle input missing for debug copy: ${path}"
+        fi
+    done
+fi
+
+VALIDATOR_SCRIPT="${STEP1C_MODULE_DIR}/bin/debug_beagle_vcf.sh"
+if [ -x "${VALIDATOR_SCRIPT}" ]; then
+    for path in "${BEAGLE_VCF_PATHS[@]}"; do
+        [ -f "${path}" ] || continue
+        validate_log="${path%.vcf.gz}.validate.log"
+        log_info "Validating Beagle input: ${path}"
+        if ! bash "${VALIDATOR_SCRIPT}" "${path}" > "${validate_log}" 2>&1; then
+            error_exit "Beagle input validation failed: ${path}. See ${validate_log}"
+        fi
+    done
+else
+    log_warn "Beagle validator not found or not executable: ${VALIDATOR_SCRIPT}"
+fi
 
 local_map_arg=""
 if [ -n "${GENE_MAP_FILE}" ] && [ -f "${GENE_MAP_FILE}" ]; then
