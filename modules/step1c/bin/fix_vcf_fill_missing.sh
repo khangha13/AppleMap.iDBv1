@@ -58,18 +58,27 @@ trap 'rm -f "${tmp_out}" "${meta_out}"' EXIT
 
 # WORKAROUND: Python3 crashes with "Illegal instruction" on some compute nodes
 # Use bcftools instead - it's more reliable and already handles VCF normalization
+
 # Extract and count headers
-zcat "${INPUT}" 2>/dev/null | awk 'BEGIN{FS="\t"} /^#CHROM/{print NF; exit}' > "${meta_out}"
+header_cols=$(zcat "${INPUT}" 2>/dev/null | awk 'BEGIN{FS="\t"} /^#CHROM/{print NF; exit}')
+if [ -z "${header_cols}" ] || [ "${header_cols}" -lt 9 ]; then
+    echo "[FATAL] Invalid or missing #CHROM header in ${INPUT}" >&2
+    exit 1
+fi
+echo "${header_cols}" > "${meta_out}"
 
 # Simple validation pass-through using bcftools (no Python needed)
-total_rows=$(zcat "${INPUT}" 2>/dev/null | grep -v "^#" | wc -l)
+total_rows=$(zcat "${INPUT}" 2>/dev/null | grep -cv "^#" || true)
 patched_rows=0
 
 echo "${total_rows}" >> "${meta_out}"
 echo "${patched_rows}" >> "${meta_out}"
 
-# Use bcftools to normalize the VCF (handles all edge cases correctly)
-"${BCFTOOLS_BIN}" view -Ov "${INPUT}" > "${tmp_out}"
+# Use bcftools to normalize the VCF (handles all edge cases correctly, including empty VCFs)
+if ! "${BCFTOOLS_BIN}" view -Ov "${INPUT}" > "${tmp_out}" 2>/dev/null; then
+    echo "[FATAL] bcftools view failed for ${INPUT}" >&2
+    exit 1
+fi
 
 # Python3 script removed - was causing "Illegal instruction" crashes on compute nodes
 # bcftools handles VCF validation/normalization reliably without Python dependency
