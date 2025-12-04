@@ -190,8 +190,6 @@ while IFS= read -r vcf_path; do
     BEAGLE_VCF_PATHS+=("${sorted_path}")
 done < "${VCF_MANIFEST}"
 
-LOCAL_MANIFEST="${WORK_TMPDIR}/vcf_manifest.txt"
-
 # WORKAROUND: Beagle 5.4.22Jul22.46e has compatibility issues with certain bgzip formats
 # Decompress VCFs to plain text for Beagle (verified working with uncompressed VCFs)
 log_info "Decompressing VCFs for Beagle (bgzip format compatibility workaround)..."
@@ -208,10 +206,6 @@ for path in "${BEAGLE_VCF_PATHS[@]}"; do
     UNCOMPRESSED_PREFIXES+=("${uncompressed_path}")
 done
 
-# Update manifest to point to uncompressed files
-printf '%s\n' "${UNCOMPRESSED_PREFIXES[@]}" > "${LOCAL_MANIFEST}"
-log_info "Prepared $(echo "${UNCOMPRESSED_PREFIXES[@]}" | wc -w) uncompressed VCF files for Beagle"
-
 local_map_arg=""
 if [ -n "${GENE_MAP_FILE}" ] && [ -f "${GENE_MAP_FILE}" ]; then
     rsync -rhivPt "${GENE_MAP_FILE}" "${WORK_TMPDIR}/"
@@ -224,9 +218,6 @@ JAVA_MEM="-Xmx${MEMORY_GB}g"
 
 log_info "Launching Beagle imputation..."
 
-# Minimum variants required for Beagle phasing (configurable)
-STEP1C_MIN_VARIANTS="${STEP1C_MIN_VARIANTS:-10}"
-
 # Process each chromosome separately (Beagle does not support manifest files in gt= parameter)
 for uncompressed_vcf in "${UNCOMPRESSED_PREFIXES[@]}"; do
     [ -f "${uncompressed_vcf}" ] || continue
@@ -235,28 +226,7 @@ for uncompressed_vcf in "${UNCOMPRESSED_PREFIXES[@]}"; do
     chr_prefix="${uncompressed_vcf%.vcf}"
     chr_prefix="${chr_prefix##*/}"
     
-    # Count variants (non-header lines)
-    variant_count=$(grep -cv "^#" "${uncompressed_vcf}" || echo "0")
-    
-    if [ "${variant_count}" -lt "${STEP1C_MIN_VARIANTS}" ]; then
-        log_warn "Skipping Beagle for ${uncompressed_vcf}: only ${variant_count} variants (min: ${STEP1C_MIN_VARIANTS})"
-        log_info "Copying input as 'phased' output (insufficient variants for phasing statistics)"
-        
-        # Compress and copy as "phased" output
-        bgzip -c "${uncompressed_vcf}" > "${chr_prefix}_phased.vcf.gz"
-        tabix -f "${chr_prefix}_phased.vcf.gz" || log_warn "Failed to index ${chr_prefix}_phased.vcf.gz"
-        
-        # Create a minimal log explaining the skip
-        {
-            echo "Beagle skipped for ${uncompressed_vcf}"
-            echo "Reason: Only ${variant_count} variants (minimum required: ${STEP1C_MIN_VARIANTS})"
-            echo "Output: Input VCF copied as-is (no phasing applied)"
-        } > "${chr_prefix}_phased.log"
-        
-        continue
-    fi
-    
-    log_info "Running Beagle on ${uncompressed_vcf} (${variant_count} variants)..."
+    log_info "Running Beagle on ${uncompressed_vcf}..."
     
     if ! java ${JAVA_MEM} -jar "${BEAGLE_JAR}" \
         gt="${uncompressed_vcf}" \
