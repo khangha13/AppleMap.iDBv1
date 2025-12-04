@@ -146,7 +146,29 @@ while IFS= read -r vcf_path; do
         error_exit "Final auto-fix failed for ${header_base}"
     fi
 
-    local_name="${final_base}"
+    # Drop any remaining rows with insufficient columns and log count
+    clean_base="${final_base%.vcf.gz}.clean.vcf.gz"
+    clean_path="${WORK_TMPDIR}/${clean_base}"
+    dropped_log="${WORK_TMPDIR}/${final_base%.vcf.gz}.dropped.txt"
+    log_info "Dropping rows with <${EXPECTED_COLS:-9}+ columns in ${final_base}"
+    dropped_count=$(
+        zcat "${final_path}" 2>/dev/null | awk -v expected="${EXPECTED_COLS:-9}" 'BEGIN{FS="\t"; OFS="\t"}
+            /^#/ {print > "/dev/stderr"; next}
+            {
+                if (NF < expected) {
+                    print > "'"${dropped_log}"'"
+                    next
+                }
+                print > "/dev/stdout"
+            }' | bgzip > "${clean_path}"; echo ${PIPESTATUS[0]}
+    )
+    tabix -f "${clean_path}" || log_warn "Failed to index ${clean_base}"
+    # If any rows were dropped, log a warning
+    if [ -s "${dropped_log}" ]; then
+        log_warn "Dropped malformed rows from ${final_base}; details in ${dropped_log}"
+    fi
+
+    local_name="${clean_base}"
     VCF_PREFIXES+=("${local_name}")
 done < "${VCF_MANIFEST}"
 
