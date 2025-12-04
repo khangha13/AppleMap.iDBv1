@@ -265,7 +265,6 @@ while IFS= read -r vcf_path; do
 done < "${VCF_MANIFEST}"
 
 LOCAL_MANIFEST="${WORK_TMPDIR}/vcf_manifest.txt"
-printf '%s\n' "${VCF_PREFIXES[@]}" > "${LOCAL_MANIFEST}"
 
 VALIDATOR_SCRIPT="${STEP1C_MODULE_DIR}/bin/debug_beagle_vcf.sh"
 if [ -x "${VALIDATOR_SCRIPT}" ]; then
@@ -280,6 +279,26 @@ if [ -x "${VALIDATOR_SCRIPT}" ]; then
 else
     log_warn "Beagle validator not found or not executable: ${VALIDATOR_SCRIPT}"
 fi
+
+# WORKAROUND: Beagle 5.4.22Jul22.46e has compatibility issues with certain bgzip formats
+# Decompress VCFs to plain text for Beagle (verified working with uncompressed VCFs)
+log_info "Decompressing VCFs for Beagle (bgzip format compatibility workaround)..."
+UNCOMPRESSED_PREFIXES=()
+for path in "${BEAGLE_VCF_PATHS[@]}"; do
+    [ -f "${path}" ] || continue
+    base_name="$(basename "${path}")"
+    uncompressed_base="${base_name%.vcf.gz}.vcf"
+    uncompressed_path="${WORK_TMPDIR}/${uncompressed_base}"
+    log_info "Decompressing: ${base_name} -> ${uncompressed_base}"
+    if ! zcat "${path}" > "${uncompressed_path}"; then
+        error_exit "Failed to decompress ${path} for Beagle"
+    fi
+    UNCOMPRESSED_PREFIXES+=("${uncompressed_base}")
+done
+
+# Update manifest to point to uncompressed files
+printf '%s\n' "${UNCOMPRESSED_PREFIXES[@]}" > "${LOCAL_MANIFEST}"
+log_info "Updated manifest with $(echo "${UNCOMPRESSED_PREFIXES[@]}" | wc -w) uncompressed VCF files"
 
 local_map_arg=""
 if [ -n "${GENE_MAP_FILE}" ] && [ -f "${GENE_MAP_FILE}" ]; then

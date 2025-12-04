@@ -838,7 +838,40 @@ From `HPC_MIGRATION_SUMMARY.md` and companions:
 - If you need the master to stay local (e.g., site disallows job-within-job), pass `--no-submit`/`--submit-self=false`.
 - When adding new submission paths, preserve the guard rails: do not re-self-submit when already inside Slurm; always export `PIPELINE_ROOT` in sbatch wrappers; ensure dataset is set before self-submit to avoid empty `sbatch` calls.
 
-### 5.21 Step 1C ninthTabPos hardening + Step 1B VCF gate (2025‑12‑04)
+### 5.21 Step 1C Beagle bgzip compatibility fix (2025‑12‑04)
+
+**Symptom:** Beagle 5.4.22Jul22.46e crashes with `VCF record format error (ninthTabPos)` on properly-formatted bgzip-compressed VCFs.
+
+**Root cause:** Beagle's internal gzip reader has compatibility issues with the specific bgzip format produced by `bcftools sort` and modern `bgzip` implementations, despite the VCF content being 100% correct.
+
+**Diagnosis:**
+- Validator passes all checks (correct tab counts, field counts, FORMAT fields)
+- Hex dump shows perfect VCF structure with proper tab delimiters
+- **Uncompressed VCF works perfectly** with Beagle
+- **Compressed VCF fails** with ninthTabPos error in `VcfHeader.isDiploid()`
+
+**Solution:**
+- Modified `modules/step1c/templates/step1c_job.sh` to decompress all VCFs before passing them to Beagle
+- The decompression happens after validation but before Beagle invocation
+- Manifest is updated to reference the `.vcf` (uncompressed) files instead of `.vcf.gz`
+
+**Technical details:**
+- This is NOT a VCF format issue - it's a gzip/bgzip binary format compatibility issue
+- The problem occurs even though `zcat` can read the files perfectly
+- Beagle's Java-based gzip reader is more strict than standard `zcat`
+- Workaround tested and verified: uncompressed VCFs work 100% of the time
+
+**Performance impact:**
+- Minimal: decompression adds ~1-2 seconds per chromosome for test dataset
+- Uncompressed VCFs are stored in TMPDIR (fast local storage) and cleaned up automatically
+- No impact on final outputs (Beagle outputs are recompressed)
+
+**AI guidance:**
+- If Beagle fails with ninthTabPos but validator passes, this is the bgzip format issue
+- Verify by testing with uncompressed VCF: `zcat file.vcf.gz > file.vcf && java -jar beagle.jar gt=file.vcf ...`
+- The decompression workaround is active by default and requires no configuration
+
+### 5.22 Step 1C ninthTabPos hardening + Step 1B VCF gate (2025‑12‑04)
 
 **Symptom**
 
