@@ -1,329 +1,259 @@
-[uqpha1@bunya1 step1c_debug]$ cd 20251204_142232
-[uqpha1@bunya1 20251204_142232]$ cat *
-2025-12-04T14:22:42	Persisted artifacts from /scratch/temp/18482343
-Input: /scratch/temp/18482343/Chr01_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
-Header columns: 11 (tabs: 10, expected tabs: 10)
-Sample count: 2
-Validated data lines: 5
-[PASSED] VCF passed Beagle validation
-Input: /scratch/temp/18482343/Chr02_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
-Header columns: 11 (tabs: 10, expected tabs: 10)
-Sample count: 2
-Validated data lines: 1
-[PASSED] VCF passed Beagle validation
-Input: /scratch/temp/18482343/Chr03_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
-Header columns: 11 (tabs: 10, expected tabs: 10)
-Sample count: 2
-Validated data lines: 8
-[PASSED] VCF passed Beagle validation
-Input: /scratch/temp/18482343/Chr04_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
-Header columns: 11 (tabs: 10, expected tabs: 10)
-Sample count: 2
-Validated data lines: 13
-[PASSED] VCF passed Beagle validation
-Input: /scratch/temp/18482343/Chr05_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
-Header columns: 11 (tabs: 10, expected tabs: 10)
-Sample count: 2
-Validated data lines: 6
-[PASSED] VCF passed Beagle validation
-Input: /scratch/temp/18482343/Chr06_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
-Header columns: 11 (tabs: 10, expected tabs: 10)
-Sample count: 2
-Validated data lines: 0
-[PASSED] VCF passed Beagle validation
-Input: /scratch/temp/18482343/Chr07_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
-Header columns: 11 (tabs: 10, expected tabs: 10)
-Sample count: 2
-Validated data lines: 4
-[PASSED] VCF passed Beagle validation
-Input: /scratch/temp/18482343/Chr08_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
-Header columns: 11 (tabs: 10, expected tabs: 10)
-Sample count: 2
-Validated data lines: 0
-[PASSED] VCF passed Beagle validation
-Input: /scratch/temp/18482343/Chr09_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
-Header columns: 11 (tabs: 10, expected tabs: 10)
-Sample count: 2
-Validated data lines: 4
-[PASSED] VCF passed Beagle validation
-Input: /scratch/temp/18482343/Chr10_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
-Header columns: 11 (tabs: 10, expected tabs: 10)
-Sample count: 2
-Validated data lines: 17
-[PASSED] VCF passed Beagle validation
-Input: /scratch/temp/18482343/Chr11_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
-Header columns: 11 (tabs: 10, expected tabs: 10)
-Sample count: 2
-Validated data lines: 29
-[PASSED] VCF passed Beagle validation
-Input: /scratch/temp/18482343/Chr12_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
-Header columns: 11 (tabs: 10, expected tabs: 10)
-Sample count: 2
-Validated data lines: 0
-[PASSED] VCF passed Beagle validation
-Input: /scratch/temp/18482343/Chr13_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
-Header columns: 11 (tabs: 10, expected tabs: 10)
-Sample count: 2
-Validated data lines: 14
-[PASSED] VCF passed Beagle validation
-Input: /scratch/temp/18482343/Chr14_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
-Header columns: 11 (tabs: 10, expected tabs: 10)
-Sample count: 2
-Validated data lines: 12
-[PASSED] VCF passed Beagle validation
-Input: /scratch/temp/18482343/Chr15_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
-Header columns: 11 (tabs: 10, expected tabs: 10)
-Sample count: 2
-Validated data lines: 15
-[PASSED] VCF passed Beagle validation
-Input: /scratch/temp/18482343/Chr16_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
-Header columns: 11 (tabs: 10, expected tabs: 10)
-Sample count: 2
-Validated data lines: 11
-[PASSED] VCF passed Beagle validation
-Input: /scratch/temp/18482343/Chr17_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
-Header columns: 11 (tabs: 10, expected tabs: 10)
-Sample count: 2
-Validated data lines: 2
-[PASSED] VCF passed Beagle validation
-
-[uqpha1@bunya1 test]$ cat 1C_18482343_0_Apple_GATK_1C_test_18482343.error
+[uqpha1@bun136 test]$ cat 1C_18482609_0_Apple_GATK_1C_test_18482609.error
 [pipeline_config] ⚠️  PIPELINE_CONFIG_SOURCED was true but required paths were empty; reloading config.
 [pipeline_config] ℹ️  Environment source: /home/uqpha1/AppleMap.iDBv1/config/environment.sh
 [pipeline_config] ℹ️  PIPELINE_REFERENCE_FASTA: /QRISdata/Q8367/Reference_Genome/GDDH13_1-1_formatted.fasta
 [pipeline_config] ℹ️  PIPELINE_ADAPTER_FASTA: /QRISdata/Q8367/Liao_2021_adapter/TruSeq2-PE.fa
 [pipeline_config] ℹ️  PIPELINE_KNOWN_SITES_VCF: /QRISdata/Q8367/Known_Sites/Final_DB_Known-sites_Filtered_by_480K_Unique_HD.vcf
 [pipeline_config] ℹ️  Set REFERENCE_GENOME from PIPELINE_REFERENCE_FASTA: /QRISdata/Q8367/Reference_Genome/GDDH13_1-1_formatted.fasta
-[2025-12-04 14:22:30] [INFO] [step1c] Logging system initialized for module: step1c
-[2025-12-04 14:22:30] [INFO] [step1c] Log type: job
-[2025-12-04 14:22:30] [INFO] [step1c] Log file: /scratch/project/bigdata_apple/logs/step1c_20251204_142230.log
-[2025-12-04 14:22:30] [INFO] [step1c] Log level: INFO
-[2025-12-04 14:22:30] [INFO] [step1c] Beagle impute flag: false (false = phasing-only)
-[2025-12-04 14:22:32] [INFO] [step1c] Using working directory: /scratch/temp/18482343
-[2025-12-04 14:22:32] [INFO] [step1c] Step 1C artifacts will be copied to /scratch/project/bigdata_apple/logs/test/step1c_debug/20251204_142232
-[2025-12-04 14:22:33] [INFO] [step1c] Auto-fixing VCF: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr01_consolidated.vcf.gz -> /scratch/temp/18482343/Chr01_consolidated.fixed.vcf.gz
-[2025-12-04 14:22:34] [INFO] [step1c] Filtering/normalizing SNPs for Chr01_consolidated.fixed.vcf.gz
+[2025-12-04 15:00:02] [INFO] [step1c] Logging system initialized for module: step1c
+[2025-12-04 15:00:02] [INFO] [step1c] Log type: job
+[2025-12-04 15:00:02] [INFO] [step1c] Log file: /home/uqpha1/logs/step1c_20251204_150002.log
+[2025-12-04 15:00:02] [INFO] [step1c] Log level: INFO
+[2025-12-04 15:00:02] [INFO] [step1c] Beagle impute flag: false (false = phasing-only)
+[2025-12-04 15:00:04] [INFO] [step1c] Using working directory: /scratch/temp/18482609
+[2025-12-04 15:00:04] [INFO] [step1c] Step 1C artifacts will be copied to /scratch/project/bigdata_apple/logs/test/step1c_debug/20251204_150004
+[2025-12-04 15:00:05] [INFO] [step1c] Auto-fixing VCF: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr01_consolidated.vcf.gz -> /scratch/temp/18482609/Chr01_consolidated.fixed.vcf.gz
+[2025-12-04 15:00:05] [INFO] [step1c] Filtering/normalizing SNPs for Chr01_consolidated.fixed.vcf.gz
 Lines   total/split/realigned/skipped:	5/0/0/0
-[2025-12-04 14:22:34] [INFO] [step1c] Renaming contigs (Chr01->1) in Chr01_consolidated.fixed.filtered.vcf.gz
-[2025-12-04 14:22:34] [INFO] [step1c] Injecting numeric contig header into Chr01_consolidated.fixed.filtered.renamed.vcf.gz
-[2025-12-04 14:22:34] [INFO] [step1c] Final padding/validation for Chr01_consolidated.fixed.filtered.renamed.hdr.vcf.gz
-[2025-12-04 14:22:34] [INFO] [step1c] Dropping rows with <11 columns in Chr01_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
-[2025-12-04 14:22:34] [INFO] [step1c] Sorting VCF for Beagle: Chr01_consolidated.fixed.filtered.renamed.hdr.final.clean.vcf.gz
-Writing to /scratch/temp/18482343/bcftools.IrnrMu
+[2025-12-04 15:00:05] [INFO] [step1c] Renaming contigs (Chr01->1) in Chr01_consolidated.fixed.filtered.vcf.gz
+[2025-12-04 15:00:05] [INFO] [step1c] Injecting numeric contig header into Chr01_consolidated.fixed.filtered.renamed.vcf.gz
+[2025-12-04 15:00:06] [INFO] [step1c] Final padding/validation for Chr01_consolidated.fixed.filtered.renamed.hdr.vcf.gz
+[2025-12-04 15:00:06] [INFO] [step1c] Dropping rows with <11 columns in Chr01_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
+[2025-12-04 15:00:06] [INFO] [step1c] Sorting VCF for Beagle: Chr01_consolidated.fixed.filtered.renamed.hdr.final.clean.vcf.gz
+Writing to /scratch/temp/18482609/bcftools.oWCq0E
 Merging 1 temporary files
 Cleaning
 Done
-[2025-12-04 14:22:34] [INFO] [step1c] Auto-fixing VCF: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr02_consolidated.vcf.gz -> /scratch/temp/18482343/Chr02_consolidated.fixed.vcf.gz
-[2025-12-04 14:22:34] [INFO] [step1c] Filtering/normalizing SNPs for Chr02_consolidated.fixed.vcf.gz
+[2025-12-04 15:00:06] [INFO] [step1c] Auto-fixing VCF: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr02_consolidated.vcf.gz -> /scratch/temp/18482609/Chr02_consolidated.fixed.vcf.gz
+[2025-12-04 15:00:06] [INFO] [step1c] Filtering/normalizing SNPs for Chr02_consolidated.fixed.vcf.gz
 Lines   total/split/realigned/skipped:	1/0/0/0
-[2025-12-04 14:22:34] [INFO] [step1c] Renaming contigs (Chr01->1) in Chr02_consolidated.fixed.filtered.vcf.gz
-[2025-12-04 14:22:34] [INFO] [step1c] Injecting numeric contig header into Chr02_consolidated.fixed.filtered.renamed.vcf.gz
-[2025-12-04 14:22:34] [INFO] [step1c] Final padding/validation for Chr02_consolidated.fixed.filtered.renamed.hdr.vcf.gz
-[2025-12-04 14:22:34] [INFO] [step1c] Dropping rows with <11 columns in Chr02_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
-[2025-12-04 14:22:34] [INFO] [step1c] Sorting VCF for Beagle: Chr02_consolidated.fixed.filtered.renamed.hdr.final.clean.vcf.gz
-Writing to /scratch/temp/18482343/bcftools.rJoGy8
+[2025-12-04 15:00:06] [INFO] [step1c] Renaming contigs (Chr01->1) in Chr02_consolidated.fixed.filtered.vcf.gz
+[2025-12-04 15:00:06] [INFO] [step1c] Injecting numeric contig header into Chr02_consolidated.fixed.filtered.renamed.vcf.gz
+[2025-12-04 15:00:06] [INFO] [step1c] Final padding/validation for Chr02_consolidated.fixed.filtered.renamed.hdr.vcf.gz
+[2025-12-04 15:00:06] [INFO] [step1c] Dropping rows with <11 columns in Chr02_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
+[2025-12-04 15:00:06] [INFO] [step1c] Sorting VCF for Beagle: Chr02_consolidated.fixed.filtered.renamed.hdr.final.clean.vcf.gz
+Writing to /scratch/temp/18482609/bcftools.gvfrkk
 Merging 1 temporary files
 Cleaning
 Done
-[2025-12-04 14:22:34] [INFO] [step1c] Auto-fixing VCF: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr03_consolidated.vcf.gz -> /scratch/temp/18482343/Chr03_consolidated.fixed.vcf.gz
-[2025-12-04 14:22:34] [INFO] [step1c] Filtering/normalizing SNPs for Chr03_consolidated.fixed.vcf.gz
+[2025-12-04 15:00:06] [INFO] [step1c] Auto-fixing VCF: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr03_consolidated.vcf.gz -> /scratch/temp/18482609/Chr03_consolidated.fixed.vcf.gz
+[2025-12-04 15:00:06] [INFO] [step1c] Filtering/normalizing SNPs for Chr03_consolidated.fixed.vcf.gz
 Lines   total/split/realigned/skipped:	8/0/0/0
-[2025-12-04 14:22:34] [INFO] [step1c] Renaming contigs (Chr01->1) in Chr03_consolidated.fixed.filtered.vcf.gz
-[2025-12-04 14:22:34] [INFO] [step1c] Injecting numeric contig header into Chr03_consolidated.fixed.filtered.renamed.vcf.gz
-[2025-12-04 14:22:34] [INFO] [step1c] Final padding/validation for Chr03_consolidated.fixed.filtered.renamed.hdr.vcf.gz
-[2025-12-04 14:22:35] [INFO] [step1c] Dropping rows with <11 columns in Chr03_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
-[2025-12-04 14:22:35] [INFO] [step1c] Sorting VCF for Beagle: Chr03_consolidated.fixed.filtered.renamed.hdr.final.clean.vcf.gz
-Writing to /scratch/temp/18482343/bcftools.CZgHeU
+[2025-12-04 15:00:06] [INFO] [step1c] Renaming contigs (Chr01->1) in Chr03_consolidated.fixed.filtered.vcf.gz
+[2025-12-04 15:00:06] [INFO] [step1c] Injecting numeric contig header into Chr03_consolidated.fixed.filtered.renamed.vcf.gz
+[2025-12-04 15:00:06] [INFO] [step1c] Final padding/validation for Chr03_consolidated.fixed.filtered.renamed.hdr.vcf.gz
+[2025-12-04 15:00:06] [INFO] [step1c] Dropping rows with <11 columns in Chr03_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
+[2025-12-04 15:00:06] [INFO] [step1c] Sorting VCF for Beagle: Chr03_consolidated.fixed.filtered.renamed.hdr.final.clean.vcf.gz
+Writing to /scratch/temp/18482609/bcftools.KOfT2z
 Merging 1 temporary files
 Cleaning
 Done
-[2025-12-04 14:22:35] [INFO] [step1c] Auto-fixing VCF: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr04_consolidated.vcf.gz -> /scratch/temp/18482343/Chr04_consolidated.fixed.vcf.gz
-[2025-12-04 14:22:35] [INFO] [step1c] Filtering/normalizing SNPs for Chr04_consolidated.fixed.vcf.gz
+[2025-12-04 15:00:06] [INFO] [step1c] Auto-fixing VCF: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr04_consolidated.vcf.gz -> /scratch/temp/18482609/Chr04_consolidated.fixed.vcf.gz
+[2025-12-04 15:00:07] [INFO] [step1c] Filtering/normalizing SNPs for Chr04_consolidated.fixed.vcf.gz
 Lines   total/split/realigned/skipped:	14/0/0/0
-[2025-12-04 14:22:35] [INFO] [step1c] Renaming contigs (Chr01->1) in Chr04_consolidated.fixed.filtered.vcf.gz
-[2025-12-04 14:22:35] [INFO] [step1c] Injecting numeric contig header into Chr04_consolidated.fixed.filtered.renamed.vcf.gz
-[2025-12-04 14:22:35] [INFO] [step1c] Final padding/validation for Chr04_consolidated.fixed.filtered.renamed.hdr.vcf.gz
-[2025-12-04 14:22:35] [INFO] [step1c] Dropping rows with <11 columns in Chr04_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
-[2025-12-04 14:22:35] [INFO] [step1c] Sorting VCF for Beagle: Chr04_consolidated.fixed.filtered.renamed.hdr.final.clean.vcf.gz
-Writing to /scratch/temp/18482343/bcftools.hdktQW
+[2025-12-04 15:00:07] [INFO] [step1c] Renaming contigs (Chr01->1) in Chr04_consolidated.fixed.filtered.vcf.gz
+[2025-12-04 15:00:07] [INFO] [step1c] Injecting numeric contig header into Chr04_consolidated.fixed.filtered.renamed.vcf.gz
+[2025-12-04 15:00:07] [INFO] [step1c] Final padding/validation for Chr04_consolidated.fixed.filtered.renamed.hdr.vcf.gz
+[2025-12-04 15:00:07] [INFO] [step1c] Dropping rows with <11 columns in Chr04_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
+[2025-12-04 15:00:07] [INFO] [step1c] Sorting VCF for Beagle: Chr04_consolidated.fixed.filtered.renamed.hdr.final.clean.vcf.gz
+Writing to /scratch/temp/18482609/bcftools.168tIN
 Merging 1 temporary files
 Cleaning
 Done
-[2025-12-04 14:22:35] [INFO] [step1c] Auto-fixing VCF: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr05_consolidated.vcf.gz -> /scratch/temp/18482343/Chr05_consolidated.fixed.vcf.gz
-[2025-12-04 14:22:35] [INFO] [step1c] Filtering/normalizing SNPs for Chr05_consolidated.fixed.vcf.gz
+[2025-12-04 15:00:07] [INFO] [step1c] Auto-fixing VCF: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr05_consolidated.vcf.gz -> /scratch/temp/18482609/Chr05_consolidated.fixed.vcf.gz
+[2025-12-04 15:00:07] [INFO] [step1c] Filtering/normalizing SNPs for Chr05_consolidated.fixed.vcf.gz
 Lines   total/split/realigned/skipped:	8/0/0/0
-[2025-12-04 14:22:35] [INFO] [step1c] Renaming contigs (Chr01->1) in Chr05_consolidated.fixed.filtered.vcf.gz
-[2025-12-04 14:22:35] [INFO] [step1c] Injecting numeric contig header into Chr05_consolidated.fixed.filtered.renamed.vcf.gz
-[2025-12-04 14:22:35] [INFO] [step1c] Final padding/validation for Chr05_consolidated.fixed.filtered.renamed.hdr.vcf.gz
-[2025-12-04 14:22:35] [INFO] [step1c] Dropping rows with <11 columns in Chr05_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
-[2025-12-04 14:22:35] [INFO] [step1c] Sorting VCF for Beagle: Chr05_consolidated.fixed.filtered.renamed.hdr.final.clean.vcf.gz
-Writing to /scratch/temp/18482343/bcftools.IAs7xa
+[2025-12-04 15:00:07] [INFO] [step1c] Renaming contigs (Chr01->1) in Chr05_consolidated.fixed.filtered.vcf.gz
+[2025-12-04 15:00:07] [INFO] [step1c] Injecting numeric contig header into Chr05_consolidated.fixed.filtered.renamed.vcf.gz
+[2025-12-04 15:00:07] [INFO] [step1c] Final padding/validation for Chr05_consolidated.fixed.filtered.renamed.hdr.vcf.gz
+[2025-12-04 15:00:07] [INFO] [step1c] Dropping rows with <11 columns in Chr05_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
+[2025-12-04 15:00:07] [INFO] [step1c] Sorting VCF for Beagle: Chr05_consolidated.fixed.filtered.renamed.hdr.final.clean.vcf.gz
+Writing to /scratch/temp/18482609/bcftools.LiSDjz
 Merging 1 temporary files
 Cleaning
 Done
-[2025-12-04 14:22:35] [INFO] [step1c] Auto-fixing VCF: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr06_consolidated.vcf.gz -> /scratch/temp/18482343/Chr06_consolidated.fixed.vcf.gz
-[2025-12-04 14:22:36] [INFO] [step1c] Filtering/normalizing SNPs for Chr06_consolidated.fixed.vcf.gz
+[2025-12-04 15:00:07] [INFO] [step1c] Auto-fixing VCF: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr06_consolidated.vcf.gz -> /scratch/temp/18482609/Chr06_consolidated.fixed.vcf.gz
+[2025-12-04 15:00:07] [INFO] [step1c] Filtering/normalizing SNPs for Chr06_consolidated.fixed.vcf.gz
 Lines   total/split/realigned/skipped:	0/0/0/0
-[2025-12-04 14:22:36] [INFO] [step1c] Renaming contigs (Chr01->1) in Chr06_consolidated.fixed.filtered.vcf.gz
-[2025-12-04 14:22:36] [INFO] [step1c] Injecting numeric contig header into Chr06_consolidated.fixed.filtered.renamed.vcf.gz
-[2025-12-04 14:22:36] [INFO] [step1c] Final padding/validation for Chr06_consolidated.fixed.filtered.renamed.hdr.vcf.gz
-[2025-12-04 14:22:36] [INFO] [step1c] Dropping rows with <11 columns in Chr06_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
-[2025-12-04 14:22:36] [INFO] [step1c] Sorting VCF for Beagle: Chr06_consolidated.fixed.filtered.renamed.hdr.final.clean.vcf.gz
-Writing to /scratch/temp/18482343/bcftools.eQrtyi
+[2025-12-04 15:00:07] [INFO] [step1c] Renaming contigs (Chr01->1) in Chr06_consolidated.fixed.filtered.vcf.gz
+[2025-12-04 15:00:07] [INFO] [step1c] Injecting numeric contig header into Chr06_consolidated.fixed.filtered.renamed.vcf.gz
+[2025-12-04 15:00:07] [INFO] [step1c] Final padding/validation for Chr06_consolidated.fixed.filtered.renamed.hdr.vcf.gz
+[2025-12-04 15:00:07] [INFO] [step1c] Dropping rows with <11 columns in Chr06_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
+[2025-12-04 15:00:07] [INFO] [step1c] Sorting VCF for Beagle: Chr06_consolidated.fixed.filtered.renamed.hdr.final.clean.vcf.gz
+Writing to /scratch/temp/18482609/bcftools.c8P5ZA
 Merging 0 temporary files
 Cleaning
 Done
-[2025-12-04 14:22:36] [INFO] [step1c] Auto-fixing VCF: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr07_consolidated.vcf.gz -> /scratch/temp/18482343/Chr07_consolidated.fixed.vcf.gz
-[2025-12-04 14:22:36] [INFO] [step1c] Filtering/normalizing SNPs for Chr07_consolidated.fixed.vcf.gz
+[2025-12-04 15:00:08] [INFO] [step1c] Auto-fixing VCF: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr07_consolidated.vcf.gz -> /scratch/temp/18482609/Chr07_consolidated.fixed.vcf.gz
+[2025-12-04 15:00:08] [INFO] [step1c] Filtering/normalizing SNPs for Chr07_consolidated.fixed.vcf.gz
 Lines   total/split/realigned/skipped:	6/0/0/0
-[2025-12-04 14:22:36] [INFO] [step1c] Renaming contigs (Chr01->1) in Chr07_consolidated.fixed.filtered.vcf.gz
-[2025-12-04 14:22:36] [INFO] [step1c] Injecting numeric contig header into Chr07_consolidated.fixed.filtered.renamed.vcf.gz
-[2025-12-04 14:22:36] [INFO] [step1c] Final padding/validation for Chr07_consolidated.fixed.filtered.renamed.hdr.vcf.gz
-[2025-12-04 14:22:36] [INFO] [step1c] Dropping rows with <11 columns in Chr07_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
-[2025-12-04 14:22:36] [INFO] [step1c] Sorting VCF for Beagle: Chr07_consolidated.fixed.filtered.renamed.hdr.final.clean.vcf.gz
-Writing to /scratch/temp/18482343/bcftools.l1cjN1
+[2025-12-04 15:00:08] [INFO] [step1c] Renaming contigs (Chr01->1) in Chr07_consolidated.fixed.filtered.vcf.gz
+[2025-12-04 15:00:08] [INFO] [step1c] Injecting numeric contig header into Chr07_consolidated.fixed.filtered.renamed.vcf.gz
+[2025-12-04 15:00:08] [INFO] [step1c] Final padding/validation for Chr07_consolidated.fixed.filtered.renamed.hdr.vcf.gz
+[2025-12-04 15:00:08] [INFO] [step1c] Dropping rows with <11 columns in Chr07_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
+[2025-12-04 15:00:08] [INFO] [step1c] Sorting VCF for Beagle: Chr07_consolidated.fixed.filtered.renamed.hdr.final.clean.vcf.gz
+Writing to /scratch/temp/18482609/bcftools.UiFmsZ
 Merging 1 temporary files
 Cleaning
 Done
-[2025-12-04 14:22:36] [INFO] [step1c] Auto-fixing VCF: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr08_consolidated.vcf.gz -> /scratch/temp/18482343/Chr08_consolidated.fixed.vcf.gz
-[2025-12-04 14:22:36] [INFO] [step1c] Filtering/normalizing SNPs for Chr08_consolidated.fixed.vcf.gz
+[2025-12-04 15:00:08] [INFO] [step1c] Auto-fixing VCF: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr08_consolidated.vcf.gz -> /scratch/temp/18482609/Chr08_consolidated.fixed.vcf.gz
+[2025-12-04 15:00:08] [INFO] [step1c] Filtering/normalizing SNPs for Chr08_consolidated.fixed.vcf.gz
 Lines   total/split/realigned/skipped:	0/0/0/0
-[2025-12-04 14:22:36] [INFO] [step1c] Renaming contigs (Chr01->1) in Chr08_consolidated.fixed.filtered.vcf.gz
-[2025-12-04 14:22:36] [INFO] [step1c] Injecting numeric contig header into Chr08_consolidated.fixed.filtered.renamed.vcf.gz
-[2025-12-04 14:22:36] [INFO] [step1c] Final padding/validation for Chr08_consolidated.fixed.filtered.renamed.hdr.vcf.gz
-[2025-12-04 14:22:37] [INFO] [step1c] Dropping rows with <11 columns in Chr08_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
-[2025-12-04 14:22:37] [INFO] [step1c] Sorting VCF for Beagle: Chr08_consolidated.fixed.filtered.renamed.hdr.final.clean.vcf.gz
-Writing to /scratch/temp/18482343/bcftools.cGjpxy
+[2025-12-04 15:00:08] [INFO] [step1c] Renaming contigs (Chr01->1) in Chr08_consolidated.fixed.filtered.vcf.gz
+[2025-12-04 15:00:08] [INFO] [step1c] Injecting numeric contig header into Chr08_consolidated.fixed.filtered.renamed.vcf.gz
+[2025-12-04 15:00:08] [INFO] [step1c] Final padding/validation for Chr08_consolidated.fixed.filtered.renamed.hdr.vcf.gz
+[2025-12-04 15:00:08] [INFO] [step1c] Dropping rows with <11 columns in Chr08_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
+[2025-12-04 15:00:08] [INFO] [step1c] Sorting VCF for Beagle: Chr08_consolidated.fixed.filtered.renamed.hdr.final.clean.vcf.gz
+Writing to /scratch/temp/18482609/bcftools.SrCNl2
 Merging 0 temporary files
 Cleaning
 Done
-[2025-12-04 14:22:37] [INFO] [step1c] Auto-fixing VCF: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr09_consolidated.vcf.gz -> /scratch/temp/18482343/Chr09_consolidated.fixed.vcf.gz
-[2025-12-04 14:22:37] [INFO] [step1c] Filtering/normalizing SNPs for Chr09_consolidated.fixed.vcf.gz
+[2025-12-04 15:00:08] [INFO] [step1c] Auto-fixing VCF: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr09_consolidated.vcf.gz -> /scratch/temp/18482609/Chr09_consolidated.fixed.vcf.gz
+[2025-12-04 15:00:08] [INFO] [step1c] Filtering/normalizing SNPs for Chr09_consolidated.fixed.vcf.gz
 Lines   total/split/realigned/skipped:	4/0/0/0
-[2025-12-04 14:22:37] [INFO] [step1c] Renaming contigs (Chr01->1) in Chr09_consolidated.fixed.filtered.vcf.gz
-[2025-12-04 14:22:37] [INFO] [step1c] Injecting numeric contig header into Chr09_consolidated.fixed.filtered.renamed.vcf.gz
-[2025-12-04 14:22:37] [INFO] [step1c] Final padding/validation for Chr09_consolidated.fixed.filtered.renamed.hdr.vcf.gz
-[2025-12-04 14:22:37] [INFO] [step1c] Dropping rows with <11 columns in Chr09_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
-[2025-12-04 14:22:37] [INFO] [step1c] Sorting VCF for Beagle: Chr09_consolidated.fixed.filtered.renamed.hdr.final.clean.vcf.gz
-Writing to /scratch/temp/18482343/bcftools.2Y0Het
+[2025-12-04 15:00:08] [INFO] [step1c] Renaming contigs (Chr01->1) in Chr09_consolidated.fixed.filtered.vcf.gz
+[2025-12-04 15:00:08] [INFO] [step1c] Injecting numeric contig header into Chr09_consolidated.fixed.filtered.renamed.vcf.gz
+[2025-12-04 15:00:08] [INFO] [step1c] Final padding/validation for Chr09_consolidated.fixed.filtered.renamed.hdr.vcf.gz
+[2025-12-04 15:00:09] [INFO] [step1c] Dropping rows with <11 columns in Chr09_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
+[2025-12-04 15:00:09] [INFO] [step1c] Sorting VCF for Beagle: Chr09_consolidated.fixed.filtered.renamed.hdr.final.clean.vcf.gz
+Writing to /scratch/temp/18482609/bcftools.k1UxXR
 Merging 1 temporary files
 Cleaning
 Done
-[2025-12-04 14:22:37] [INFO] [step1c] Auto-fixing VCF: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr10_consolidated.vcf.gz -> /scratch/temp/18482343/Chr10_consolidated.fixed.vcf.gz
-[2025-12-04 14:22:37] [INFO] [step1c] Filtering/normalizing SNPs for Chr10_consolidated.fixed.vcf.gz
+[2025-12-04 15:00:09] [INFO] [step1c] Auto-fixing VCF: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr10_consolidated.vcf.gz -> /scratch/temp/18482609/Chr10_consolidated.fixed.vcf.gz
+[2025-12-04 15:00:09] [INFO] [step1c] Filtering/normalizing SNPs for Chr10_consolidated.fixed.vcf.gz
 Lines   total/split/realigned/skipped:	19/0/0/0
-[2025-12-04 14:22:37] [INFO] [step1c] Renaming contigs (Chr01->1) in Chr10_consolidated.fixed.filtered.vcf.gz
-[2025-12-04 14:22:37] [INFO] [step1c] Injecting numeric contig header into Chr10_consolidated.fixed.filtered.renamed.vcf.gz
-[2025-12-04 14:22:37] [INFO] [step1c] Final padding/validation for Chr10_consolidated.fixed.filtered.renamed.hdr.vcf.gz
-[2025-12-04 14:22:37] [INFO] [step1c] Dropping rows with <11 columns in Chr10_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
-[2025-12-04 14:22:37] [INFO] [step1c] Sorting VCF for Beagle: Chr10_consolidated.fixed.filtered.renamed.hdr.final.clean.vcf.gz
-Writing to /scratch/temp/18482343/bcftools.KfpuQz
+[2025-12-04 15:00:09] [INFO] [step1c] Renaming contigs (Chr01->1) in Chr10_consolidated.fixed.filtered.vcf.gz
+[2025-12-04 15:00:09] [INFO] [step1c] Injecting numeric contig header into Chr10_consolidated.fixed.filtered.renamed.vcf.gz
+[2025-12-04 15:00:09] [INFO] [step1c] Final padding/validation for Chr10_consolidated.fixed.filtered.renamed.hdr.vcf.gz
+[2025-12-04 15:00:09] [INFO] [step1c] Dropping rows with <11 columns in Chr10_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
+[2025-12-04 15:00:09] [INFO] [step1c] Sorting VCF for Beagle: Chr10_consolidated.fixed.filtered.renamed.hdr.final.clean.vcf.gz
+Writing to /scratch/temp/18482609/bcftools.3fOQdz
 Merging 1 temporary files
 Cleaning
 Done
-[2025-12-04 14:22:38] [INFO] [step1c] Auto-fixing VCF: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr11_consolidated.vcf.gz -> /scratch/temp/18482343/Chr11_consolidated.fixed.vcf.gz
-[2025-12-04 14:22:38] [INFO] [step1c] Filtering/normalizing SNPs for Chr11_consolidated.fixed.vcf.gz
+[2025-12-04 15:00:09] [INFO] [step1c] Auto-fixing VCF: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr11_consolidated.vcf.gz -> /scratch/temp/18482609/Chr11_consolidated.fixed.vcf.gz
+[2025-12-04 15:00:09] [INFO] [step1c] Filtering/normalizing SNPs for Chr11_consolidated.fixed.vcf.gz
 Lines   total/split/realigned/skipped:	36/0/0/0
-[2025-12-04 14:22:38] [INFO] [step1c] Renaming contigs (Chr01->1) in Chr11_consolidated.fixed.filtered.vcf.gz
-[2025-12-04 14:22:38] [INFO] [step1c] Injecting numeric contig header into Chr11_consolidated.fixed.filtered.renamed.vcf.gz
-[2025-12-04 14:22:38] [INFO] [step1c] Final padding/validation for Chr11_consolidated.fixed.filtered.renamed.hdr.vcf.gz
-[2025-12-04 14:22:38] [INFO] [step1c] Dropping rows with <11 columns in Chr11_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
-[2025-12-04 14:22:38] [INFO] [step1c] Sorting VCF for Beagle: Chr11_consolidated.fixed.filtered.renamed.hdr.final.clean.vcf.gz
-Writing to /scratch/temp/18482343/bcftools.ZUiKjR
+[2025-12-04 15:00:09] [INFO] [step1c] Renaming contigs (Chr01->1) in Chr11_consolidated.fixed.filtered.vcf.gz
+[2025-12-04 15:00:09] [INFO] [step1c] Injecting numeric contig header into Chr11_consolidated.fixed.filtered.renamed.vcf.gz
+[2025-12-04 15:00:09] [INFO] [step1c] Final padding/validation for Chr11_consolidated.fixed.filtered.renamed.hdr.vcf.gz
+[2025-12-04 15:00:09] [INFO] [step1c] Dropping rows with <11 columns in Chr11_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
+[2025-12-04 15:00:09] [INFO] [step1c] Sorting VCF for Beagle: Chr11_consolidated.fixed.filtered.renamed.hdr.final.clean.vcf.gz
+Writing to /scratch/temp/18482609/bcftools.rGNww3
 Merging 1 temporary files
 Cleaning
 Done
-[2025-12-04 14:22:38] [INFO] [step1c] Auto-fixing VCF: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr12_consolidated.vcf.gz -> /scratch/temp/18482343/Chr12_consolidated.fixed.vcf.gz
-[2025-12-04 14:22:38] [INFO] [step1c] Filtering/normalizing SNPs for Chr12_consolidated.fixed.vcf.gz
+[2025-12-04 15:00:09] [INFO] [step1c] Auto-fixing VCF: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr12_consolidated.vcf.gz -> /scratch/temp/18482609/Chr12_consolidated.fixed.vcf.gz
+[2025-12-04 15:00:10] [INFO] [step1c] Filtering/normalizing SNPs for Chr12_consolidated.fixed.vcf.gz
 Lines   total/split/realigned/skipped:	0/0/0/0
-[2025-12-04 14:22:38] [INFO] [step1c] Renaming contigs (Chr01->1) in Chr12_consolidated.fixed.filtered.vcf.gz
-[2025-12-04 14:22:38] [INFO] [step1c] Injecting numeric contig header into Chr12_consolidated.fixed.filtered.renamed.vcf.gz
-[2025-12-04 14:22:38] [INFO] [step1c] Final padding/validation for Chr12_consolidated.fixed.filtered.renamed.hdr.vcf.gz
-[2025-12-04 14:22:38] [INFO] [step1c] Dropping rows with <11 columns in Chr12_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
-[2025-12-04 14:22:38] [INFO] [step1c] Sorting VCF for Beagle: Chr12_consolidated.fixed.filtered.renamed.hdr.final.clean.vcf.gz
-Writing to /scratch/temp/18482343/bcftools.yeYcVB
+[2025-12-04 15:00:10] [INFO] [step1c] Renaming contigs (Chr01->1) in Chr12_consolidated.fixed.filtered.vcf.gz
+[2025-12-04 15:00:10] [INFO] [step1c] Injecting numeric contig header into Chr12_consolidated.fixed.filtered.renamed.vcf.gz
+[2025-12-04 15:00:10] [INFO] [step1c] Final padding/validation for Chr12_consolidated.fixed.filtered.renamed.hdr.vcf.gz
+[2025-12-04 15:00:10] [INFO] [step1c] Dropping rows with <11 columns in Chr12_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
+[2025-12-04 15:00:10] [INFO] [step1c] Sorting VCF for Beagle: Chr12_consolidated.fixed.filtered.renamed.hdr.final.clean.vcf.gz
+Writing to /scratch/temp/18482609/bcftools.ibUHpk
 Merging 0 temporary files
 Cleaning
 Done
-[2025-12-04 14:22:38] [INFO] [step1c] Auto-fixing VCF: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr13_consolidated.vcf.gz -> /scratch/temp/18482343/Chr13_consolidated.fixed.vcf.gz
-[2025-12-04 14:22:38] [INFO] [step1c] Filtering/normalizing SNPs for Chr13_consolidated.fixed.vcf.gz
+[2025-12-04 15:00:10] [INFO] [step1c] Auto-fixing VCF: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr13_consolidated.vcf.gz -> /scratch/temp/18482609/Chr13_consolidated.fixed.vcf.gz
+[2025-12-04 15:00:10] [INFO] [step1c] Filtering/normalizing SNPs for Chr13_consolidated.fixed.vcf.gz
 Lines   total/split/realigned/skipped:	16/0/0/0
-[2025-12-04 14:22:38] [INFO] [step1c] Renaming contigs (Chr01->1) in Chr13_consolidated.fixed.filtered.vcf.gz
-[2025-12-04 14:22:39] [INFO] [step1c] Injecting numeric contig header into Chr13_consolidated.fixed.filtered.renamed.vcf.gz
-[2025-12-04 14:22:39] [INFO] [step1c] Final padding/validation for Chr13_consolidated.fixed.filtered.renamed.hdr.vcf.gz
-[2025-12-04 14:22:39] [INFO] [step1c] Dropping rows with <11 columns in Chr13_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
-[2025-12-04 14:22:39] [INFO] [step1c] Sorting VCF for Beagle: Chr13_consolidated.fixed.filtered.renamed.hdr.final.clean.vcf.gz
-Writing to /scratch/temp/18482343/bcftools.CFr47x
+[2025-12-04 15:00:10] [INFO] [step1c] Renaming contigs (Chr01->1) in Chr13_consolidated.fixed.filtered.vcf.gz
+[2025-12-04 15:00:10] [INFO] [step1c] Injecting numeric contig header into Chr13_consolidated.fixed.filtered.renamed.vcf.gz
+[2025-12-04 15:00:10] [INFO] [step1c] Final padding/validation for Chr13_consolidated.fixed.filtered.renamed.hdr.vcf.gz
+[2025-12-04 15:00:10] [INFO] [step1c] Dropping rows with <11 columns in Chr13_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
+[2025-12-04 15:00:10] [INFO] [step1c] Sorting VCF for Beagle: Chr13_consolidated.fixed.filtered.renamed.hdr.final.clean.vcf.gz
+Writing to /scratch/temp/18482609/bcftools.X0DxHe
 Merging 1 temporary files
 Cleaning
 Done
-[2025-12-04 14:22:39] [INFO] [step1c] Auto-fixing VCF: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr14_consolidated.vcf.gz -> /scratch/temp/18482343/Chr14_consolidated.fixed.vcf.gz
-[2025-12-04 14:22:39] [INFO] [step1c] Filtering/normalizing SNPs for Chr14_consolidated.fixed.vcf.gz
+[2025-12-04 15:00:10] [INFO] [step1c] Auto-fixing VCF: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr14_consolidated.vcf.gz -> /scratch/temp/18482609/Chr14_consolidated.fixed.vcf.gz
+[2025-12-04 15:00:10] [INFO] [step1c] Filtering/normalizing SNPs for Chr14_consolidated.fixed.vcf.gz
 Lines   total/split/realigned/skipped:	15/0/0/0
-[2025-12-04 14:22:39] [INFO] [step1c] Renaming contigs (Chr01->1) in Chr14_consolidated.fixed.filtered.vcf.gz
-[2025-12-04 14:22:39] [INFO] [step1c] Injecting numeric contig header into Chr14_consolidated.fixed.filtered.renamed.vcf.gz
-[2025-12-04 14:22:39] [INFO] [step1c] Final padding/validation for Chr14_consolidated.fixed.filtered.renamed.hdr.vcf.gz
-[2025-12-04 14:22:39] [INFO] [step1c] Dropping rows with <11 columns in Chr14_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
-[2025-12-04 14:22:39] [INFO] [step1c] Sorting VCF for Beagle: Chr14_consolidated.fixed.filtered.renamed.hdr.final.clean.vcf.gz
-Writing to /scratch/temp/18482343/bcftools.ZrlP7L
+[2025-12-04 15:00:10] [INFO] [step1c] Renaming contigs (Chr01->1) in Chr14_consolidated.fixed.filtered.vcf.gz
+[2025-12-04 15:00:10] [INFO] [step1c] Injecting numeric contig header into Chr14_consolidated.fixed.filtered.renamed.vcf.gz
+[2025-12-04 15:00:10] [INFO] [step1c] Final padding/validation for Chr14_consolidated.fixed.filtered.renamed.hdr.vcf.gz
+[2025-12-04 15:00:10] [INFO] [step1c] Dropping rows with <11 columns in Chr14_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
+[2025-12-04 15:00:10] [INFO] [step1c] Sorting VCF for Beagle: Chr14_consolidated.fixed.filtered.renamed.hdr.final.clean.vcf.gz
+Writing to /scratch/temp/18482609/bcftools.dm48Zy
 Merging 1 temporary files
 Cleaning
 Done
-[2025-12-04 14:22:39] [INFO] [step1c] Auto-fixing VCF: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr15_consolidated.vcf.gz -> /scratch/temp/18482343/Chr15_consolidated.fixed.vcf.gz
-[2025-12-04 14:22:39] [INFO] [step1c] Filtering/normalizing SNPs for Chr15_consolidated.fixed.vcf.gz
+[2025-12-04 15:00:10] [INFO] [step1c] Auto-fixing VCF: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr15_consolidated.vcf.gz -> /scratch/temp/18482609/Chr15_consolidated.fixed.vcf.gz
+[2025-12-04 15:00:10] [INFO] [step1c] Filtering/normalizing SNPs for Chr15_consolidated.fixed.vcf.gz
 Lines   total/split/realigned/skipped:	16/0/0/0
-[2025-12-04 14:22:39] [INFO] [step1c] Renaming contigs (Chr01->1) in Chr15_consolidated.fixed.filtered.vcf.gz
-[2025-12-04 14:22:39] [INFO] [step1c] Injecting numeric contig header into Chr15_consolidated.fixed.filtered.renamed.vcf.gz
-[2025-12-04 14:22:39] [INFO] [step1c] Final padding/validation for Chr15_consolidated.fixed.filtered.renamed.hdr.vcf.gz
-[2025-12-04 14:22:39] [INFO] [step1c] Dropping rows with <11 columns in Chr15_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
-[2025-12-04 14:22:39] [INFO] [step1c] Sorting VCF for Beagle: Chr15_consolidated.fixed.filtered.renamed.hdr.final.clean.vcf.gz
-Writing to /scratch/temp/18482343/bcftools.OFJ5fN
+[2025-12-04 15:00:11] [INFO] [step1c] Renaming contigs (Chr01->1) in Chr15_consolidated.fixed.filtered.vcf.gz
+[2025-12-04 15:00:11] [INFO] [step1c] Injecting numeric contig header into Chr15_consolidated.fixed.filtered.renamed.vcf.gz
+[2025-12-04 15:00:11] [INFO] [step1c] Final padding/validation for Chr15_consolidated.fixed.filtered.renamed.hdr.vcf.gz
+[2025-12-04 15:00:11] [INFO] [step1c] Dropping rows with <11 columns in Chr15_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
+[2025-12-04 15:00:11] [INFO] [step1c] Sorting VCF for Beagle: Chr15_consolidated.fixed.filtered.renamed.hdr.final.clean.vcf.gz
+Writing to /scratch/temp/18482609/bcftools.3F6lsB
 Merging 1 temporary files
 Cleaning
 Done
-[2025-12-04 14:22:40] [INFO] [step1c] Auto-fixing VCF: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr16_consolidated.vcf.gz -> /scratch/temp/18482343/Chr16_consolidated.fixed.vcf.gz
-[2025-12-04 14:22:40] [INFO] [step1c] Filtering/normalizing SNPs for Chr16_consolidated.fixed.vcf.gz
+[2025-12-04 15:00:11] [INFO] [step1c] Auto-fixing VCF: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr16_consolidated.vcf.gz -> /scratch/temp/18482609/Chr16_consolidated.fixed.vcf.gz
+[2025-12-04 15:00:11] [INFO] [step1c] Filtering/normalizing SNPs for Chr16_consolidated.fixed.vcf.gz
 Lines   total/split/realigned/skipped:	11/0/0/0
-[2025-12-04 14:22:40] [INFO] [step1c] Renaming contigs (Chr01->1) in Chr16_consolidated.fixed.filtered.vcf.gz
-[2025-12-04 14:22:40] [INFO] [step1c] Injecting numeric contig header into Chr16_consolidated.fixed.filtered.renamed.vcf.gz
-[2025-12-04 14:22:40] [INFO] [step1c] Final padding/validation for Chr16_consolidated.fixed.filtered.renamed.hdr.vcf.gz
-[2025-12-04 14:22:40] [INFO] [step1c] Dropping rows with <11 columns in Chr16_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
-[2025-12-04 14:22:40] [INFO] [step1c] Sorting VCF for Beagle: Chr16_consolidated.fixed.filtered.renamed.hdr.final.clean.vcf.gz
-Writing to /scratch/temp/18482343/bcftools.Xd8OZl
+[2025-12-04 15:00:11] [INFO] [step1c] Renaming contigs (Chr01->1) in Chr16_consolidated.fixed.filtered.vcf.gz
+[2025-12-04 15:00:11] [INFO] [step1c] Injecting numeric contig header into Chr16_consolidated.fixed.filtered.renamed.vcf.gz
+[2025-12-04 15:00:11] [INFO] [step1c] Final padding/validation for Chr16_consolidated.fixed.filtered.renamed.hdr.vcf.gz
+[2025-12-04 15:00:11] [INFO] [step1c] Dropping rows with <11 columns in Chr16_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
+[2025-12-04 15:00:11] [INFO] [step1c] Sorting VCF for Beagle: Chr16_consolidated.fixed.filtered.renamed.hdr.final.clean.vcf.gz
+Writing to /scratch/temp/18482609/bcftools.rZGCCJ
 Merging 1 temporary files
 Cleaning
 Done
-[2025-12-04 14:22:40] [INFO] [step1c] Auto-fixing VCF: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr17_consolidated.vcf.gz -> /scratch/temp/18482343/Chr17_consolidated.fixed.vcf.gz
-[2025-12-04 14:22:40] [INFO] [step1c] Filtering/normalizing SNPs for Chr17_consolidated.fixed.vcf.gz
+[2025-12-04 15:00:11] [INFO] [step1c] Auto-fixing VCF: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr17_consolidated.vcf.gz -> /scratch/temp/18482609/Chr17_consolidated.fixed.vcf.gz
+[2025-12-04 15:00:11] [INFO] [step1c] Filtering/normalizing SNPs for Chr17_consolidated.fixed.vcf.gz
 Lines   total/split/realigned/skipped:	2/0/0/0
-[2025-12-04 14:22:40] [INFO] [step1c] Renaming contigs (Chr01->1) in Chr17_consolidated.fixed.filtered.vcf.gz
-[2025-12-04 14:22:40] [INFO] [step1c] Injecting numeric contig header into Chr17_consolidated.fixed.filtered.renamed.vcf.gz
-[2025-12-04 14:22:40] [INFO] [step1c] Final padding/validation for Chr17_consolidated.fixed.filtered.renamed.hdr.vcf.gz
-[2025-12-04 14:22:40] [INFO] [step1c] Dropping rows with <11 columns in Chr17_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
-[2025-12-04 14:22:40] [INFO] [step1c] Sorting VCF for Beagle: Chr17_consolidated.fixed.filtered.renamed.hdr.final.clean.vcf.gz
-Writing to /scratch/temp/18482343/bcftools.UEjdki
+[2025-12-04 15:00:11] [INFO] [step1c] Renaming contigs (Chr01->1) in Chr17_consolidated.fixed.filtered.vcf.gz
+[2025-12-04 15:00:11] [INFO] [step1c] Injecting numeric contig header into Chr17_consolidated.fixed.filtered.renamed.vcf.gz
+[2025-12-04 15:00:11] [INFO] [step1c] Final padding/validation for Chr17_consolidated.fixed.filtered.renamed.hdr.vcf.gz
+[2025-12-04 15:00:11] [INFO] [step1c] Dropping rows with <11 columns in Chr17_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
+[2025-12-04 15:00:11] [INFO] [step1c] Sorting VCF for Beagle: Chr17_consolidated.fixed.filtered.renamed.hdr.final.clean.vcf.gz
+Writing to /scratch/temp/18482609/bcftools.F9TJuI
 Merging 1 temporary files
 Cleaning
 Done
-[2025-12-04 14:22:40] [INFO] [step1c] Validating Beagle input: /scratch/temp/18482343/Chr01_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
-[2025-12-04 14:22:40] [INFO] [step1c] Validating Beagle input: /scratch/temp/18482343/Chr02_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
-[2025-12-04 14:22:40] [INFO] [step1c] Validating Beagle input: /scratch/temp/18482343/Chr03_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
-[2025-12-04 14:22:41] [INFO] [step1c] Validating Beagle input: /scratch/temp/18482343/Chr04_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
-[2025-12-04 14:22:41] [INFO] [step1c] Validating Beagle input: /scratch/temp/18482343/Chr05_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
-[2025-12-04 14:22:41] [INFO] [step1c] Validating Beagle input: /scratch/temp/18482343/Chr06_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
-[2025-12-04 14:22:41] [INFO] [step1c] Validating Beagle input: /scratch/temp/18482343/Chr07_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
-[2025-12-04 14:22:41] [INFO] [step1c] Validating Beagle input: /scratch/temp/18482343/Chr08_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
-[2025-12-04 14:22:41] [INFO] [step1c] Validating Beagle input: /scratch/temp/18482343/Chr09_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
-[2025-12-04 14:22:41] [INFO] [step1c] Validating Beagle input: /scratch/temp/18482343/Chr10_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
-[2025-12-04 14:22:41] [INFO] [step1c] Validating Beagle input: /scratch/temp/18482343/Chr11_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
-[2025-12-04 14:22:41] [INFO] [step1c] Validating Beagle input: /scratch/temp/18482343/Chr12_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
-[2025-12-04 14:22:41] [INFO] [step1c] Validating Beagle input: /scratch/temp/18482343/Chr13_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
-[2025-12-04 14:22:41] [INFO] [step1c] Validating Beagle input: /scratch/temp/18482343/Chr14_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
-[2025-12-04 14:22:41] [INFO] [step1c] Validating Beagle input: /scratch/temp/18482343/Chr15_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
-[2025-12-04 14:22:41] [INFO] [step1c] Validating Beagle input: /scratch/temp/18482343/Chr16_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
-[2025-12-04 14:22:41] [INFO] [step1c] Validating Beagle input: /scratch/temp/18482343/Chr17_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
-[2025-12-04 14:22:42] [INFO] [step1c] Launching Beagle imputation...
-Exception in thread "main" java.lang.IllegalArgumentException: VCF record format error: Chr01_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
+[2025-12-04 15:00:11] [INFO] [step1c] Validating Beagle input: /scratch/temp/18482609/Chr01_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
+[2025-12-04 15:00:11] [INFO] [step1c] Validating Beagle input: /scratch/temp/18482609/Chr02_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
+[2025-12-04 15:00:11] [INFO] [step1c] Validating Beagle input: /scratch/temp/18482609/Chr03_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
+[2025-12-04 15:00:12] [INFO] [step1c] Validating Beagle input: /scratch/temp/18482609/Chr04_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
+[2025-12-04 15:00:12] [INFO] [step1c] Validating Beagle input: /scratch/temp/18482609/Chr05_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
+[2025-12-04 15:00:12] [INFO] [step1c] Validating Beagle input: /scratch/temp/18482609/Chr06_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
+[2025-12-04 15:00:12] [INFO] [step1c] Validating Beagle input: /scratch/temp/18482609/Chr07_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
+[2025-12-04 15:00:12] [INFO] [step1c] Validating Beagle input: /scratch/temp/18482609/Chr08_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
+[2025-12-04 15:00:12] [INFO] [step1c] Validating Beagle input: /scratch/temp/18482609/Chr09_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
+[2025-12-04 15:00:12] [INFO] [step1c] Validating Beagle input: /scratch/temp/18482609/Chr10_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
+[2025-12-04 15:00:12] [INFO] [step1c] Validating Beagle input: /scratch/temp/18482609/Chr11_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
+[2025-12-04 15:00:12] [INFO] [step1c] Validating Beagle input: /scratch/temp/18482609/Chr12_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
+[2025-12-04 15:00:12] [INFO] [step1c] Validating Beagle input: /scratch/temp/18482609/Chr13_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
+[2025-12-04 15:00:12] [INFO] [step1c] Validating Beagle input: /scratch/temp/18482609/Chr14_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
+[2025-12-04 15:00:12] [INFO] [step1c] Validating Beagle input: /scratch/temp/18482609/Chr15_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
+[2025-12-04 15:00:12] [INFO] [step1c] Validating Beagle input: /scratch/temp/18482609/Chr16_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
+[2025-12-04 15:00:12] [INFO] [step1c] Validating Beagle input: /scratch/temp/18482609/Chr17_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
+[2025-12-04 15:00:12] [INFO] [step1c] Decompressing VCFs for Beagle (bgzip format compatibility workaround)...
+[2025-12-04 15:00:12] [INFO] [step1c] Decompressing: Chr01_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz -> Chr01_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf
+[2025-12-04 15:00:12] [INFO] [step1c] Decompressing: Chr02_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz -> Chr02_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf
+[2025-12-04 15:00:12] [INFO] [step1c] Decompressing: Chr03_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz -> Chr03_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf
+[2025-12-04 15:00:12] [INFO] [step1c] Decompressing: Chr04_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz -> Chr04_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf
+[2025-12-04 15:00:12] [INFO] [step1c] Decompressing: Chr05_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz -> Chr05_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf
+[2025-12-04 15:00:12] [INFO] [step1c] Decompressing: Chr06_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz -> Chr06_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf
+[2025-12-04 15:00:13] [INFO] [step1c] Decompressing: Chr07_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz -> Chr07_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf
+[2025-12-04 15:00:13] [INFO] [step1c] Decompressing: Chr08_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz -> Chr08_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf
+[2025-12-04 15:00:13] [INFO] [step1c] Decompressing: Chr09_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz -> Chr09_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf
+[2025-12-04 15:00:13] [INFO] [step1c] Decompressing: Chr10_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz -> Chr10_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf
+[2025-12-04 15:00:13] [INFO] [step1c] Decompressing: Chr11_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz -> Chr11_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf
+[2025-12-04 15:00:13] [INFO] [step1c] Decompressing: Chr12_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz -> Chr12_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf
+[2025-12-04 15:00:13] [INFO] [step1c] Decompressing: Chr13_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz -> Chr13_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf
+[2025-12-04 15:00:13] [INFO] [step1c] Decompressing: Chr14_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz -> Chr14_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf
+[2025-12-04 15:00:13] [INFO] [step1c] Decompressing: Chr15_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz -> Chr15_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf
+[2025-12-04 15:00:13] [INFO] [step1c] Decompressing: Chr16_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz -> Chr16_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf
+[2025-12-04 15:00:13] [INFO] [step1c] Decompressing: Chr17_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz -> Chr17_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf
+[2025-12-04 15:00:13] [INFO] [step1c] Updated manifest with 17 uncompressed VCF files
+[2025-12-04 15:00:13] [INFO] [step1c] Launching Beagle imputation...
+Exception in thread "main" java.lang.IllegalArgumentException: VCF record format error: Chr01_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf
 	at vcf.VcfRecGTParser.ninthTabPos(VcfRecGTParser.java:87)
 	at vcf.VcfHeader.isDiploid(VcfHeader.java:73)
 	at vcf.VcfIt.<init>(VcfIt.java:217)
@@ -334,3 +264,266 @@ Exception in thread "main" java.lang.IllegalArgumentException: VCF record format
 	at vcf.TargSlidingWindow.instance(TargSlidingWindow.java:66)
 	at main.Main.slidingWindow(Main.java:127)
 	at main.Main.main(Main.java:107)
+[uqpha1@bun136 test]$ ls
+1C_18482609_0_Apple_GATK_1C_test_18482609.error  1C_18482609_0_Apple_GATK_1C_test_18482609.output  step1c_debug
+[uqpha1@bun136 test]$ cd step1c_debug/
+[uqpha1@bun136 step1c_debug]$ ls
+20251204_150004
+[uqpha1@bun136 step1c_debug]$ cd 20251204_150004/
+[uqpha1@bun136 20251204_150004]$ ls
+ARTIFACTS.log                                                                         Chr05_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.validate.log  Chr09_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz        Chr13_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz.tbi
+Chr01_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.validate.log  Chr05_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz        Chr09_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz.tbi    Chr14_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.validate.log
+Chr01_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz        Chr05_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz.tbi    Chr10_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.validate.log  Chr14_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
+Chr01_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz.tbi    Chr06_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.validate.log  Chr10_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz        Chr14_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz.tbi
+Chr02_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.validate.log  Chr06_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz        Chr10_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz.tbi    Chr15_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.validate.log
+Chr02_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz        Chr06_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz.tbi    Chr11_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.validate.log  Chr15_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
+Chr02_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz.tbi    Chr07_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.validate.log  Chr11_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz        Chr15_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz.tbi
+Chr03_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.validate.log  Chr07_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz        Chr11_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz.tbi    Chr16_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.validate.log
+Chr03_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz        Chr07_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz.tbi    Chr12_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.validate.log  Chr16_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
+Chr03_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz.tbi    Chr08_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.validate.log  Chr12_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz        Chr16_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz.tbi
+Chr04_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.validate.log  Chr08_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz        Chr12_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz.tbi    Chr17_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.validate.log
+Chr04_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz        Chr08_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz.tbi    Chr13_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.validate.log  Chr17_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz
+Chr04_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz.tbi    Chr09_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.validate.log  Chr13_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz        Chr17_consolidated.fixed.filtered.renamed.hdr.final.clean.sorted.beagle.vcf.gz.tbi
+[uqpha1@bun136 20251204_150004]$ cd ../..
+[uqpha1@bun136 test]$ ls
+1C_18482609_0_Apple_GATK_1C_test_18482609.error  1C_18482609_0_Apple_GATK_1C_test_18482609.output  step1c_debug
+[uqpha1@bun136 test]$ cat 1C_18482609_0_Apple_GATK_1C_test_18482609.output
+sending incremental file list
+>f+++++++++ GDDH13_1-1_formatted.fasta
+        721.39M 100%  457.71MB/s    0:00:01 (xfr#1, to-chk=0/1)
+
+sent 721.56M bytes  received 35 bytes  481.04M bytes/sec
+total size is 721.39M  speedup is 1.00
+sending incremental file list
+>f+++++++++ GDDH13_1-1_formatted.fasta.fai
+            548 100%    0.00kB/s    0:00:00 (xfr#1, to-chk=0/1)
+
+sent 662 bytes  received 35 bytes  1.39K bytes/sec
+total size is 548  speedup is 0.79
+sending incremental file list
+>f+++++++++ GDDH13_1-1_formatted.dict
+          2.60K 100%    0.00kB/s    0:00:00 (xfr#1, to-chk=0/1)
+
+sent 2.71K bytes  received 35 bytes  5.49K bytes/sec
+total size is 2.60K  speedup is 0.95
+[INFO] Input: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr01_consolidated.vcf.gz
+[INFO] Header columns: 11
+[INFO] Total data rows: 5
+[INFO] Rows patched: 0
+[INFO] Patched VCF written: /scratch/temp/18482609/Chr01_consolidated.fixed.vcf.gz
+[INFO] Patched rows percentage: 0.00%
+[INFO] Input: /scratch/temp/18482609/Chr01_consolidated.fixed.filtered.renamed.hdr.vcf.gz
+[INFO] Header columns: 11
+[INFO] Total data rows: 5
+[INFO] Rows patched: 0
+[INFO] Patched VCF written: /scratch/temp/18482609/Chr01_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
+[INFO] Patched rows percentage: 0.00%
+[INFO] Input: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr02_consolidated.vcf.gz
+[INFO] Header columns: 11
+[INFO] Total data rows: 1
+[INFO] Rows patched: 0
+[INFO] Patched VCF written: /scratch/temp/18482609/Chr02_consolidated.fixed.vcf.gz
+[INFO] Patched rows percentage: 0.00%
+[INFO] Input: /scratch/temp/18482609/Chr02_consolidated.fixed.filtered.renamed.hdr.vcf.gz
+[INFO] Header columns: 11
+[INFO] Total data rows: 1
+[INFO] Rows patched: 0
+[INFO] Patched VCF written: /scratch/temp/18482609/Chr02_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
+[INFO] Patched rows percentage: 0.00%
+[INFO] Input: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr03_consolidated.vcf.gz
+[INFO] Header columns: 11
+[INFO] Total data rows: 8
+[INFO] Rows patched: 0
+[INFO] Patched VCF written: /scratch/temp/18482609/Chr03_consolidated.fixed.vcf.gz
+[INFO] Patched rows percentage: 0.00%
+[INFO] Input: /scratch/temp/18482609/Chr03_consolidated.fixed.filtered.renamed.hdr.vcf.gz
+[INFO] Header columns: 11
+[INFO] Total data rows: 8
+[INFO] Rows patched: 0
+[INFO] Patched VCF written: /scratch/temp/18482609/Chr03_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
+[INFO] Patched rows percentage: 0.00%
+[INFO] Input: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr04_consolidated.vcf.gz
+[INFO] Header columns: 11
+[INFO] Total data rows: 14
+[INFO] Rows patched: 0
+[INFO] Patched VCF written: /scratch/temp/18482609/Chr04_consolidated.fixed.vcf.gz
+[INFO] Patched rows percentage: 0.00%
+[INFO] Input: /scratch/temp/18482609/Chr04_consolidated.fixed.filtered.renamed.hdr.vcf.gz
+[INFO] Header columns: 11
+[INFO] Total data rows: 13
+[INFO] Rows patched: 0
+[INFO] Patched VCF written: /scratch/temp/18482609/Chr04_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
+[INFO] Patched rows percentage: 0.00%
+[INFO] Input: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr05_consolidated.vcf.gz
+[INFO] Header columns: 11
+[INFO] Total data rows: 8
+[INFO] Rows patched: 0
+[INFO] Patched VCF written: /scratch/temp/18482609/Chr05_consolidated.fixed.vcf.gz
+[INFO] Patched rows percentage: 0.00%
+[INFO] Input: /scratch/temp/18482609/Chr05_consolidated.fixed.filtered.renamed.hdr.vcf.gz
+[INFO] Header columns: 11
+[INFO] Total data rows: 6
+[INFO] Rows patched: 0
+[INFO] Patched VCF written: /scratch/temp/18482609/Chr05_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
+[INFO] Patched rows percentage: 0.00%
+[INFO] Input: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr06_consolidated.vcf.gz
+[INFO] Header columns: 11
+[INFO] Total data rows: 0
+[INFO] Rows patched: 0
+[INFO] Patched VCF written: /scratch/temp/18482609/Chr06_consolidated.fixed.vcf.gz
+[INFO] Patched rows percentage: 0.00%
+[INFO] Input: /scratch/temp/18482609/Chr06_consolidated.fixed.filtered.renamed.hdr.vcf.gz
+[INFO] Header columns: 11
+[INFO] Total data rows: 0
+[INFO] Rows patched: 0
+[INFO] Patched VCF written: /scratch/temp/18482609/Chr06_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
+[INFO] Patched rows percentage: 0.00%
+[INFO] Input: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr07_consolidated.vcf.gz
+[INFO] Header columns: 11
+[INFO] Total data rows: 6
+[INFO] Rows patched: 0
+[INFO] Patched VCF written: /scratch/temp/18482609/Chr07_consolidated.fixed.vcf.gz
+[INFO] Patched rows percentage: 0.00%
+[INFO] Input: /scratch/temp/18482609/Chr07_consolidated.fixed.filtered.renamed.hdr.vcf.gz
+[INFO] Header columns: 11
+[INFO] Total data rows: 4
+[INFO] Rows patched: 0
+[INFO] Patched VCF written: /scratch/temp/18482609/Chr07_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
+[INFO] Patched rows percentage: 0.00%
+[INFO] Input: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr08_consolidated.vcf.gz
+[INFO] Header columns: 11
+[INFO] Total data rows: 0
+[INFO] Rows patched: 0
+[INFO] Patched VCF written: /scratch/temp/18482609/Chr08_consolidated.fixed.vcf.gz
+[INFO] Patched rows percentage: 0.00%
+[INFO] Input: /scratch/temp/18482609/Chr08_consolidated.fixed.filtered.renamed.hdr.vcf.gz
+[INFO] Header columns: 11
+[INFO] Total data rows: 0
+[INFO] Rows patched: 0
+[INFO] Patched VCF written: /scratch/temp/18482609/Chr08_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
+[INFO] Patched rows percentage: 0.00%
+[INFO] Input: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr09_consolidated.vcf.gz
+[INFO] Header columns: 11
+[INFO] Total data rows: 4
+[INFO] Rows patched: 0
+[INFO] Patched VCF written: /scratch/temp/18482609/Chr09_consolidated.fixed.vcf.gz
+[INFO] Patched rows percentage: 0.00%
+[INFO] Input: /scratch/temp/18482609/Chr09_consolidated.fixed.filtered.renamed.hdr.vcf.gz
+[INFO] Header columns: 11
+[INFO] Total data rows: 4
+[INFO] Rows patched: 0
+[INFO] Patched VCF written: /scratch/temp/18482609/Chr09_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
+[INFO] Patched rows percentage: 0.00%
+[INFO] Input: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr10_consolidated.vcf.gz
+[INFO] Header columns: 11
+[INFO] Total data rows: 19
+[INFO] Rows patched: 0
+[INFO] Patched VCF written: /scratch/temp/18482609/Chr10_consolidated.fixed.vcf.gz
+[INFO] Patched rows percentage: 0.00%
+[INFO] Input: /scratch/temp/18482609/Chr10_consolidated.fixed.filtered.renamed.hdr.vcf.gz
+[INFO] Header columns: 11
+[INFO] Total data rows: 17
+[INFO] Rows patched: 0
+[INFO] Patched VCF written: /scratch/temp/18482609/Chr10_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
+[INFO] Patched rows percentage: 0.00%
+[INFO] Input: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr11_consolidated.vcf.gz
+[INFO] Header columns: 11
+[INFO] Total data rows: 36
+[INFO] Rows patched: 0
+[INFO] Patched VCF written: /scratch/temp/18482609/Chr11_consolidated.fixed.vcf.gz
+[INFO] Patched rows percentage: 0.00%
+[INFO] Input: /scratch/temp/18482609/Chr11_consolidated.fixed.filtered.renamed.hdr.vcf.gz
+[INFO] Header columns: 11
+[INFO] Total data rows: 29
+[INFO] Rows patched: 0
+[INFO] Patched VCF written: /scratch/temp/18482609/Chr11_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
+[INFO] Patched rows percentage: 0.00%
+[INFO] Input: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr12_consolidated.vcf.gz
+[INFO] Header columns: 11
+[INFO] Total data rows: 0
+[INFO] Rows patched: 0
+[INFO] Patched VCF written: /scratch/temp/18482609/Chr12_consolidated.fixed.vcf.gz
+[INFO] Patched rows percentage: 0.00%
+[INFO] Input: /scratch/temp/18482609/Chr12_consolidated.fixed.filtered.renamed.hdr.vcf.gz
+[INFO] Header columns: 11
+[INFO] Total data rows: 0
+[INFO] Rows patched: 0
+[INFO] Patched VCF written: /scratch/temp/18482609/Chr12_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
+[INFO] Patched rows percentage: 0.00%
+[INFO] Input: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr13_consolidated.vcf.gz
+[INFO] Header columns: 11
+[INFO] Total data rows: 16
+[INFO] Rows patched: 0
+[INFO] Patched VCF written: /scratch/temp/18482609/Chr13_consolidated.fixed.vcf.gz
+[INFO] Patched rows percentage: 0.00%
+[INFO] Input: /scratch/temp/18482609/Chr13_consolidated.fixed.filtered.renamed.hdr.vcf.gz
+[INFO] Header columns: 11
+[INFO] Total data rows: 14
+[INFO] Rows patched: 0
+[INFO] Patched VCF written: /scratch/temp/18482609/Chr13_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
+[INFO] Patched rows percentage: 0.00%
+[INFO] Input: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr14_consolidated.vcf.gz
+[INFO] Header columns: 11
+[INFO] Total data rows: 15
+[INFO] Rows patched: 0
+[INFO] Patched VCF written: /scratch/temp/18482609/Chr14_consolidated.fixed.vcf.gz
+[INFO] Patched rows percentage: 0.00%
+[INFO] Input: /scratch/temp/18482609/Chr14_consolidated.fixed.filtered.renamed.hdr.vcf.gz
+[INFO] Header columns: 11
+[INFO] Total data rows: 12
+[INFO] Rows patched: 0
+[INFO] Patched VCF written: /scratch/temp/18482609/Chr14_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
+[INFO] Patched rows percentage: 0.00%
+[INFO] Input: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr15_consolidated.vcf.gz
+[INFO] Header columns: 11
+[INFO] Total data rows: 16
+[INFO] Rows patched: 0
+[INFO] Patched VCF written: /scratch/temp/18482609/Chr15_consolidated.fixed.vcf.gz
+[INFO] Patched rows percentage: 0.00%
+[INFO] Input: /scratch/temp/18482609/Chr15_consolidated.fixed.filtered.renamed.hdr.vcf.gz
+[INFO] Header columns: 11
+[INFO] Total data rows: 15
+[INFO] Rows patched: 0
+[INFO] Patched VCF written: /scratch/temp/18482609/Chr15_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
+[INFO] Patched rows percentage: 0.00%
+[INFO] Input: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr16_consolidated.vcf.gz
+[INFO] Header columns: 11
+[INFO] Total data rows: 11
+[INFO] Rows patched: 0
+[INFO] Patched VCF written: /scratch/temp/18482609/Chr16_consolidated.fixed.vcf.gz
+[INFO] Patched rows percentage: 0.00%
+[INFO] Input: /scratch/temp/18482609/Chr16_consolidated.fixed.filtered.renamed.hdr.vcf.gz
+[INFO] Header columns: 11
+[INFO] Total data rows: 11
+[INFO] Rows patched: 0
+[INFO] Patched VCF written: /scratch/temp/18482609/Chr16_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
+[INFO] Patched rows percentage: 0.00%
+[INFO] Input: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr17_consolidated.vcf.gz
+[INFO] Header columns: 11
+[INFO] Total data rows: 2
+[INFO] Rows patched: 0
+[INFO] Patched VCF written: /scratch/temp/18482609/Chr17_consolidated.fixed.vcf.gz
+[INFO] Patched rows percentage: 0.00%
+[INFO] Input: /scratch/temp/18482609/Chr17_consolidated.fixed.filtered.renamed.hdr.vcf.gz
+[INFO] Header columns: 11
+[INFO] Total data rows: 2
+[INFO] Rows patched: 0
+[INFO] Patched VCF written: /scratch/temp/18482609/Chr17_consolidated.fixed.filtered.renamed.hdr.final.vcf.gz
+[INFO] Patched rows percentage: 0.00%
+beagle.22Jul22.46e.jar (version 5.4)
+Copyright (C) 2014-2022 Brian L. Browning
+Enter "java -jar beagle.22Jul22.46e.jar" to list command line argument
+Start time: 03:00 PM AEST on 04 Dec 2025
+
+Command line: java -Xmx49152m -jar beagle.22Jul22.46e.jar
+  gt=/scratch/temp/18482609/vcf_manifest.txt
+  out=/scratch/temp/18482609/test_beagle
+  nthreads=8
+  impute=false
+  window=3
+  overlap=0.3
+  ne=100000
+  seed=2025
+
+No genetic map is specified: using 1 cM = 1 Mb
+[uqpha1@bun136 test]$ 

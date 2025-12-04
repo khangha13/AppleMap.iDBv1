@@ -838,38 +838,41 @@ From `HPC_MIGRATION_SUMMARY.md` and companions:
 - If you need the master to stay local (e.g., site disallows job-within-job), pass `--no-submit`/`--submit-self=false`.
 - When adding new submission paths, preserve the guard rails: do not re-self-submit when already inside Slurm; always export `PIPELINE_ROOT` in sbatch wrappers; ensure dataset is set before self-submit to avoid empty `sbatch` calls.
 
-### 5.21 Step 1C Beagle bgzip compatibility fix (2025‑12‑04)
+### 5.21 Step 1C Beagle manifest + bgzip compatibility fix (2025‑12‑04)
 
-**Symptom:** Beagle 5.4.22Jul22.46e crashes with `VCF record format error (ninthTabPos)` on properly-formatted bgzip-compressed VCFs.
+**Symptom:** Beagle 5.4.22Jul22.46e crashes with `VCF record format error (ninthTabPos)` on properly-formatted VCFs.
 
-**Root cause:** Beagle's internal gzip reader has compatibility issues with the specific bgzip format produced by `bcftools sort` and modern `bgzip` implementations, despite the VCF content being 100% correct.
+**Root causes (TWO issues identified):**
+
+1. **Incorrect manifest usage:** Pipeline was passing a text file listing VCF paths to Beagle's `gt=` parameter. Beagle expects `gt=` to point to a **single VCF file**, not a manifest. Beagle was trying to parse the filename (first line of manifest) as VCF content, causing immediate failure.
+
+2. **bgzip compression incompatibility:** Beagle's internal gzip reader has compatibility issues with the specific bgzip format produced by `bcftools sort` and modern `bgzip` implementations, despite the VCF content being 100% correct.
 
 **Diagnosis:**
+- Manual test with uncompressed VCF passed: `java -jar beagle.jar gt=chr01.vcf out=test` ✓
+- Pipeline with compressed VCF + manifest failed ✗
 - Validator passes all checks (correct tab counts, field counts, FORMAT fields)
 - Hex dump shows perfect VCF structure with proper tab delimiters
-- **Uncompressed VCF works perfectly** with Beagle
-- **Compressed VCF fails** with ninthTabPos error in `VcfHeader.isDiploid()`
 
 **Solution:**
-- Modified `modules/step1c/templates/step1c_job.sh` to decompress all VCFs before passing them to Beagle
-- The decompression happens after validation but before Beagle invocation
-- Manifest is updated to reference the `.vcf` (uncompressed) files instead of `.vcf.gz`
+1. **Run Beagle per-chromosome:** Modified `step1c_job.sh` to loop through chromosomes and run Beagle separately on each VCF file (matching standard Beagle usage)
+2. **Decompress VCFs:** All VCFs are decompressed before passing to Beagle to avoid bgzip compatibility issues
 
 **Technical details:**
-- This is NOT a VCF format issue - it's a gzip/bgzip binary format compatibility issue
-- The problem occurs even though `zcat` can read the files perfectly
-- Beagle's Java-based gzip reader is more strict than standard `zcat`
-- Workaround tested and verified: uncompressed VCFs work 100% of the time
+- Standard Beagle usage: `gt=file.vcf` (single file)
+- Pipeline was incorrectly using: `gt=manifest.txt` (list of files)
+- Beagle has NO built-in support for manifest files in the `gt=` parameter
+- Each chromosome now gets its own Beagle run with output like `Chr01_phased.vcf.gz`, `Chr02_phased.vcf.gz`, etc.
 
 **Performance impact:**
-- Minimal: decompression adds ~1-2 seconds per chromosome for test dataset
-- Uncompressed VCFs are stored in TMPDIR (fast local storage) and cleaned up automatically
-- No impact on final outputs (Beagle outputs are recompressed)
+- Per-chromosome processing is standard practice and allows parallel processing in future
+- Decompression adds ~1-2 seconds per chromosome
+- Uncompressed VCFs stored in TMPDIR (fast local storage), auto-cleaned
 
 **AI guidance:**
-- If Beagle fails with ninthTabPos but validator passes, this is the bgzip format issue
-- Verify by testing with uncompressed VCF: `zcat file.vcf.gz > file.vcf && java -jar beagle.jar gt=file.vcf ...`
-- The decompression workaround is active by default and requires no configuration
+- Beagle MUST be run on individual VCF files, not manifest files
+- If adding batch processing in future, use SLURM job arrays, not Beagle manifests
+- Always test Beagle commands manually first: `java -jar beagle.jar gt=single_file.vcf out=output`
 
 ### 5.22 Step 1C ninthTabPos hardening + Step 1B VCF gate (2025‑12‑04)
 

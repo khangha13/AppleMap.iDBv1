@@ -312,15 +312,31 @@ JAVA_MEM="-Xmx${MEMORY_GB}g"
 
 log_info "Launching Beagle imputation..."
 
-java ${JAVA_MEM} -jar "${BEAGLE_JAR}" \
-    gt="${LOCAL_MANIFEST}" \
-    out="${WORK_TMPDIR}/${OUTPUT_PREFIX}" \
-    nthreads="${THREADS}" \
-    impute="${IMPUTE_FLAG}" \
-    window=3 overlap=0.3 ne=100000 seed=2025 \
-    ${local_map_arg}
+# Process each chromosome separately (Beagle does not support manifest files in gt= parameter)
+for uncompressed_vcf in "${UNCOMPRESSED_PREFIXES[@]}"; do
+    [ -f "${uncompressed_vcf}" ] || continue
+    
+    # Extract chromosome name for output prefix
+    chr_prefix="${uncompressed_vcf%.vcf}"
+    chr_prefix="${chr_prefix##*/}"  # Remove path
+    
+    log_info "Running Beagle on ${uncompressed_vcf}..."
+    
+    if ! java ${JAVA_MEM} -jar "${BEAGLE_JAR}" \
+        gt="${uncompressed_vcf}" \
+        out="${chr_prefix}_phased" \
+        nthreads="${THREADS}" \
+        impute="${IMPUTE_FLAG}" \
+        window=3 overlap=0.3 ne=100000 seed=2025 \
+        ${local_map_arg}; then
+        error_exit "Beagle failed for ${uncompressed_vcf}"
+    fi
+    
+    log_info "Beagle completed for ${uncompressed_vcf}"
+done
 
 mkdir -p "${OUTPUT_DIR}"
-rsync -rhivPt "${WORK_TMPDIR}/${OUTPUT_PREFIX}"* "${OUTPUT_DIR}/"
+rsync -rhivPt "${WORK_TMPDIR}"/*_phased.vcf.gz "${OUTPUT_DIR}/" || log_warn "No phased VCF outputs found"
+rsync -rhivPt "${WORK_TMPDIR}"/*_phased.log "${OUTPUT_DIR}/" || log_warn "No Beagle log files found"
 
 log_info "Beagle imputation completed. Results copied to ${OUTPUT_DIR}"
