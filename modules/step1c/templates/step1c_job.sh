@@ -127,18 +127,26 @@ while IFS= read -r vcf_path; do
             awk 'NR==FNR {map[$1]=$2; next} {if ($1 in map) printf "##contig=<ID=%s,length=%s>\n", map[$1], $2}' \
                 "${mapping_file}" "${LOCAL_REF_FAI}" > "${numeric_contig_header}"
         fi
-        if [ -s "${numeric_contig_header}" ]; then
-            header_base="${renamed_base%.vcf.gz}.hdr.vcf.gz"
-            header_path="${WORK_TMPDIR}/${header_base}"
-            log_info "Injecting numeric contig header into ${renamed_base}"
-            if ! "${BCFTOOLS_BIN}" annotate -h "${numeric_contig_header}" -Oz -o "${header_path}" "${renamed_path}"; then
+    if [ -s "${numeric_contig_header}" ]; then
+        header_base="${renamed_base%.vcf.gz}.hdr.vcf.gz"
+        header_path="${WORK_TMPDIR}/${header_base}"
+        log_info "Injecting numeric contig header into ${renamed_base}"
+        if ! "${BCFTOOLS_BIN}" annotate -h "${numeric_contig_header}" -Oz -o "${header_path}" "${renamed_path}"; then
                 error_exit "bcftools annotate (add contig header) failed for ${renamed_base}"
             fi
             tabix -f "${header_path}" || log_warn "Failed to index ${header_base}"
         fi
     fi
 
-    local_name="${header_base}"
+    # Final safety pass: re-pad/fix after header edits to catch any residual malformed rows
+    final_base="${header_base%.vcf.gz}.final.vcf.gz"
+    final_path="${WORK_TMPDIR}/${final_base}"
+    log_info "Final padding/validation for ${header_base}"
+    if ! bash "${FIX_VCF_SCRIPT}" "${header_path}" "${final_path}"; then
+        error_exit "Final auto-fix failed for ${header_base}"
+    fi
+
+    local_name="${final_base}"
     VCF_PREFIXES+=("${local_name}")
 done < "${VCF_MANIFEST}"
 
