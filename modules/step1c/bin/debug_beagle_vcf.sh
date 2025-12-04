@@ -99,7 +99,10 @@ print(f"Header columns: {len(header_fields)} (tabs: {tab_count}, expected tabs: 
 print(f"Sample count: {sample_count}")
 
 if tab_count != expected_tabs:
-    log_warn(f"Header contains {tab_count} tab characters but {expected_tabs} are expected")
+    log_error(f"Header has {tab_count} tab characters but {expected_tabs} expected")
+    log_error(f"Beagle will fail with ninthTabPos error on this file")
+    print(f"[FAILED] Header tab count mismatch: {tab_count} != {expected_tabs}", file=sys.stderr)
+    sys.exit(1)
 
 line_count = 0
 
@@ -115,6 +118,11 @@ for raw in fh:
 
     if re.search(r"[^\t] [^\t]", line):
         log_warn(f"Line {line_count}: contains spaces between non-tab characters (mixed delimiters)", line)
+
+    # CRITICAL: Check raw tab count before parsing (this is what Beagle's ninthTabPos checks)
+    actual_tabs = line.count('\t')
+    if actual_tabs != expected_tabs:
+        log_error(f"Line {line_count}: has {actual_tabs} tabs (expected {expected_tabs}) - Beagle ninthTabPos will fail", line)
 
     fields = line.split("\t")
 
