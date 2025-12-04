@@ -101,15 +101,25 @@ while IFS= read -r vcf_path; do
     if ! bash "${FIX_VCF_SCRIPT}" "${vcf_path}" "${fixed_path}"; then
         error_exit "Auto-fix failed for ${vcf_path}"
     fi
-    renamed_base="${fixed_base%.vcf.gz}.renamed.vcf.gz"
+    # Filter to biallelic SNPs and normalize against reference (using original contig names)
+    filtered_base="${fixed_base%.vcf.gz}.filtered.vcf.gz"
+    filtered_path="${WORK_TMPDIR}/${filtered_base}"
+    log_info "Filtering/normalizing SNPs for ${fixed_base}"
+    if ! "${BCFTOOLS_BIN}" norm -m -any -f "${LOCAL_REF}" "${fixed_path}" -Ou | \
+         "${BCFTOOLS_BIN}" view -v snps -m2 -M2 -Oz -o "${filtered_path}"; then
+        error_exit "bcftools filter/normalize failed for ${fixed_base}"
+    fi
+    tabix -f "${filtered_path}" || log_warn "Failed to index ${filtered_base}"
+
+    # Rename contigs to numeric and inject corresponding header lines
+    renamed_base="${filtered_base%.vcf.gz}.renamed.vcf.gz"
     renamed_path="${WORK_TMPDIR}/${renamed_base}"
-    log_info "Renaming contigs (Chr01->1) in ${fixed_base}"
-    if ! "${BCFTOOLS_BIN}" annotate --rename-chrs "${mapping_file}" -Oz -o "${renamed_path}" "${fixed_path}"; then
-        error_exit "bcftools annotate (rename) failed for ${fixed_base}"
+    log_info "Renaming contigs (Chr01->1) in ${filtered_base}"
+    if ! "${BCFTOOLS_BIN}" annotate --rename-chrs "${mapping_file}" -Oz -o "${renamed_path}" "${filtered_path}"; then
+        error_exit "bcftools annotate (rename) failed for ${filtered_base}"
     fi
     tabix -f "${renamed_path}" || log_warn "Failed to index ${renamed_base}"
 
-    # Ensure contig header lines exist with numeric names/lengths
     header_path="${renamed_path}"
     header_base="${renamed_base}"
     if [ -f "${LOCAL_REF_FAI}" ]; then
@@ -128,17 +138,7 @@ while IFS= read -r vcf_path; do
         fi
     fi
 
-    # Filter to biallelic SNPs and normalize against reference
-    filtered_base="${fixed_base%.vcf.gz}.filtered.vcf.gz"
-    filtered_path="${WORK_TMPDIR}/${filtered_base}"
-    log_info "Filtering/normalizing SNPs for ${renamed_base}"
-    if ! "${BCFTOOLS_BIN}" norm -m -any -f "${LOCAL_REF}" "${header_path}" -Ou | \
-         "${BCFTOOLS_BIN}" view -v snps -m2 -M2 -Oz -o "${filtered_path}"; then
-        error_exit "bcftools filter/normalize failed for ${renamed_base}"
-    fi
-    tabix -f "${filtered_path}" || log_warn "Failed to index ${filtered_base}"
-
-    local_name="${filtered_base}"
+    local_name="${header_base}"
     VCF_PREFIXES+=("${local_name}")
 done < "${VCF_MANIFEST}"
 
