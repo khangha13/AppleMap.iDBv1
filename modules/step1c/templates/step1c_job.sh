@@ -183,6 +183,27 @@ while IFS= read -r vcf_path; do
     fi
     tabix -f "${sorted_path}" || log_warn "Failed to index ${sorted_base}"
 
+    # Strict validation: log and abort if any record has fewer columns than header
+    expected_sorted=$(zcat "${sorted_path}" 2>/dev/null | awk 'BEGIN{FS="\t"} /^#CHROM/{print NF; exit}')
+    if [ -z "${expected_sorted}" ]; then
+        expected_sorted=9
+    fi
+    validate_report="${WORK_TMPDIR}/${sorted_base%.vcf.gz}.validate.txt"
+    if ! zcat "${sorted_path}" 2>/dev/null | awk -v expected="${expected_sorted}" 'BEGIN{FS="\t"}
+        /^#/ {next}
+        NF<expected {print "Line " NR " has " NF " fields: "$0; exit 1}
+    '; then
+        {
+            echo "Validation failed for ${sorted_base}"
+            echo "Expected columns: ${expected_sorted}"
+            zcat "${sorted_path}" 2>/dev/null | awk -v expected="${expected_sorted}" 'BEGIN{FS="\t"}
+                /^#/ {next}
+                NF<expected {print "Line " NR " has " NF " fields: "$0; exit}
+            '
+        } > "${validate_report}"
+        error_exit "Final VCF still malformed: ${sorted_base}. See ${validate_report}"
+    fi
+
     local_name="${sorted_base}"
     VCF_PREFIXES+=("${local_name}")
 done < "${VCF_MANIFEST}"
