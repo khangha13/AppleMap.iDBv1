@@ -107,7 +107,14 @@ awk -v expected="${expected_cols}" 'BEGIN{FS="[ \t]+"; OFS="\t"}
         delete out_fields;
     }' > "${tmp_out}"
 
-bgzip -c "${tmp_out}" > "${OUTPUT}"
+# Compress with bgzip; fallback to bcftools view -Oz if bgzip crashes
+if ! bgzip -c "${tmp_out}" > "${OUTPUT}"; then
+    echo "[WARN] bgzip failed on ${tmp_out}; attempting bcftools view -Oz fallback." >&2
+    if ! "${BCFTOOLS_BIN}" view -Oz -o "${OUTPUT}" "${tmp_out}"; then
+        echo "[FATAL] Compression failed for ${INPUT} (bgzip and bcftools view both failed)." >&2
+        exit 1
+    fi
+fi
 tabix -f "${OUTPUT}"
 
 # Verify patched file
