@@ -80,7 +80,7 @@ tmp_out="$(mktemp "${tmp_base%/}/fixvcfXXXXXX")"
 trap 'rm -f "${tmp_out}"' EXIT
 
 zcat "${INPUT}" 2>/dev/null | \
-awk -v expected="${expected_cols}" 'BEGIN{FS=OFS="\t"}
+awk -v expected="${expected_cols}" 'BEGIN{FS="[ \t]+"; OFS="\t"}
     /^#/ {print; next}
     {
         # Ensure at least CHROM..INFO (8 cols)
