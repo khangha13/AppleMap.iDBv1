@@ -45,6 +45,11 @@ fi
 export PIPELINE_ROOT
 STEP1C_MODULE_DIR="${PIPELINE_ROOT}/modules/step1c"
 FIX_VCF_SCRIPT="${STEP1C_MODULE_DIR}/bin/fix_vcf_fill_missing.sh"
+if [ -z "${STEP1C_MAX_REPAIR_PCT:-}" ]; then
+    export STEP1C_MAX_REPAIR_PCT=5
+else
+    export STEP1C_MAX_REPAIR_PCT
+fi
 
 source "${PIPELINE_ROOT}/config/pipeline_config.sh"
 source "${PIPELINE_ROOT}/lib/logging.sh"
@@ -73,7 +78,38 @@ fi
 WORK_TMPDIR="${TMPDIR:-$(mktemp -d "${SCRATCH_BASE_PATH%/}/step1c_XXXXXX")}"
 mkdir -p "${WORK_TMPDIR}"
 
+STEP1C_RUN_ID="$(date +%Y%m%d_%H%M%S)"
+STEP1C_DEBUG_DIR="${LOG_BASE_PATH%/}/${DATASET_NAME}/step1c_debug/${STEP1C_RUN_ID}"
+STEP1C_PERSIST_ARTIFACTS="${STEP1C_PERSIST_ARTIFACTS:-true}"
+STEP1C_COPY_BEAGLE_VCFS="${STEP1C_DEBUG_BEAGLE:-false}"
+STEP1C_ARTIFACTS_NOTED="false"
+
+persist_step1c_artifacts() {
+    if [ "${STEP1C_PERSIST_ARTIFACTS}" != "true" ] || [ -z "${WORK_TMPDIR:-}" ]; then
+        return
+    fi
+    mkdir -p "${STEP1C_DEBUG_DIR}"
+    local patterns=("*.validate.log" "*.dropped*.txt")
+    local found=false
+    for pattern in "${patterns[@]}"; do
+        while IFS= read -r artifact; do
+            [ -z "${artifact}" ] && continue
+            rsync -rt "${artifact}" "${STEP1C_DEBUG_DIR}/" >/dev/null 2>&1 || true
+            found=true
+        done < <(find "${WORK_TMPDIR}" -maxdepth 1 -type f -name "${pattern}" -print 2>/dev/null)
+    done
+    if [ "${STEP1C_COPY_BEAGLE_VCFS}" = "true" ]; then
+        find "${WORK_TMPDIR}" -maxdepth 1 -type f -name "*.beagle.vcf.gz*" -exec rsync -rt {} "${STEP1C_DEBUG_DIR}/" \; >/dev/null 2>&1 || true
+    fi
+    if [ "${STEP1C_ARTIFACTS_NOTED}" = "false" ] && { [ "${found}" = "true" ] || [ "${STEP1C_COPY_BEAGLE_VCFS}" = "true" ]; }; then
+        printf '%s\tPersisted artifacts from %s\n' "$(date +%Y-%m-%dT%H:%M:%S)" "${WORK_TMPDIR}" >> "${STEP1C_DEBUG_DIR}/ARTIFACTS.log"
+        STEP1C_ARTIFACTS_NOTED="true"
+    fi
+}
+trap 'persist_step1c_artifacts' EXIT
+
 log_info "Using working directory: ${WORK_TMPDIR}"
+log_info "Step 1C artifacts will be copied to ${STEP1C_DEBUG_DIR}"
 
 mapping_file="${WORK_TMPDIR}/chr_rename_map.txt"
 if [ ! -f "${mapping_file}" ]; then
@@ -230,24 +266,6 @@ done < "${VCF_MANIFEST}"
 
 LOCAL_MANIFEST="${WORK_TMPDIR}/vcf_manifest.txt"
 printf '%s\n' "${VCF_PREFIXES[@]}" > "${LOCAL_MANIFEST}"
-
-if [ "${STEP1C_DEBUG_BEAGLE:-false}" = "true" ]; then
-    debug_root="${LOG_BASE_PATH%/}/${DATASET_NAME}/step1c_debug"
-    timestamp="$(date +%Y%m%d_%H%M%S)"
-    debug_dir="${debug_root}/${timestamp}"
-    mkdir -p "${debug_dir}"
-    log_info "STEP1C_DEBUG_BEAGLE enabled; copying Beagle inputs to ${debug_dir}"
-    for path in "${BEAGLE_VCF_PATHS[@]}"; do
-        if [ -f "${path}" ]; then
-            rsync -rhivPt "${path}" "${debug_dir}/"
-            if [ -f "${path}.tbi" ]; then
-                rsync -rhivPt "${path}.tbi" "${debug_dir}/"
-            fi
-        else
-            log_warn "Expected Beagle input missing for debug copy: ${path}"
-        fi
-    done
-fi
 
 VALIDATOR_SCRIPT="${STEP1C_MODULE_DIR}/bin/debug_beagle_vcf.sh"
 if [ -x "${VALIDATOR_SCRIPT}" ]; then

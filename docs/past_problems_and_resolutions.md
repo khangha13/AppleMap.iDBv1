@@ -868,6 +868,32 @@ From `HPC_MIGRATION_SUMMARY.md` and companions:
 - Enable `STEP1C_DEBUG_BEAGLE=true` on first runs for any dataset. The captured Beagle inputs/validate logs make debugging painless if Beagle still complains.
 - Treat `modules/step1b/bin/validate_consolidated_vcf.sh` failures as fatal—rerun the offending chromosome(s) through Step 1B or Step 1A rather than trying to hand-edit VCFs.
 
+### 5.22 Validator crash & TMPDIR log loss (2025‑12‑04)
+
+**Symptom**
+
+- Step 1C crashed immediately after `Validating Beagle input…` with `Beagle input validation failed` pointing to `*.beagle.vcf.gz`, but the referenced `.validate.log` had already vanished because the job ended and the scheduler cleaned up `TMPDIR`.
+- Re-running locally reproduced an `OSError: telling position disabled by next() call` inside `debug_beagle_vcf.sh`, so no diagnostics were gathered even when the VCF was genuinely malformed (e.g. blank genotype columns).
+
+**Fix**
+
+1. **Validator rewrite**
+   - Removed the `.tell()`/`.seek()` logic and stream the gzip file once, so the validator never crashes on Python’s gzip iterator.
+   - Always emit the first offending line into the `.validate.log` (no `--verbose` flag needed) so users can see exactly which row failed.
+2. **Repair guard rails**
+   - `fix_vcf_fill_missing.sh` now records how many rows were patched and fails fast when the percentage exceeds `STEP1C_MAX_REPAIR_PCT` (default 5%). This prevents silently “fixing” massively corrupt inputs.
+3. **Artifact persistence**
+   - `step1c_job.sh` now traps `EXIT` and copies every `*.validate.log`, `*.dropped*.txt`, and (when `STEP1C_DEBUG_BEAGLE=true`) the cleaned `*.beagle.vcf.gz` files from `${WORK_TMPDIR}` into `${LOG_BASE_PATH}/${dataset}/step1c_debug/<timestamp>/` before the scheduler deletes TMPDIR.
+   - The copy happens regardless of success/failure, so users can always inspect validator output after the job ends.
+4. **Regression coverage**
+   - `test/test_vcf_repairs.sh` now runs both a column-short fixture and one with empty genotype slots to ensure the repair + validator pipeline behaves consistently.
+
+**AI guidance**
+
+- Keep `STEP1C_MAX_REPAIR_PCT` at a low value unless you explicitly want to tolerate large amounts of padding; values above ~10% should be treated as an upstream Step 1B issue.
+- When collecting diagnostics, look under `${LOG_BASE_PATH}/${dataset}/step1c_debug/<timestamp>/` even if `STEP1C_DEBUG_BEAGLE` was false—the trap now copies validator logs there automatically.
+- If you need the cleaned `.beagle.vcf.gz` files themselves, keep `STEP1C_DEBUG_BEAGLE=true`; only logs are copied when it is false to save space.
+
 ---
 
 ## 6. Configuration & Troubleshooting Checklist

@@ -148,3 +148,12 @@ fi
 
 echo "[INFO] Patched VCF written: ${OUTPUT}"
 echo "[INFO] Patched rows percentage: ${percent}%"
+
+threshold="${STEP1C_MAX_REPAIR_PCT:-5}"
+if [ "${threshold}" != "off" ] && [ "${total_rows}" -gt 0 ]; then
+    if awk -v pct="${percent}" -v thr="${threshold}" 'BEGIN{exit !(pct>thr)}'; then
+        echo "[FATAL] ${percent}% of rows required repair (threshold ${threshold}%)." >&2
+        echo "[FATAL] This VCF is likely corrupt upstream; rerun Step 1B for this chromosome." >&2
+        exit 2
+    fi
+fi
