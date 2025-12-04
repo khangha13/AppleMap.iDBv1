@@ -85,6 +85,8 @@ rsync -rhivPt "${REFERENCE_FASTA}" "${WORK_TMPDIR}/"
 rsync -rhivPt "${REFERENCE_FASTA}.fai" "${WORK_TMPDIR}/" || true
 rsync -rhivPt "${REFERENCE_FASTA%.*}.dict" "${WORK_TMPDIR}/" || true
 LOCAL_REF="${WORK_TMPDIR}/$(basename "${REFERENCE_FASTA}")"
+LOCAL_REF_FAI="${LOCAL_REF}.fai"
+numeric_contig_header="${WORK_TMPDIR}/contigs_numeric.header.txt"
 
 VCF_PREFIXES=()
 while IFS= read -r vcf_path; do
@@ -107,11 +109,30 @@ while IFS= read -r vcf_path; do
     fi
     tabix -f "${renamed_path}" || log_warn "Failed to index ${renamed_base}"
 
+    # Ensure contig header lines exist with numeric names/lengths
+    header_path="${renamed_path}"
+    header_base="${renamed_base}"
+    if [ -f "${LOCAL_REF_FAI}" ]; then
+        if [ ! -s "${numeric_contig_header}" ]; then
+            awk 'NR==FNR {map[$1]=$2; next} {if ($1 in map) printf "##contig=<ID=%s,length=%s>\n", map[$1], $2}' \
+                "${mapping_file}" "${LOCAL_REF_FAI}" > "${numeric_contig_header}"
+        fi
+        if [ -s "${numeric_contig_header}" ]; then
+            header_base="${renamed_base%.vcf.gz}.hdr.vcf.gz"
+            header_path="${WORK_TMPDIR}/${header_base}"
+            log_info "Injecting numeric contig header into ${renamed_base}"
+            if ! "${BCFTOOLS_BIN}" annotate -h "${numeric_contig_header}" -Oz -o "${header_path}" "${renamed_path}"; then
+                error_exit "bcftools annotate (add contig header) failed for ${renamed_base}"
+            fi
+            tabix -f "${header_path}" || log_warn "Failed to index ${header_base}"
+        fi
+    fi
+
     # Filter to biallelic SNPs and normalize against reference
     filtered_base="${fixed_base%.vcf.gz}.filtered.vcf.gz"
     filtered_path="${WORK_TMPDIR}/${filtered_base}"
     log_info "Filtering/normalizing SNPs for ${renamed_base}"
-    if ! "${BCFTOOLS_BIN}" norm -m -any -f "${LOCAL_REF}" "${renamed_path}" -Ou | \
+    if ! "${BCFTOOLS_BIN}" norm -m -any -f "${LOCAL_REF}" "${header_path}" -Ou | \
          "${BCFTOOLS_BIN}" view -v snps -m2 -M2 -Oz -o "${filtered_path}"; then
         error_exit "bcftools filter/normalize failed for ${renamed_base}"
     fi
