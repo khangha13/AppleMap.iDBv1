@@ -801,6 +801,20 @@ From `HPC_MIGRATION_SUMMARY.md` and companions:
 
 - Use the padding script only when upstream regeneration is not feasible; it preserves records by inserting missing genotypes rather than dropping lines. Still prefer rerunning Step 1B/Step 1A when possible.
 
+### 5.19 Beagle prep hardening (2025‑12‑04)
+
+**Symptom**
+
+- Beagle still hit `VCF record format error (ninthTabPos)` after padding and renaming; malformed rows slipped through late-stage transformations.
+
+**Fix**
+
+- Step 1C job now enforces Beagle prep steps: SNP-only, biallelic, normalized against reference, contig rename + matching `##contig` header injection, final padding, drop of any residual short rows with logging, validation abort if NF<expected remains, and final bcftools sort/index before Beagle.
+
+**AI guidance**
+
+- Align with Beagle tutorial: normalize + SNP-only + consistent contigs/headers + sorted VCF. Add a fatal validator before Beagle if any record has fewer columns than the header; don’t rely on Beagle to surface format issues.
+
 **AI guidance**
 
 - If you need the master to stay local (e.g., site disallows job-within-job), pass `--no-submit`/`--submit-self=false`.

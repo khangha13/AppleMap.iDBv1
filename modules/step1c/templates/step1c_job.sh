@@ -150,25 +150,40 @@ while IFS= read -r vcf_path; do
     clean_base="${final_base%.vcf.gz}.clean.vcf.gz"
     clean_path="${WORK_TMPDIR}/${clean_base}"
     dropped_log="${WORK_TMPDIR}/${final_base%.vcf.gz}.dropped.txt"
-    log_info "Dropping rows with <${EXPECTED_COLS:-9}+ columns in ${final_base}"
-    dropped_count=$(
-        zcat "${final_path}" 2>/dev/null | awk -v expected="${EXPECTED_COLS:-9}" 'BEGIN{FS="\t"; OFS="\t"}
-            /^#/ {print > "/dev/stderr"; next}
-            {
-                if (NF < expected) {
-                    print > "'"${dropped_log}"'"
-                    next
-                }
-                print > "/dev/stdout"
-            }' | bgzip > "${clean_path}"; echo ${PIPESTATUS[0]}
-    )
+    validate_log="${WORK_TMPDIR}/${final_base%.vcf.gz}.validate.txt"
+    expected_cols=$(zcat "${final_path}" 2>/dev/null | awk 'BEGIN{FS="\t"} /^#CHROM/{print NF; exit}')
+    if [ -z "${expected_cols}" ]; then
+        expected_cols=9
+    fi
+    log_info "Dropping rows with <${expected_cols} columns in ${final_base}"
+    zcat "${final_path}" 2>/dev/null | awk -v expected="${expected_cols}" 'BEGIN{FS="\t"; OFS="\t"}
+        /^#/ {print; next}
+        {
+            if (NF < expected) {
+                print > "'"${dropped_log}"'"
+                next
+            }
+            print
+        }' | bgzip > "${clean_path}"
     tabix -f "${clean_path}" || log_warn "Failed to index ${clean_base}"
-    # If any rows were dropped, log a warning
     if [ -s "${dropped_log}" ]; then
         log_warn "Dropped malformed rows from ${final_base}; details in ${dropped_log}"
     fi
+    # Final validation: abort if any record is still short
+    if ! zcat "${clean_path}" 2>/dev/null | awk -v expected="${expected_cols}" 'BEGIN{FS="\t"} /^#CHROM/{next} !/^#/ && NF<expected {print "Line " NR " has " NF " fields"; exit 1}'; then
+        error_exit "Final VCF still contains rows with <${expected_cols} columns: ${clean_base}. See ${dropped_log} for dropped rows."
+    fi
 
-    local_name="${clean_base}"
+    # Sort the cleaned VCF by coordinate to match Beagle expectations
+    sorted_base="${clean_base%.vcf.gz}.sorted.vcf.gz"
+    sorted_path="${WORK_TMPDIR}/${sorted_base}"
+    log_info "Sorting VCF for Beagle: ${clean_base}"
+    if ! "${BCFTOOLS_BIN}" sort "${clean_path}" -Oz -o "${sorted_path}"; then
+        error_exit "bcftools sort failed for ${clean_base}"
+    fi
+    tabix -f "${sorted_path}" || log_warn "Failed to index ${sorted_base}"
+
+    local_name="${sorted_base}"
     VCF_PREFIXES+=("${local_name}")
 done < "${VCF_MANIFEST}"
 
