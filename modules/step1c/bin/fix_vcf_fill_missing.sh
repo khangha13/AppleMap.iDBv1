@@ -83,38 +83,28 @@ zcat "${INPUT}" 2>/dev/null | \
 awk -v expected="${expected_cols}" 'BEGIN{FS="[ \t]+"; OFS="\t"}
     /^#/ {print; next}
     {
-        # Force presence of first 8 fields (CHROM..INFO). If missing, pad with dots.
-        if (NF < 8) {
-            for (i = NF + 1; i <= 8; i++) {$i="."}
+        # Normalize into exactly expected columns, replacing missing fields with placeholders
+        chrom = ($1==""?".":$1);
+        pos   = ($2==""?"0":$2);
+        id    = ($3==""?".":$3);
+        ref   = ($4==""?"N":$4);
+        alt   = ($5==""?"<X>":$5);
+        qual  = ($6==""?".":$6);
+        filter= ($7==""?".":$7);
+        info  = ($8==""?".":$8);
+        format= ($9==""?"GT":$9);
+        out_fields[1]=chrom; out_fields[2]=pos; out_fields[3]=id;
+        out_fields[4]=ref; out_fields[5]=alt; out_fields[6]=qual;
+        out_fields[7]=filter; out_fields[8]=info; out_fields[9]=format;
+        for (i=10; i<=expected; i++) {
+            out_fields[i] = (i<=NF ? $i : "./.");
         }
-        # Ensure FORMAT
-        if (NF < 9) {
-            $9 = "GT"
+        for (i=1; i<=expected; i++) {
+            if (i>1) printf OFS;
+            printf "%s", out_fields[i];
         }
-        # Pad sample columns with ./.
-        while (NF < expected) {
-            $(NF + 1) = "./."
-        }
-        # Re-check; if still short (e.g., empty line), emit a minimal placeholder
-        if (NF < expected) {
-            # Build a synthetic line with placeholders
-            chrom = ($1==""?"." : $1);
-            pos = ($2==""?"0":$2);
-            id = ($3==""?".":$3);
-            ref = ($4==""?"N":$4);
-            alt = ($5==""?"<X>":$5);
-            qual = ($6==""?".":$6);
-            filter = ($7==""?".":$7);
-            info = ($8==""?".":$8);
-            format = "GT";
-            printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s", chrom,pos,id,ref,alt,qual,filter,info,format;
-            for (j=10; j<=expected; j++) {
-                printf "\t./.";
-            }
-            printf "\n";
-        } else {
-            print
-        }
+        printf "\n";
+        delete out_fields;
     }' > "${tmp_out}"
 
 bgzip -c "${tmp_out}" > "${OUTPUT}"
