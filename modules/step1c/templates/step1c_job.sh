@@ -203,8 +203,25 @@ while IFS= read -r vcf_path; do
         } > "${validate_report}"
         error_exit "Final VCF still malformed: ${sorted_base}. See ${validate_report}"
     fi
+    # Drop any residual short records and reindex (belt-and-braces)
+    beagle_base="${sorted_base%.vcf.gz}.beagle.vcf.gz"
+    beagle_path="${WORK_TMPDIR}/${beagle_base}"
+    dropped_final_log="${WORK_TMPDIR}/${sorted_base%.vcf.gz}.dropped_final.txt"
+    zcat "${sorted_path}" 2>/dev/null | awk -v expected="${expected_sorted}" 'BEGIN{FS="\t"; OFS="\t"}
+        /^#/ {print; next}
+        {
+            if (NF < expected) {
+                print > "'"${dropped_final_log}"'"
+                next
+            }
+            print
+        }' | bgzip > "${beagle_path}"
+    tabix -f "${beagle_path}" || log_warn "Failed to index ${beagle_base}"
+    if [ -s "${dropped_final_log}" ]; then
+        log_warn "Dropped residual malformed rows from ${sorted_base}; details in ${dropped_final_log}"
+    fi
 
-    local_name="${sorted_base}"
+    local_name="${beagle_base}"
     VCF_PREFIXES+=("${local_name}")
 done < "${VCF_MANIFEST}"
 
