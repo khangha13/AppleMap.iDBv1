@@ -68,7 +68,7 @@ sample_count=$((header_fields - 9))
 expected_cols=$((9 + sample_count))
 
 total_rows=$(zcat "${INPUT}" 2>/dev/null | awk '!/^#/ {c++} END{print c+0}')
-malformed_rows=$(zcat "${INPUT}" 2>/dev/null | awk -v exp="${expected_cols}" 'BEGIN{FS="\t"} !/^#/ && NF<exp {c++} END{print c+0}')
+malformed_rows=$(zcat "${INPUT}" 2>/dev/null | awk -v expected="${expected_cols}" 'BEGIN{FS="\t"} !/^#/ && NF<expected {c++} END{print c+0}')
 
 echo "[INFO] Input: ${INPUT}"
 echo "[INFO] Samples: ${sample_count} | Expected columns: ${expected_cols}"
@@ -80,7 +80,7 @@ tmp_out="$(mktemp "${tmp_base%/}/fixvcfXXXXXX")"
 trap 'rm -f "${tmp_out}"' EXIT
 
 zcat "${INPUT}" 2>/dev/null | \
-awk -v exp="${expected_cols}" 'BEGIN{FS=OFS="\t"}
+awk -v expected="${expected_cols}" 'BEGIN{FS=OFS="\t"}
     /^#/ {print; next}
     {
         # Ensure at least CHROM..INFO (8 cols)
@@ -92,7 +92,7 @@ awk -v exp="${expected_cols}" 'BEGIN{FS=OFS="\t"}
             $9 = "GT"
         }
         # Pad sample columns with ./.
-        while (NF < exp) {
+        while (NF < expected) {
             $(NF + 1) = "./."
         }
         print
