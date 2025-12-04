@@ -110,12 +110,7 @@ fi
 echo "[INFO] Patched VCF written: ${OUTPUT}"
 patched_rows=${malformed_rows}
 if [ "${total_rows}" -gt 0 ]; then
-    percent=$(python - <<PY
-total=${total_rows}
-patched=${patched_rows}
-print(f"{(patched/total*100):.2f}")
-PY
-)
+    percent=$(awk -v total="${total_rows}" -v patched="${patched_rows}" 'BEGIN{if (total>0) printf "%.2f", (patched/total*100); else print "0.00"}')
 else
     percent="0.00"
 fi
