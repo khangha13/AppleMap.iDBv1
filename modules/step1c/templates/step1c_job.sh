@@ -74,6 +74,13 @@ mkdir -p "${WORK_TMPDIR}"
 
 log_info "Using working directory: ${WORK_TMPDIR}"
 
+mapping_file="${WORK_TMPDIR}/chr_rename_map.txt"
+if [ ! -f "${mapping_file}" ]; then
+    for i in $(seq -w 1 17); do
+        printf "Chr%s\t%d\n" "${i}" "${i#0}" >> "${mapping_file}"
+    done
+fi
+
 rsync -rhivPt "${REFERENCE_FASTA}" "${WORK_TMPDIR}/"
 rsync -rhivPt "${REFERENCE_FASTA}.fai" "${WORK_TMPDIR}/" || true
 rsync -rhivPt "${REFERENCE_FASTA%.*}.dict" "${WORK_TMPDIR}/" || true
@@ -91,7 +98,14 @@ while IFS= read -r vcf_path; do
     if ! bash "${FIX_VCF_SCRIPT}" "${vcf_path}" "${fixed_path}"; then
         error_exit "Auto-fix failed for ${vcf_path}"
     fi
-    local_name="${fixed_base}"
+    renamed_base="${fixed_base%.vcf.gz}.renamed.vcf.gz"
+    renamed_path="${WORK_TMPDIR}/${renamed_base}"
+    log_info "Renaming contigs (Chr01->1) in ${fixed_base}"
+    if ! "${BCFTOOLS_BIN}" annotate --rename-chrs "${mapping_file}" -Oz -o "${renamed_path}" "${fixed_path}"; then
+        error_exit "bcftools annotate (rename) failed for ${fixed_base}"
+    fi
+    tabix -f "${renamed_path}" || log_warn "Failed to index ${renamed_base}"
+    local_name="${renamed_base}"
     VCF_PREFIXES+=("${local_name}")
 done < "${VCF_MANIFEST}"
 
