@@ -84,6 +84,7 @@ fi
 rsync -rhivPt "${REFERENCE_FASTA}" "${WORK_TMPDIR}/"
 rsync -rhivPt "${REFERENCE_FASTA}.fai" "${WORK_TMPDIR}/" || true
 rsync -rhivPt "${REFERENCE_FASTA%.*}.dict" "${WORK_TMPDIR}/" || true
+LOCAL_REF="${WORK_TMPDIR}/$(basename "${REFERENCE_FASTA}")"
 
 VCF_PREFIXES=()
 while IFS= read -r vcf_path; do
@@ -105,7 +106,18 @@ while IFS= read -r vcf_path; do
         error_exit "bcftools annotate (rename) failed for ${fixed_base}"
     fi
     tabix -f "${renamed_path}" || log_warn "Failed to index ${renamed_base}"
-    local_name="${renamed_base}"
+
+    # Filter to biallelic SNPs and normalize against reference
+    filtered_base="${fixed_base%.vcf.gz}.filtered.vcf.gz"
+    filtered_path="${WORK_TMPDIR}/${filtered_base}"
+    log_info "Filtering/normalizing SNPs for ${renamed_base}"
+    if ! "${BCFTOOLS_BIN}" norm -m -any -f "${LOCAL_REF}" "${renamed_path}" -Ou | \
+         "${BCFTOOLS_BIN}" view -v snps -m2 -M2 -Oz -o "${filtered_path}"; then
+        error_exit "bcftools filter/normalize failed for ${renamed_base}"
+    fi
+    tabix -f "${filtered_path}" || log_warn "Failed to index ${filtered_base}"
+
+    local_name="${filtered_base}"
     VCF_PREFIXES+=("${local_name}")
 done < "${VCF_MANIFEST}"
 
