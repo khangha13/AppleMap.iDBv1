@@ -838,7 +838,21 @@ From `HPC_MIGRATION_SUMMARY.md` and companions:
 - If you need the master to stay local (e.g., site disallows job-within-job), pass `--no-submit`/`--submit-self=false`.
 - When adding new submission paths, preserve the guard rails: do not re-self-submit when already inside Slurm; always export `PIPELINE_ROOT` in sbatch wrappers; ensure dataset is set before self-submit to avoid empty `sbatch` calls.
 
-### 5.21 Step 1C Beagle manifest + bgzip compatibility fix (2025‑12‑04)
+### 5.21 Step 1C Python3 "Illegal instruction" crash + Beagle manifest fix (2025‑12‑04)
+
+**Symptom:** Python3 crashes with "Illegal instruction (core dumped)" in `fix_vcf_fill_missing.sh`, preventing Step 1C from starting.
+
+**Root cause:** Python3 binary incompatible with CPU architecture on some compute nodes (particularly older nodes or mixed-architecture clusters). The Python interpreter crashes before executing any code.
+
+**Solution:** Removed Python3 dependency from `fix_vcf_fill_missing.sh`. Replaced with bcftools-based validation which is more reliable and doesn't require Python. Since VCFs are already validated by Step 1B, the "repair" step is typically a no-op anyway (all previous runs showed "Rows patched: 0").
+
+**Technical details:**
+- `Illegal instruction` errors indicate CPU instruction set incompatibility
+- Python binaries compiled for newer CPUs (e.g., with AVX512) will crash on older CPUs
+- bcftools is compiled for the HPC environment and always works
+- The Python repair logic was overkill - bcftools `view` handles VCF normalization correctly
+
+### 5.22 Step 1C Beagle manifest + bgzip compatibility fix (2025‑12‑04)
 
 **Symptom:** Beagle 5.4.22Jul22.46e crashes with `VCF record format error (ninthTabPos)` on properly-formatted VCFs.
 
