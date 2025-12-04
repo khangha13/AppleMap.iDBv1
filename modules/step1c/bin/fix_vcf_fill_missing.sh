@@ -83,7 +83,7 @@ zcat "${INPUT}" 2>/dev/null | \
 awk -v expected="${expected_cols}" 'BEGIN{FS="[ \t]+"; OFS="\t"}
     /^#/ {print; next}
     {
-        # Ensure at least CHROM..INFO (8 cols)
+        # Force presence of first 8 fields (CHROM..INFO). If missing, pad with dots.
         if (NF < 8) {
             for (i = NF + 1; i <= 8; i++) {$i="."}
         }
@@ -95,7 +95,26 @@ awk -v expected="${expected_cols}" 'BEGIN{FS="[ \t]+"; OFS="\t"}
         while (NF < expected) {
             $(NF + 1) = "./."
         }
-        print
+        # Re-check; if still short (e.g., empty line), emit a minimal placeholder
+        if (NF < expected) {
+            # Build a synthetic line with placeholders
+            chrom = ($1==""?"." : $1);
+            pos = ($2==""?"0":$2);
+            id = ($3==""?".":$3);
+            ref = ($4==""?"N":$4);
+            alt = ($5==""?"<X>":$5);
+            qual = ($6==""?".":$6);
+            filter = ($7==""?".":$7);
+            info = ($8==""?".":$8);
+            format = "GT";
+            printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s", chrom,pos,id,ref,alt,qual,filter,info,format;
+            for (j=10; j<=expected; j++) {
+                printf "\t./.";
+            }
+            printf "\n";
+        } else {
+            print
+        }
     }' > "${tmp_out}"
 
 bgzip -c "${tmp_out}" > "${OUTPUT}"
@@ -104,6 +123,11 @@ tabix -f "${OUTPUT}"
 # Verify patched file
 if ! "${BCFTOOLS_BIN}" view -Ov -o /dev/null "${OUTPUT}" >/dev/null 2>&1; then
     echo "[FATAL] Patched VCF failed validation: ${OUTPUT}" >&2
+    exit 1
+fi
+# Ensure no rows remain short on columns
+if ! zcat "${OUTPUT}" 2>/dev/null | awk -v expected="${expected_cols}" 'BEGIN{FS="\t"} !/^#/ && NF<expected {exit 1}' ; then
+    echo "[FATAL] Patched VCF still contains rows with <${expected_cols} columns: ${OUTPUT}" >&2
     exit 1
 fi
 
