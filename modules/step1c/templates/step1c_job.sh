@@ -122,6 +122,7 @@ numeric_contig_header="${WORK_TMPDIR}/contigs_numeric.header.txt"
 
 VCF_PREFIXES=()
 BEAGLE_VCF_PATHS=()
+ORIGINAL_VCF_PATHS=()
 
 # Process each input VCF: filter, normalize, rename contigs, sort
 # Removed redundant auto-fix and validation loops (root cause was bgzip, not VCF format)
@@ -188,13 +189,17 @@ while IFS= read -r vcf_path; do
 
     VCF_PREFIXES+=("${sorted_base}")
     BEAGLE_VCF_PATHS+=("${sorted_path}")
+    ORIGINAL_VCF_PATHS+=("${vcf_path}")
 done < "${VCF_MANIFEST}"
 
 # WORKAROUND: Beagle 5.4.22Jul22.46e has compatibility issues with certain bgzip formats
 # Decompress VCFs to plain text for Beagle (verified working with uncompressed VCFs)
 log_info "Decompressing VCFs for Beagle (bgzip format compatibility workaround)..."
 UNCOMPRESSED_PREFIXES=()
-for path in "${BEAGLE_VCF_PATHS[@]}"; do
+UNCOMPRESSED_ORIGINAL_PATHS=()
+for i in "${!BEAGLE_VCF_PATHS[@]}"; do
+    path="${BEAGLE_VCF_PATHS[$i]}"
+    original_vcf="${ORIGINAL_VCF_PATHS[$i]}"
     [ -f "${path}" ] || continue
     base_name="$(basename "${path}")"
     uncompressed_base="${base_name%.vcf.gz}.vcf"
@@ -204,6 +209,7 @@ for path in "${BEAGLE_VCF_PATHS[@]}"; do
         error_exit "Failed to decompress ${path} for Beagle"
     fi
     UNCOMPRESSED_PREFIXES+=("${uncompressed_path}")
+    UNCOMPRESSED_ORIGINAL_PATHS+=("${original_vcf}")
 done
 
 local_map_arg=""
@@ -219,18 +225,19 @@ JAVA_MEM="-Xmx${MEMORY_GB}g"
 log_info "Launching Beagle imputation..."
 
 # Process each chromosome separately (Beagle does not support manifest files in gt= parameter)
-for uncompressed_vcf in "${UNCOMPRESSED_PREFIXES[@]}"; do
+for i in "${!UNCOMPRESSED_PREFIXES[@]}"; do
+    uncompressed_vcf="${UNCOMPRESSED_PREFIXES[$i]}"
+    original_vcf="${UNCOMPRESSED_ORIGINAL_PATHS[$i]}"
     [ -f "${uncompressed_vcf}" ] || continue
     
-    # Extract chromosome name for output prefix
-    chr_prefix="${uncompressed_vcf%.vcf}"
-    chr_prefix="${chr_prefix##*/}"
+    # Extract clean chromosome name from original VCF (e.g., Chr01_consolidated.vcf.gz -> Chr01)
+    chr_name="$(basename "${original_vcf}" | sed -E 's/_consolidated\.vcf\.gz$//' | sed -E 's/_.*$//')"
     
-    log_info "Running Beagle on ${uncompressed_vcf}..."
+    log_info "Running Beagle on ${uncompressed_vcf} (output: ${chr_name}_phased)..."
     
     if ! java ${JAVA_MEM} -jar "${BEAGLE_JAR}" \
         gt="${uncompressed_vcf}" \
-        out="${chr_prefix}_phased" \
+        out="${chr_name}_phased" \
         nthreads="${THREADS}" \
         impute="${IMPUTE_FLAG}" \
         window=3 overlap=0.3 ne=100000 seed=2025 \
@@ -238,7 +245,7 @@ for uncompressed_vcf in "${UNCOMPRESSED_PREFIXES[@]}"; do
         error_exit "Beagle failed for ${uncompressed_vcf}"
     fi
     
-    log_info "Beagle completed for ${uncompressed_vcf}"
+    log_info "Beagle completed for ${chr_name}_phased"
 done
 
 mkdir -p "${OUTPUT_DIR}"
