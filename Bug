@@ -1,0 +1,117 @@
+[uqpha1@bun136 test]$ bash ~/AppleMap.iDBv1/wrappers/sbatch/step1c_submit.sh test
+[pipeline_config] ℹ️  Environment source: /home/uqpha1/AppleMap.iDBv1/config/environment.sh
+[pipeline_config] ℹ️  PIPELINE_REFERENCE_FASTA: /QRISdata/Q8367/Reference_Genome/GDDH13_1-1_formatted.fasta
+[pipeline_config] ℹ️  PIPELINE_ADAPTER_FASTA: /QRISdata/Q8367/Liao_2021_adapter/TruSeq2-PE.fa
+[pipeline_config] ℹ️  PIPELINE_KNOWN_SITES_VCF: /QRISdata/Q8367/Known_Sites/Final_DB_Known-sites_Filtered_by_480K_Unique_HD.vcf
+[pipeline_config] ℹ️  Set REFERENCE_GENOME from PIPELINE_REFERENCE_FASTA: /QRISdata/Q8367/Reference_Genome/GDDH13_1-1_formatted.fasta
+[step1c_submit] ℹ️  Auto-inferred RDM path: /QRISdata/Q8367/WGS_Reference_Panel/test
+[pipeline_config] ⚠️  PIPELINE_CONFIG_SOURCED was true but required paths were empty; reloading config.
+[pipeline_config] ℹ️  Environment source: /home/uqpha1/AppleMap.iDBv1/config/environment.sh
+[pipeline_config] ℹ️  PIPELINE_REFERENCE_FASTA: /QRISdata/Q8367/Reference_Genome/GDDH13_1-1_formatted.fasta
+[pipeline_config] ℹ️  PIPELINE_ADAPTER_FASTA: /QRISdata/Q8367/Liao_2021_adapter/TruSeq2-PE.fa
+[pipeline_config] ℹ️  PIPELINE_KNOWN_SITES_VCF: /QRISdata/Q8367/Known_Sites/Final_DB_Known-sites_Filtered_by_480K_Unique_HD.vcf
+[pipeline_config] ℹ️  Set REFERENCE_GENOME from PIPELINE_REFERENCE_FASTA: /QRISdata/Q8367/Reference_Genome/GDDH13_1-1_formatted.fasta
+[2025-12-04 15:16:33] [INFO] [step1c] Logging system initialized for module: step1c
+[2025-12-04 15:16:33] [INFO] [step1c] Log type: pipeline
+[2025-12-04 15:16:33] [INFO] [step1c] Log file: /scratch/project/bigdata_apple/logs/pipeline_step1c_20251204_151633.log
+[2025-12-04 15:16:33] [INFO] [step1c] Log level: INFO
+[2025-12-04 15:16:33] [INFO] [step1c] Detected 17 joint VCF files for imputation.
+[2025-12-04 15:16:33] [INFO] [step1c] Using Step 1C template: /home/uqpha1/AppleMap.iDBv1/modules/step1c/templates/step1c_job.sh
+[2025-12-04 15:16:33] [INFO] [step1c] Creating SLURM script: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1C_test_20251204_151633.sh
+[2025-12-04 15:16:33] [INFO] [step1c] ✓ Created SLURM script: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1C_test_20251204_151633.sh
+[2025-12-04 15:16:33] [INFO] [step1c]   Job name: Apple_GATK_1C_test
+[2025-12-04 15:16:33] [INFO] [step1c]   Array range: 0-0
+[2025-12-04 15:16:33] [INFO] [step1c]   SLURM config: 8 CPUs, 48G RAM, 48:00:00 time
+[2025-12-04 15:16:33] [INFO] [step1c] Step 1C Beagle mode: self-impute=false
+[2025-12-04 15:16:33] [INFO] [step1c] Submitting 1C job: /scratch/project/bigdata_apple/gatk_pipeline/slurm_scripts/Apple_GATK_1C_test_20251204_151633.sh with parameters: /QRISdata/Q8367/WGS_Reference_Panel/test /scratch/project/bigdata_apple/gatk_pipeline/work/step1c/test/vcf_manifest_test_20251204_151633.txt /QRISdata/Q8367/WGS_Reference_Panel/test/8.Imputated_VCF_BEAGLE /QRISdata/Q8367/Reference_Genome/GDDH13_1-1_formatted.fasta __NO_GENE_MAP__ test_beagle 8 48 false
+[2025-12-04 15:16:33] [INFO] [step1c] Created SLURM log directory: /scratch/project/bigdata_apple/logs/test
+[2025-12-04 15:16:33] [INFO] [step1c] 1C job submitted successfully - Job ID: 18482788
+[2025-12-04 15:16:33] [INFO] [step1c] Step 1C job submitted successfully (ID: 18482788)
+[uqpha1@bun136 test]$ squeue --me
+             JOBID PARTITION     NAME     USER ST       TIME  NODES NODELIST(REASON)
+      18482788_[0]   general Apple_GA   uqpha1 PD       0:00      1 (Priority)
+          18482490   general khang_in   uqpha1  R      42:15      1 bun136
+[uqpha1@bun136 test]$ squeue --me
+             JOBID PARTITION     NAME     USER ST       TIME  NODES NODELIST(REASON)
+          18482490   general khang_in   uqpha1  R      44:37      1 bun136
+[uqpha1@bun136 test]$ cd  /scratch/project/bigdata_apple/logs/test
+[uqpha1@bun136 test]$ ls
+1C_18482788_0_Apple_GATK_1C_test_18482788.error  1C_18482788_0_Apple_GATK_1C_test_18482788.output  logs  step1c_debug
+[uqpha1@bun136 test]$ cat 1C_18482788_0_Apple_GATK_1C_test_18482788.error 
+[pipeline_config] ⚠️  PIPELINE_CONFIG_SOURCED was true but required paths were empty; reloading config.
+[pipeline_config] ℹ️  Environment source: /home/uqpha1/AppleMap.iDBv1/config/environment.sh
+[pipeline_config] ℹ️  PIPELINE_REFERENCE_FASTA: /QRISdata/Q8367/Reference_Genome/GDDH13_1-1_formatted.fasta
+[pipeline_config] ℹ️  PIPELINE_ADAPTER_FASTA: /QRISdata/Q8367/Liao_2021_adapter/TruSeq2-PE.fa
+[pipeline_config] ℹ️  PIPELINE_KNOWN_SITES_VCF: /QRISdata/Q8367/Known_Sites/Final_DB_Known-sites_Filtered_by_480K_Unique_HD.vcf
+[pipeline_config] ℹ️  Set REFERENCE_GENOME from PIPELINE_REFERENCE_FASTA: /QRISdata/Q8367/Reference_Genome/GDDH13_1-1_formatted.fasta
+[2025-12-04 15:20:01] [INFO] [step1c] Logging system initialized for module: step1c
+[2025-12-04 15:20:01] [INFO] [step1c] Log type: job
+[2025-12-04 15:20:01] [INFO] [step1c] Log file: /scratch/project/bigdata_apple/logs/test/logs/step1c_20251204_152001.log
+[2025-12-04 15:20:01] [INFO] [step1c] Log level: INFO
+[2025-12-04 15:20:01] [INFO] [step1c] Beagle impute flag: false (false = phasing-only)
+[2025-12-04 15:20:03] [INFO] [step1c] Using working directory: /scratch/temp/18482788
+[2025-12-04 15:20:03] [INFO] [step1c] Step 1C artifacts will be copied to /scratch/project/bigdata_apple/logs/test/step1c_debug/20251204_152003
+[2025-12-04 15:20:05] [INFO] [step1c] Auto-fixing VCF: /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr01_consolidated.vcf.gz -> /scratch/temp/18482788/Chr01_consolidated.fixed.vcf.gz
+/home/uqpha1/AppleMap.iDBv1/modules/step1c/bin/fix_vcf_fill_missing.sh: line 119: 1945492 Illegal instruction     (core dumped) python3 - "$INPUT" "$tmp_out" "$meta_out"  <<'PY'
+import gzip
+import sys
+
+input_path, output_path, meta_path = sys.argv[1:4]
+
+header_fields = None
+total_rows = 0
+patched_rows = 0
+
+with gzip.open(input_path, "rt", encoding="utf-8", errors="replace") as fin, \
+        open(output_path, "w", encoding="utf-8") as fout:
+    for raw in fin:
+        if raw.startswith("#"):
+            line = raw.rstrip("\r\n")
+            fout.write(line + "\n")
+            if raw.startswith("#CHROM"):
+                header_fields = line.split("\t")
+            continue
+
+        if header_fields is None:
+            raise SystemExit("[FATAL] #CHROM header not found before data lines")
+
+        total_rows += 1
+        expected_cols = len(header_fields)
+        tokens = raw.rstrip("\r\n")
+
+        if "\t" in tokens:
+            fields = tokens.split("\t")
+        else:
+            fields = tokens.split()
+
+        if len(fields) != expected_cols:
+            patched_rows += 1
+
+        if len(fields) < expected_cols:
+            fields.extend([""] * (expected_cols - len(fields)))
+        elif len(fields) > expected_cols:
+            fields = fields[:expected_cols]
+
+        # Normalise critical columns
+        fields[0] = fields[0] or "."
+        fields[1] = fields[1] or "0"
+        fields[2] = fields[2] or "."
+        fields[3] = fields[3] or "N"
+        fields[4] = fields[4] or "<X>"
+        fields[5] = fields[5] or "."
+        fields[6] = fields[6] or "."
+        fields[7] = fields[7] or "."
+        fields[8] = fields[8] or "GT"
+
+        for idx in range(9, expected_cols):
+            fields[idx] = fields[idx] or "./."
+
+        fout.write("\t".join(fields) + "\n")
+
+with open(meta_path, "w", encoding="utf-8") as meta:
+    meta.write(f"{len(header_fields or [])}\n")
+    meta.write(f"{total_rows}\n")
+    meta.write(f"{patched_rows}\n")
+PY
+
+[2025-12-04 15:20:05] [FATAL] [step1c] Auto-fix failed for /QRISdata/Q8367/WGS_Reference_Panel/test/7.Consolidated_VCF/Chr01_consolidated.vcf.gz

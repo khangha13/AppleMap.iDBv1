@@ -1,0 +1,31 @@
+/QRISdata/Q8367/
+├── Reference_Genome/                 # Reference FASTA, indexes, dict
+├── Known_Sites/                      # Known variant sets for BQSR/filters
+├── WGS_Reference_Panel/              # Reference panel(s) for imputation
+│   └── {dataset_name}/               # Versioned or dated dataset
+│       ├── 1.FASTQ/                  # Raw reads (paired, gz)
+│       ├── 2.FASTQC_pre_trimmed/     # FastQC reports (pre-trim)
+│       ├── 3.FASTQC_post_trimmed/    # FastQC reports (post-trim)
+│       ├── 4.BAM/                    # Aligned BAM + BAI + metrics
+│       ├── 5.Individual_GVCF/        # Per-sample GVCFs + idx
+│       ├── 6.Consolidated_GVCF/      # GenomicsDBImport workspaces / combined outputs
+│       ├── 7.Joint_VCF/              # Step 1B joint-called VCFs (+ per-chr)
+│       ├── 8.Imputation/             # Step 1C outputs (pre/post, logs)
+│       │   ├── pre/                  # Pre-imputation (input VCFs split per-chr)
+│       │   └── post/                 # Post-imputation (imputed VCF/BCF + R2/INFO)
+│       ├── 9.QC/                     # Step 1D QC artifacts
+│       │   ├── tsv/                  # Extracted metrics (pre/post/compare)
+│       │   ├── pre_plots/            # Pre-imputation plots
+│       │   ├── post_plots/           # Post-imputation plots
+│       │   ├── compare_plots/        # Before/after deltas & summaries
+│       │   └── reports/              # HTML/PDF QC report(s)
+│       └── logs/                     # Pipeline/SLURM logs by step (1A/1B/1C/1D)
+│
+├── GATK_Pipeline/                    # Pipeline code and wrappers (read-only)
+│   └── GATK_Pipeline_KH_v1/          # Versioned pipeline (modules, docs)
+│
+├── Runs/                             # Run manifests, batch lists, provenance
+├── chromosome_plots/                 # Legacy or summary visualizations
+├── depth_pdfs/                       # Legacy depth outputs (if shared)
+├── site_meanDP.tsv                   # Shared site-level depth (if global)
+└── Recycle_bin/                      # Quarantined/obsolete (time-limited)
