@@ -23,6 +23,8 @@ source "${PIPELINE_ROOT}/lib/slurm.sh"
 source "${STEP1C_MODULE_DIR}/lib/functions.sh"
 source "${PIPELINE_ROOT}/config/pipeline_config.sh"
 
+LAST_STEP1C_ARRAY_MAX=0
+
 main() {
     local dataset_name="$1"
     local rdm_base_path="$2"
@@ -59,9 +61,12 @@ main() {
 
     local manifest_file="${scratch_manifest_dir}/vcf_manifest_${dataset_name}_$(date +%Y%m%d_%H%M%S).txt"
     create_vcf_manifest "${rdm_base_path}" "${manifest_file}"
+    local manifest_count
+    manifest_count=$(grep -c . "${manifest_file}")
+    log_info "VCF manifest entries: ${manifest_count}"
 
     local slurm_script
-    if ! slurm_script=$(create_step1c_slurm_script "${dataset_name}"); then
+    if ! slurm_script=$(create_step1c_slurm_script "${dataset_name}" "${manifest_count}"); then
         log_error "Failed to generate Step 1C SLURM script"
         exit 1
     fi
@@ -103,6 +108,7 @@ main() {
 
     if [ $? -eq 0 ]; then
         log_info "Step 1C job submitted successfully (ID: ${job_id})"
+        log_info "Array range: 0-${LAST_STEP1C_ARRAY_MAX}"
     else
         log_error "Failed to submit Step 1C job"
         exit 1
@@ -111,6 +117,12 @@ main() {
 
 create_step1c_slurm_script() {
     local dataset_name="$1"
+    local manifest_count="$2"
+
+    if [ -z "${manifest_count}" ] || [ "${manifest_count}" -le 0 ]; then
+        log_error "Manifest is empty; cannot create Step 1C array job"
+        return 1
+    fi
 
     local config
     config=$(get_step1c_config)
@@ -123,6 +135,13 @@ create_step1c_slurm_script() {
     local memory="${config_map[MEMORY]}"
     local cpus="${config_map[CPUS]}"
     local time_limit="${config_map[TIME]}"
+    local array_max=$((manifest_count - 1))
+    local configured_array_limit="${config_map[ARRAY_MAX]:-}"
+    if [[ -n "${configured_array_limit}" && "${configured_array_limit}" -gt 0 && "${array_max}" -ge "${configured_array_limit}" ]]; then
+        log_warn "VCF count (${manifest_count}) exceeds configured array limit (${configured_array_limit}); truncating array."
+        array_max=$((configured_array_limit - 1))
+    fi
+    LAST_STEP1C_ARRAY_MAX="${array_max}"
 
     mkdir -p "${PIPELINE_SLURM_SCRIPT_DIR}"
     local slurm_script="${PIPELINE_SLURM_SCRIPT_DIR}/Apple_GATK_1C_${dataset_name}_$(date +%Y%m%d_%H%M%S).sh"
@@ -142,7 +161,7 @@ ntasks=${config_map[NTASKS]}
 cpus_per_task=${cpus}
 time_limit=${time_limit}
 memory=${memory}
-array_max=0"
+array_max=${array_max}"
     if [ -n "${config_map[QOS]:-}" ]; then
         config_string="${config_string}
 qos=${config_map[QOS]}"

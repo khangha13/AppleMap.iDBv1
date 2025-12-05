@@ -209,6 +209,7 @@ STEP1C_PARTITION="${STEP1C_PARTITION:-$PIPELINE_SLURM_PARTITION}"
 STEP1C_NODES="${STEP1C_NODES:-$PIPELINE_SLURM_NODES}"
 STEP1C_NTASKS="${STEP1C_NTASKS:-$PIPELINE_SLURM_NTASKS}"
 STEP1C_SELF_IMPUTE="${STEP1C_SELF_IMPUTE:-false}"
+STEP1C_ARRAY_MAX="${STEP1C_ARRAY_LIMIT:-25}"
 
 # -----------------------------------------------------------------------------
 # Step 1D defaults
@@ -353,6 +354,7 @@ get_step1c_config() {
     echo "PARTITION=${STEP1C_PARTITION}"
     echo "NODES=${STEP1C_NODES}"
     echo "NTASKS=${STEP1C_NTASKS}"
+    echo "ARRAY_MAX=${STEP1C_ARRAY_MAX}"
     [ -n "${SLURM_QOS}" ] && echo "QOS=${SLURM_QOS}"
 }
 
