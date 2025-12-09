@@ -57,7 +57,7 @@ main() {
         exit 1
     fi
 
-    init_logging "step1d" "pipeline"
+    init_logging "step1d" "pipeline" "${dataset_name}"
 
     if [ -z "${dataset_name}" ] || [ -z "${vcf_dir}" ]; then
         log_error "Usage: step1d main <dataset_name> <vcf_directory> [--beagle] [--dry-run] [--pca-only] [--remove-relatives]"

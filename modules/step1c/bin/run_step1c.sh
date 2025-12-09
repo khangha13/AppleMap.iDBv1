@@ -31,7 +31,7 @@ main() {
     local gene_map_file="${GENE_MAP_FILE:-}"
     local output_dir_override="${STEP1C_OUTPUT_DIR:-}"
 
-    init_logging "step1c" "pipeline"
+    init_logging "step1c" "pipeline" "${dataset_name}"
 
     if [ -z "${dataset_name}" ] || [ -z "${rdm_base_path}" ]; then
         log_error "Usage: step1c main <dataset_name> <rdm_base_path>"

@@ -78,6 +78,14 @@ create_slurm_script() {
         return 1
     fi
     
+    local log_root=""
+    if command -v resolve_log_root >/dev/null 2>&1; then
+        log_root="$(resolve_log_root "${dataset_name}" "slurm")"
+    else
+        log_root="${LOG_BASE_PATH%/}/${dataset_name}/slurm"
+        mkdir -p "${log_root}" 2>/dev/null || log_root="/tmp"
+    fi
+
     # Create SLURM script header
     if ! cat > "$output" << EOF
 #!/bin/bash -l
@@ -90,8 +98,9 @@ create_slurm_script() {
 #SBATCH --time=${time_limit}
 #SBATCH --mem=${memory}
 #SBATCH --array=0-${array_max}
-#SBATCH -o ${LOG_BASE_PATH}/${dataset_name}/${step_name}_%A_%a_%x_%j.output
-#SBATCH -e ${LOG_BASE_PATH}/${dataset_name}/${step_name}_%A_%a_%x_%j.error
+#SBATCH --chdir=${log_root}
+#SBATCH -o ${log_root}/${step_name}_%A_%a_%x_%j.output
+#SBATCH -e ${log_root}/${step_name}_%A_%a_%x_%j.error
 
 # =============================================================================
 # SLURM-GENERATED SCRIPT FOR APPLE GATK PIPELINE - ${step_name^^}
@@ -166,8 +175,14 @@ submit_job() {
     # can fail due to metadata caching even though the file exists.
 
     # Create log directory
-    mkdir -p "${LOG_BASE_PATH}/${dataset_name}"
-    log_info "Created SLURM log directory: ${LOG_BASE_PATH}/${dataset_name}"
+    local submit_log_root=""
+    if command -v resolve_log_root >/dev/null 2>&1; then
+        submit_log_root="$(resolve_log_root "${dataset_name}" "slurm")"
+    else
+        submit_log_root="${LOG_BASE_PATH%/}/${dataset_name}/slurm"
+        mkdir -p "${submit_log_root}" 2>/dev/null || submit_log_root="/tmp"
+    fi
+    log_info "SLURM log directory: ${submit_log_root}"
     
     # Submit the job
     # Resolve script to absolute path to avoid path resolution issues

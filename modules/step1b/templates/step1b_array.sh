@@ -45,7 +45,7 @@ source "${STEP1B_MODULE_DIR}/lib/functions.sh"
 source "${STEP1B_MODULE_DIR}/bin/run_step1b.sh"
 
 # Initialize logging for the array job
-init_logging "step1b" "pipeline"
+init_logging "step1b" "pipeline" "${DATASET_NAME}"
 
 if [ ! -f "${CHROMOSOME_LIST_FILE}" ]; then
     error_exit "Chromosome list file not found: ${CHROMOSOME_LIST_FILE}"

@@ -238,8 +238,16 @@ copy_consolidated_vcf() {
     log_info "Copying ${chromosome} consolidated VCF to ${destination}"
 
     local validator="${PIPELINE_ROOT}/modules/step1b/bin/validate_consolidated_vcf.sh"
-    local validate_log="$(dirname "${output_file}")/logs/${chromosome}_validate.log"
-    mkdir -p "$(dirname "${validate_log}")"
+    local dataset_name
+    dataset_name="$(basename "${rdm_base_path}")"
+    local validate_dir=""
+    if command -v resolve_log_root >/dev/null 2>&1; then
+        validate_dir="$(resolve_log_root "${dataset_name}" "artifacts/step1b")"
+    else
+        validate_dir="${LOG_BASE_PATH%/}/${dataset_name}/artifacts/step1b"
+        mkdir -p "${validate_dir}" 2>/dev/null || validate_dir="/tmp"
+    fi
+    local validate_log="${validate_dir}/${chromosome}_validate.log"
     if [ -x "${validator}" ]; then
         log_info "Validating consolidated VCF before copy: ${output_file}"
         if ! bash "${validator}" "${output_file}" > "${validate_log}" 2>&1; then

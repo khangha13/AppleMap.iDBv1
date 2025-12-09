@@ -105,10 +105,12 @@ ensure_master_logging() {
         MASTER_LOG_DATASET="${dataset_name}"
     fi
 
-    mkdir -p "${MASTER_LOG_DIR}"
+    local master_pipeline_dir="${MASTER_LOG_DIR%/}/pipeline"
+    local master_slurm_dir="${MASTER_LOG_DIR%/}/slurm"
+    mkdir -p "${master_pipeline_dir}" "${master_slurm_dir}"
     local log_suffix="${SLURM_JOB_ID:-${MASTER_RUN_STAMP}}"
-    MASTER_LOG_STDOUT="${MASTER_LOG_DIR}/GATK_master_script_${log_suffix}.output"
-    MASTER_LOG_STDERR="${MASTER_LOG_DIR}/GATK_master_script_${log_suffix}.error"
+    MASTER_LOG_STDOUT="${master_slurm_dir}/GATK_master_script_${log_suffix}.output"
+    MASTER_LOG_STDERR="${master_slurm_dir}/GATK_master_script_${log_suffix}.error"
     export MASTER_LOG_DIR MASTER_LOG_STDOUT MASTER_LOG_STDERR MASTER_LOG_DATASET
 
     if [ "${mode}" = "prepare" ]; then
@@ -118,7 +120,7 @@ ensure_master_logging() {
     if [ -z "${MASTER_LOG_INITIALIZED:-}" ]; then
         local previous_override="${PIPELINE_LOG_DIR_OVERRIDE:-}"
         PIPELINE_LOG_DIR_OVERRIDE="${MASTER_LOG_DIR}"
-        init_logging "gatk_master" "pipeline"
+        init_logging "gatk_master" "pipeline" "${dataset_name}" "pipeline"
         MASTER_LOG_FILE="${LOG_FILE}"
         MASTER_LOG_INITIALIZED="true"
         export MASTER_LOG_FILE MASTER_LOG_INITIALIZED
@@ -128,6 +130,8 @@ ensure_master_logging() {
             unset PIPELINE_LOG_DIR_OVERRIDE
         fi
         log_info "Master logging directory: ${MASTER_LOG_DIR}"
+        log_info "Master pipeline logs: ${master_pipeline_dir}"
+        log_info "Master slurm logs: ${master_slurm_dir}"
     fi
 
     if [ -z "${MASTER_IO_REDIRECTED:-}" ]; then
@@ -169,8 +173,10 @@ submit_self() {
 
     # Build sbatch flags from pipeline config (account/partition/logs etc.)
     local script_path="${PIPELINE_ROOT}/bin/gatk_pipeline.sh"
-    local stdout_template="${MASTER_LOG_DIR}/GATK_master_script_%j.output"
-    local stderr_template="${MASTER_LOG_DIR}/GATK_master_script_%j.error"
+    local master_slurm_dir="${MASTER_LOG_DIR%/}/slurm"
+    mkdir -p "${master_slurm_dir}"
+    local stdout_template="${master_slurm_dir}/GATK_master_script_%j.output"
+    local stderr_template="${master_slurm_dir}/GATK_master_script_%j.error"
     local sbatch_cmd=( sbatch
         -J GATK_master_script
         -A "${SLURM_ACCOUNT}"
@@ -180,6 +186,7 @@ submit_self() {
         -c 1
         --mem=4G
         -t 336:00:00
+        -D "${MASTER_LOG_DIR}"
         -o "${stdout_template}"
         -e "${stderr_template}"
         --export=ALL,PIPELINE_ROOT="${PIPELINE_ROOT}"

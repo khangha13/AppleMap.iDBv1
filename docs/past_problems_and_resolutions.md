@@ -122,11 +122,18 @@ The logging/SLURM design is the synthesis of:
 - `SLURM_Aware_Logging_Summary.md`
 - `Core_Pipeline_Logging_Guide.md`
 
-### 3.1 Three‑tier logging
+### 3.1 Unified log layout (Dec 2025)
 
-1. **Wrapper logs** – *interactive scripts* (`Interactive_1A.sh`, etc.)
-   - **Location:** `./logs/wrapper/`
-   - **Purpose:** user input, validation, dataset detection, step decisions,
+All logging now lands under `${LOG_BASE_PATH}/${dataset}/`:
+
+- `pipeline/` – all logger output (master, submitters, workers, wrappers).
+- `slurm/` – stdout/stderr from sbatch jobs.
+- `artifacts/step1b/` – VCF validator logs per chromosome.
+- `artifacts/step1c_debug/<run_id>/` – Beagle/tmp artifacts copied from `$TMPDIR`.
+- (State files remain alongside `${LOG_BASE_PATH}/${dataset}` for now.)
+
+Wrapper/interactive scripts also log into `pipeline/` once the dataset is known.
+Helper: `bin/show_logs.sh <dataset>` prints the resolved paths and recent files.
      SLURM submission details.
    - Creates job tracking files like:
      - `./logs/wrapper/job_<JOB_ID>_<DATASET>.info` with:
@@ -1074,3 +1081,58 @@ They are **not** promises, just design ideas worth considering:
 If you are an AI agent planning changes, prefer to *extend* this document rather
 than creating new standalone docs—this file is the canonical context for
 pipeline behaviour and historical decisions.
+
+---
+
+## 8. QUILT2 Pipeline Integration Notes
+
+The `QUILT2_Pipeline_KH_v1` is a companion pipeline for low-coverage imputation
+using QUILT2. It shares design principles with the GATK pipeline but is simpler
+(no SLURM orchestration yet). This section documents issues found during its
+initial review.
+
+### 8.1 QUILT2 pipeline bugs fixed (2025-01-XX)
+
+**Issues identified:**
+
+1. **`run_cmd` used before definition** – The auto-chunk-map code path called
+   `run_cmd` on line 398, but the function was defined on line 432. This caused
+   `--auto-chunk-map` to fail with "command not found".
+
+2. **`zcat` portability** – Used `zcat` to inspect VCF files, which fails on
+   macOS (expects `.Z` files). Replaced with `gzip -dc`.
+
+3. **bcftools index success not checked** – Panel VCF indexing failures were
+   silently ignored. Added explicit error check and exit.
+
+4. **Chunk file parsing fallback incorrect** – The fallback case used `c1` as
+   both chunk_id and chr, producing malformed chunk definitions. Fixed to
+   construct chunk_id from `${c1}_${c2}_${c3}`.
+
+5. **No chromosome validation** – Added preflight check that validates
+   chromosome names against the reference `.fai` (per §5.4 lessons).
+
+6. **Nested function definition** – `pick_panel_vcf()` was defined inside
+   `normalize_panel_vcf()`. Hoisted to module level for clarity.
+
+7. **REFERENCE_FASTA validated but unused** – QUILT2 does not require a
+   reference FASTA (it uses the reference panel VCF directly per the
+   [QUILT2 tutorial](https://github.com/rwdavies/QUILT/blob/master/README_QUILT2.org)).
+   Removed the unused validation.
+
+**Fixes applied:**
+
+- Moved `run_cmd()` definition before first use.
+- Replaced `zcat` with `gzip -dc` for cross-platform compatibility.
+- Added error handling for `bcftools index` failures.
+- Fixed chunk file parsing to use consistent chunk_id construction.
+- Added chromosome validation against `.fai` with clear warnings.
+- Hoisted `pick_panel_vcf()` to top-level function.
+- Removed unused `REFERENCE_FASTA` validation and CLI option.
+
+**AI guidance:**
+
+- QUILT2 runs interactively for now; SLURM parallelization will be added when
+  the pipeline enters production.
+- All files are written to `WORK_DIR/quilt2_output/`; no TMPDIR involvement.
+- The bcftools module (`bcftools/1.18-gcc-12.3.0`) is auto-loaded if not on PATH.

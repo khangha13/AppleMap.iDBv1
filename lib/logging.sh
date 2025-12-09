@@ -20,56 +20,97 @@ PURPLE='\033[0;35m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
+_default_scratch_base() {
+    if [ -n "${SCRATCH_BASE_PATH:-}" ]; then
+        echo "${SCRATCH_BASE_PATH%/}"
+        return
+    fi
+    if [ -d "/scratch/user/${USER:-}" ]; then
+        echo "/scratch/user/${USER}"
+        return
+    fi
+    if [ -d "/scratch/${USER:-}" ]; then
+        echo "/scratch/${USER}"
+        return
+    fi
+    if [ -d "/scratch" ]; then
+        echo "/scratch"
+        return
+    fi
+    echo "/tmp"
+}
+
+resolve_log_root() {
+    local dataset_name="$1"
+    local subdir="${2:-pipeline}"
+    local base_root=""
+
+    if [ -n "${PIPELINE_LOG_DIR_OVERRIDE:-}" ]; then
+        base_root="${PIPELINE_LOG_DIR_OVERRIDE%/}"
+    elif [ -n "${LOG_BASE_PATH:-}" ]; then
+        base_root="${LOG_BASE_PATH%/}"
+    else
+        local scratch_base
+        scratch_base="$(_default_scratch_base)"
+        base_root="${scratch_base%/}/logs"
+        LOG_BASE_PATH="${base_root}"
+        export LOG_BASE_PATH
+    fi
+
+    if [[ "${base_root}" != /* ]]; then
+        local current_dir
+        current_dir="$(pwd 2>/dev/null || echo '/tmp')"
+        base_root="${current_dir%/}/${base_root#./}"
+    fi
+
+    local root="${base_root}"
+    if [ -n "${dataset_name}" ] && [ -z "${PIPELINE_LOG_DIR_OVERRIDE:-}" ]; then
+        root="${root%/}/${dataset_name}"
+    fi
+
+    if [ -n "${subdir}" ]; then
+        root="${root%/}/${subdir}"
+    fi
+
+    if ! mkdir -p "${root}" 2>/dev/null; then
+        echo "Warning: Failed to create log directory: ${root}, using /tmp" >&2
+        root="/tmp"
+        mkdir -p "${root}" 2>/dev/null || true
+    else
+        root="$(cd "${root}" 2>/dev/null && pwd)" || root="${root}"
+    fi
+
+    printf '%s\n' "${root}"
+}
+
 # Initialize logging for any module
 init_logging() {
     local module_name="$1"
-    local log_type="$2"  # "wrapper", "pipeline", "slurm"
-    local timestamp=$(date '+%Y%m%d_%H%M%S')
-    
-    # Determine log directory using absolute paths
-    local log_dir_base=""
-    
-    # Allow explicit override for special cases (e.g., master script run folders)
-    if [ -n "${PIPELINE_LOG_DIR_OVERRIDE:-}" ]; then
-        log_dir_base="${PIPELINE_LOG_DIR_OVERRIDE}"
-    # For pipeline logs in SLURM context, use LOG_BASE_PATH if available
-    elif [ "$log_type" = "pipeline" ] && [ -n "${LOG_BASE_PATH:-}" ]; then
-        # Extract dataset name from DATASET_PATH if available (for SLURM array jobs)
-        if [ -n "${DATASET_PATH:-}" ] && [ -d "${DATASET_PATH}" ]; then
-            local dataset_name=$(basename "${DATASET_PATH}")
-            log_dir_base="${LOG_BASE_PATH}/${dataset_name}"
-        else
-            log_dir_base="${LOG_BASE_PATH}"
-        fi
-    # For wrapper logs, use WRAPPER_LOG_PATH if available, otherwise relative to current dir
-    elif [ "$log_type" = "wrapper" ] && [ -n "${WRAPPER_LOG_PATH:-}" ]; then
-        log_dir_base="${WRAPPER_LOG_PATH}"
-    # For other cases, use absolute path based on current working directory
-    else
-        local current_dir
-        current_dir="$(pwd 2>/dev/null || echo '/tmp')"
-        case "$log_type" in
-            "wrapper")
-                log_dir_base="${current_dir}/logs/wrapper"
-                ;;
-            "pipeline")
-                log_dir_base="${current_dir}/logs/pipeline"
-                ;;
-            "slurm")
-                log_dir_base="${current_dir}/logs/slurm"
-                ;;
-            *)
-                log_dir_base="${current_dir}/logs"
-                ;;
-        esac
-    fi
-    
-    # Set log file name
+    local log_type="$2"  # "wrapper", "pipeline", "slurm", "job"
+    local dataset_name="${3:-${DATASET_NAME:-${DATASET:-}}}"
+    local log_subdir="${4:-}"
+    local timestamp
+    timestamp=$(date '+%Y%m%d_%H%M%S')
+
+    case "$log_type" in
+        "pipeline"|"job"|"wrapper")
+            log_subdir="${log_subdir:-pipeline}"
+            ;;
+        "slurm")
+            log_subdir="${log_subdir:-slurm}"
+            ;;
+        *)
+            log_subdir="${log_subdir:-pipeline}"
+            ;;
+    esac
+
+    LOG_DIR="$(resolve_log_root "${dataset_name}" "${log_subdir}")"
+
     case "$log_type" in
         "wrapper")
             LOG_FILE="${module_name}_wrapper_${timestamp}.log"
             ;;
-        "pipeline")
+        "pipeline"|"job")
             LOG_FILE="pipeline_${module_name}_${timestamp}.log"
             ;;
         "slurm")
@@ -79,56 +120,15 @@ init_logging() {
             LOG_FILE="${module_name}_${timestamp}.log"
             ;;
     esac
-    
-    # Ensure log directory is absolute
-    if [[ "$log_dir_base" != /* ]]; then
-        # Convert relative path to absolute
-        local current_dir
-        current_dir="$(pwd 2>/dev/null || echo '/tmp')"
-        # Remove leading ./ if present
-        log_dir_base="${log_dir_base#./}"
-        LOG_DIR="${current_dir}/${log_dir_base}"
-    else
-        LOG_DIR="${log_dir_base}"
-    fi
-    
-    # Normalize the path by resolving parent directory if it exists
-    local parent_dir
-    parent_dir="$(dirname "${LOG_DIR}")"
-    if [ -d "$parent_dir" ]; then
-        # Parent exists, normalize it
-        parent_dir="$(cd "$parent_dir" 2>/dev/null && pwd)" || parent_dir="$(dirname "${LOG_DIR}")"
-        LOG_DIR="${parent_dir}/$(basename "${LOG_DIR}")"
-    fi
-    # If parent doesn't exist, we'll create it with mkdir -p below
-    
-    # Create log directory if it doesn't exist (with error handling)
-    if ! mkdir -p "$LOG_DIR" 2>/dev/null; then
-        # Fallback to /tmp if directory creation fails
-        echo "Warning: Failed to create log directory: $LOG_DIR, using /tmp" >&2
-        LOG_DIR="/tmp"
-        mkdir -p "$LOG_DIR" 2>/dev/null || true
-    else
-        # After creation, normalize the path
-        LOG_DIR="$(cd "$LOG_DIR" 2>/dev/null && pwd)" || LOG_DIR="${LOG_DIR}"
-    fi
-    
-    # Ensure LOG_FILE is absolute
-    if [[ "$LOG_FILE" != /* ]]; then
-        LOG_FILE="${LOG_DIR}/${LOG_FILE}"
-    else
-        LOG_FILE="${LOG_DIR}/$(basename "${LOG_FILE}")"
-    fi
-    
-    # Set log level (can be overridden by environment variable)
+
+    LOG_FILE="${LOG_DIR%/}/${LOG_FILE}"
+
     LOG_LEVEL="${LOG_LEVEL:-$DEFAULT_LOG_LEVEL}"
-    
-    # Store module name for use in log messages
     MODULE_NAME="$module_name"
-    
-    # Log initialization
+
     log_info "Logging system initialized for module: $module_name"
     log_info "Log type: $log_type"
+    log_info "Log directory: $LOG_DIR"
     log_info "Log file: $LOG_FILE"
     log_info "Log level: $LOG_LEVEL"
 }

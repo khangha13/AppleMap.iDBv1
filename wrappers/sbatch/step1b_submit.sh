@@ -33,9 +33,14 @@ DATASET_RDM_PATH="$2"
 shift 2 || true
 
 source "${PIPELINE_ROOT}/config/pipeline_config.sh"
+source "${PIPELINE_ROOT}/lib/logging.sh"
 
-LOG_DIR="${MASTER_LOG_DIR:-${LOG_BASE_PATH%/}/${DATASET_NAME}}"
-mkdir -p "${LOG_DIR}"
+if command -v resolve_log_root >/dev/null 2>&1; then
+    LOG_DIR="$(resolve_log_root "${DATASET_NAME}" "slurm")"
+else
+    LOG_DIR="${MASTER_LOG_DIR:-${LOG_BASE_PATH%/}/${DATASET_NAME}/slurm}"
+    mkdir -p "${LOG_DIR}" 2>/dev/null || LOG_DIR="/tmp"
+fi
 
 RUN_STAMP="$(date +%Y%m%d_%H%M%S)"
 STDOUT_PATH="${LOG_DIR}/step1b_master_${RUN_STAMP}_%j.output"
@@ -64,6 +69,7 @@ sbatch_cmd=(
     -c "${STEP1B_CPUS_PER_TASK}"
     --mem="${STEP1B_MEMORY}"
     -t "${STEP1B_TIME_LIMIT}"
+    -D "${LOG_DIR}"
     -o "${STDOUT_PATH}"
     -e "${STDERR_PATH}"
     --export=ALL,PIPELINE_ROOT="${PIPELINE_ROOT}"

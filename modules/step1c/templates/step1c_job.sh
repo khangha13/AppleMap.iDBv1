@@ -77,7 +77,7 @@ source "${PIPELINE_ROOT}/config/pipeline_config.sh"
 source "${PIPELINE_ROOT}/lib/logging.sh"
 source "${STEP1C_MODULE_DIR}/lib/functions.sh"
 
-init_logging "step1c" "job"
+init_logging "step1c" "job" "${DATASET_NAME}"
 log_info "Beagle impute flag: ${IMPUTE_FLAG} (false = phasing-only)"
 log_info "Hard filter flag: ${HARD_FILTER} (auto-derived from impute=${IMPUTE_FLAG} when unspecified)"
 
@@ -126,7 +126,11 @@ else
 fi
 
 STEP1C_RUN_ID="$(date +%Y%m%d_%H%M%S)_${SLURM_ARRAY_TASK_ID:-na}"
-STEP1C_DEBUG_DIR="${LOG_BASE_PATH%/}/${DATASET_NAME}/step1c_debug/${STEP1C_RUN_ID}"
+if command -v resolve_log_root >/dev/null 2>&1; then
+    STEP1C_DEBUG_DIR="$(resolve_log_root "${DATASET_NAME}" "artifacts/step1c_debug/${STEP1C_RUN_ID}")"
+else
+    STEP1C_DEBUG_DIR="${LOG_BASE_PATH%/}/${DATASET_NAME}/artifacts/step1c_debug/${STEP1C_RUN_ID}"
+fi
 STEP1C_PERSIST_ARTIFACTS="${STEP1C_PERSIST_ARTIFACTS:-true}"
 STEP1C_COPY_BEAGLE_VCFS="${STEP1C_DEBUG_BEAGLE:-false}"
 STEP1C_ARTIFACTS_NOTED="false"

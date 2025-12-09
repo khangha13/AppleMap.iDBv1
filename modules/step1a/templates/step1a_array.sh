@@ -42,7 +42,7 @@ source "${STEP1A_MODULE_DIR}/lib/functions.sh"
 source "${STEP1A_MODULE_DIR}/bin/run_step1a.sh"
 
 # Initialize logging for the array job
-init_logging "step1a" "pipeline"
+init_logging "step1a" "pipeline" "${DATASET_NAME}"
 
 if [ ! -f "${SAMPLE_LIST_FILE}" ]; then
     error_exit "Sample list file not found: ${SAMPLE_LIST_FILE}"

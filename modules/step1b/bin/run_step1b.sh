@@ -177,7 +177,7 @@ main() {
     trap 'step1b_failure_trap $?' EXIT
 
     if [ -z "${MASTER_LOG_DIR:-}" ]; then
-    init_logging "step1b" "pipeline"
+        init_logging "step1b" "pipeline" "${dataset_name}"
     else
         LOG_TO_FILE="false"
         LOG_TO_CONSOLE="true"

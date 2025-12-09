@@ -63,7 +63,7 @@ main() {
     done
     
     # Initialize logging
-    init_logging "step1a" "pipeline"
+    init_logging "step1a" "pipeline" "${dataset_name}"
     
     log_info "Starting Step 1A execution"
     log_info "Dataset: $dataset_name"

@@ -44,7 +44,7 @@ if [ -f "${PIPELINE_ROOT}/config/pipeline_config.sh" ]; then
 fi
 if [ -f "${PIPELINE_ROOT}/lib/logging.sh" ]; then
     source "${PIPELINE_ROOT}/lib/logging.sh"
-    init_logging "step1d" "pipeline"
+    init_logging "step1d" "pipeline" "${DATASET_NAME:-${DATASET:-}}"
 fi
 trap 'log_error "Unexpected failure in master_vcf_analysis.sh"; exit 1' ERR
 

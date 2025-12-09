@@ -74,7 +74,11 @@ WORK_TMPDIR="${TMPDIR:-$(mktemp -d "${SCRATCH_BASE_PATH%/}/step1c_XXXXXX")}"
 mkdir -p "${WORK_TMPDIR}"
 
 STEP1C_RUN_ID="$(date +%Y%m%d_%H%M%S)"
-STEP1C_DEBUG_DIR="${LOG_BASE_PATH%/}/${DATASET_NAME}/step1c_debug/${STEP1C_RUN_ID}"
+if command -v resolve_log_root >/dev/null 2>&1; then
+    STEP1C_DEBUG_DIR="$(resolve_log_root "${DATASET_NAME}" "artifacts/step1c_debug/${STEP1C_RUN_ID}")"
+else
+    STEP1C_DEBUG_DIR="${LOG_BASE_PATH%/}/${DATASET_NAME}/artifacts/step1c_debug/${STEP1C_RUN_ID}"
+fi
 STEP1C_PERSIST_ARTIFACTS="${STEP1C_PERSIST_ARTIFACTS:-true}"
 STEP1C_COPY_BEAGLE_VCFS="${STEP1C_DEBUG_BEAGLE:-false}"
 STEP1C_ARTIFACTS_NOTED="false"
