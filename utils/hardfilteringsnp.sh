@@ -1,5 +1,6 @@
 
 #Execute
+module purge
 module load gatk/4.3.0.0-gcccore-11.3.0-java-11
 module load samtools/1.18-gcc-12.3.0
 

@@ -16,6 +16,7 @@ fi
 # Load all required bioinformatics tools and their specific versions
 # These versions have been tested and are compatible with each other
 
+module purge
 module load fastqc/0.11.9-java-11              # Quality control for raw reads
 module load trimmomatic/0.39-java-11           # Read trimming and adapter removal
 module load bwa/0.7.17-gcccore-11.3.0          # Burrows-Wheeler Aligner for read mapping

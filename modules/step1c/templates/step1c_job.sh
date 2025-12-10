@@ -102,6 +102,9 @@ if [ -z "${TARGET_VCF:-}" ]; then
 fi
 log_info "Array task ${SLURM_ARRAY_TASK_ID}/${vcf_count} processing ${TARGET_VCF}"
 
+# Reset module environment before loading toolchain modules
+module purge
+
 # Load Beagle (fixed version for pipeline reproducibility)
 module load beagle/5.4.22jul22.46e-java-11 >/dev/null 2>&1 || log_warn "Unable to load beagle/5.4.22jul22.46e-java-11 module; ensure beagle.jar is accessible."
 

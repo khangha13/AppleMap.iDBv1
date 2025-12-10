@@ -66,6 +66,7 @@ cd "$scratch_dir"
 # =============================================================================
 
 #Load module sra-toolkit
+module purge
 module load sra-toolkit
 
 # Download SRA file with prefetch

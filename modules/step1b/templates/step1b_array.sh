@@ -32,6 +32,7 @@ step1b_array_exit_trap() {
 # Load all required bioinformatics tools and their specific versions
 # These versions have been tested and are compatible with each other
 
+module purge
 module load gatk/4.3.0.0-gcccore-11.3.0-java-11 # Genome Analysis Toolkit for variant calling
 module load samtools/1.16.1-gcc-11.3.0         # SAM/BAM file manipulation and indexing
 

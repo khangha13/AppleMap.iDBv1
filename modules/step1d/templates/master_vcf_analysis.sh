@@ -332,6 +332,11 @@ cd "${WORK_DIR}" || {
     exit 1
 }
 
+# Reset module environment before loading required tools
+if command -v module >/dev/null 2>&1; then
+    module purge
+fi
+
 # Load conda environment
 log_info "Loading required modules..."
 if module load miniforge/25.3.0-3 >/dev/null 2>&1; then

@@ -22,6 +22,10 @@ if [ ! -d "${STEP1B_MODULE_DIR}" ]; then
     exit 1
 fi
 
+if command -v module >/dev/null 2>&1; then
+    module purge
+fi
+
 source "${PIPELINE_ROOT}/lib/logging.sh"
 source "${PIPELINE_ROOT}/lib/slurm.sh"
 source "${PIPELINE_ROOT}/lib/validation.sh"

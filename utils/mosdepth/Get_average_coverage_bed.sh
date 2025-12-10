@@ -473,6 +473,7 @@ echo "=========================================="
 echo ""
 
 # Setup environment: Load conda and R plotting environment
+module purge
 module load miniforge
 source $ROOTMINIFORGE/etc/profile.d/conda.sh
 conda activate rplot

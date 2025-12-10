@@ -58,6 +58,9 @@ source "${STEP1C_MODULE_DIR}/lib/functions.sh"
 init_logging "step1c" "job"
 log_info "Beagle impute flag: ${IMPUTE_FLAG} (false = phasing-only)"
 
+# Reset module environment before loading toolchain modules
+module purge
+
 # Load Beagle (fixed version for pipeline reproducibility)
 module load beagle/5.4.22jul22.46e-java-11 >/dev/null 2>&1 || log_warn "Unable to load beagle/5.4.22jul22.46e-java-11 module; ensure beagle.jar is accessible."
 

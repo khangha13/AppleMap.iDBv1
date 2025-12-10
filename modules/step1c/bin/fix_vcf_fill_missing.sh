@@ -33,6 +33,9 @@ OUTPUT="${2:-${INPUT%.vcf.gz}.fixed.vcf.gz}"
 
 # Ensure required tools exist
 BCFTOOLS_BIN="${BCFTOOLS_BIN:-bcftools}"
+if command -v module >/dev/null 2>&1; then
+    module purge
+fi
 if ! command -v "${BCFTOOLS_BIN}" >/dev/null 2>&1; then
     if command -v module >/dev/null 2>&1; then
         module load bcftools/1.18-gcc-12.3.0 >/dev/null 2>&1 || true

@@ -1007,6 +1007,23 @@ cp step1c_job.legacy.sh step1c_job.sh
 - If mysterious VCF format issues reappear, first check `bcftools view` output before reintroducing validation loops
 - See `modules/step1c/STREAMLINED_COMPARISON.md` for detailed before/after comparison
 
+### 5.24 bcftools “Illegal instruction” on compute nodes (2025‑12‑10)
+
+**Symptom**
+- Step 1C array tasks crashed during the bcftools normalization/filter stage with `Illegal instruction (core dumped)` on Bunya compute nodes (both epyc3 and epyc4), before any real work began.
+
+**Root cause**
+- The job picked up a non-module bcftools binary built for a different CPU ISA (likely Intel/AVX512). The binary segfaulted immediately on AMD nodes. The intended bcftools module (`bcftools/1.18-GCC-12.3.0`) was not loaded because the environment already had a conflicting `bcftools` in `PATH`.
+
+**Fix**
+- Standardised all pipelines to `module purge` before any `module load`, then load the known-good bcftools module. Added this purge+load guard in Step 1C templates and other module users across `GATK_Pipeline_KH_v1` and `QUILT2_Pipeline_KH_v1`.
+- Verification sbatch probes (1-minute jobs) confirmed the correct binaries on epyc3 (`/sw/auto/rocky8c/epyc3/software/BCFtools/1.18-GCC-12.3.0/bin/bcftools`) and epyc4 (`.../epyc4/...`).
+
+**Operational guidance**
+- If bcftools is missing or crashes, run a tiny sbatch probe on the target partition/architecture:
+  - `module purge; module load bcftools/1.18-GCC-12.3.0; which bcftools; bcftools --version`
+- Avoid relying on ad-hoc conda/user installs for core pipeline tools on mixed-architecture clusters; always prefer the site module after `module purge`.
+
 ---
 
 ## 6. Configuration & Troubleshooting Checklist
