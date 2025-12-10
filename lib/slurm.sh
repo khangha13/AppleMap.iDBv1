@@ -60,6 +60,7 @@ create_slurm_script() {
     local memory="${config_map[memory]:-}"
     local array_max="${config_map[array_max]:-}"
     local qos="${config_map[qos]:-}"
+    local constraint="${config_map[constraint]:-}"
     
     # Validate required fields
     local missing_fields=()
@@ -115,6 +116,12 @@ EOF
     then
         log_error "Failed to write SLURM script header to: $output"
         return 1
+    fi
+
+    # Append constraint line if provided
+    if [ -n "${constraint}" ]; then
+        echo "#SBATCH --constraint=${constraint}" >> "$output"
+        echo "" >> "$output"
     fi
     
     local py_bin="${PYTHON_BIN:-python3}"

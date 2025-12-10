@@ -1024,6 +1024,20 @@ cp step1c_job.legacy.sh step1c_job.sh
   - `module purge; module load bcftools/1.18-GCC-12.3.0; which bcftools; bcftools --version`
 - Avoid relying on ad-hoc conda/user installs for core pipeline tools on mixed-architecture clusters; always prefer the site module after `module purge`.
 
+### 5.25 Step 1C constrained to epyc4 nodes (2025‑12‑10)
+
+**Symptom**
+- Step 1C array tasks sometimes crashed with `Illegal instruction` during bcftools normalize/filter on specific nodes (e.g., bun006, epyc3), while the same tasks succeeded on epyc4 nodes (e.g., bun108).
+
+**Root cause**
+- The site bcftools module (`bcftools/1.18-GCC-12.3.0`) is built for newer ISA and can fault on some epyc3 hosts. epyc4 nodes run it correctly.
+
+**Fix**
+- Step 1C submission now passes a SLURM constraint `--constraint=epyc4` by default (via `STEP1C_CONSTRAINT`, default `epyc4`) so arrays land only on compatible nodes.
+
+**Operational guidance**
+- To override, set `STEP1C_CONSTRAINT=""` (or another constraint) before running `step1c_submit.sh` if your cluster has a different compatible feature name. If you hit `Illegal instruction` again, re-run with a constraint to the known-good node class (epyc4 on Bunya).
+
 ---
 
 ## 6. Configuration & Troubleshooting Checklist
