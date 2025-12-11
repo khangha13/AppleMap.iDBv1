@@ -83,7 +83,8 @@ STEP1C_ACCOUNT=""          # Optional: override default account (leave empty to 
 STEP1C_PARTITION=""       # Optional: override default partition (leave empty to use PIPELINE_SLURM_PARTITION)
 STEP1C_NODES=""           # Optional: override default nodes (leave empty to use PIPELINE_SLURM_NODES)
 STEP1C_NTASKS=""          # Optional: override default ntasks (leave empty to use PIPELINE_SLURM_NTASKS)
-# Beagle self-imputation (true enables impute=true; false = phasing-only/impute=false)
+# Beagle self-imputation toggle: true => Beagle impute=true (self-impute untyped
+# markers, no hard-filter); false/empty => phasing-only (impute=false, hard-filter on)
 STEP1C_SELF_IMPUTE="false"
 
 # Step 1D (QC analysis)
@@ -94,13 +95,41 @@ STEP1D_ACCOUNT=""          # Optional: override default account (leave empty to 
 STEP1D_PARTITION=""       # Optional: override default partition (leave empty to use PIPELINE_SLURM_PARTITION)
 STEP1D_NODES=""           # Optional: override default nodes (leave empty to use PIPELINE_SLURM_NODES)
 STEP1D_NTASKS=""          # Optional: override default ntasks (leave empty to use PIPELINE_SLURM_NTASKS)
+# Step 1D behavior toggles
+STEP1D_PCA_ONLY="false"            # true => run PCA only
+STEP1D_REMOVE_RELATIVES="false"    # true => drop relatives before PCA/QC
+STEP1D_PCA_SHOW_LABELS="true"      # show sample labels on PCA plots
+STEP1D_PCA_USE_GGREPEL="true"      # use ggrepel to avoid label overlap
+STEP1D_PCA_LABEL_SIZE="1.5"        # PCA label size
+STEP1D_PCA_DIR="pca_analysis"      # output directory name for PCA assets
 
 # -----------------------------------------------------------------------------
 # ADVANCED / OPTIONAL SETTINGS
 # -----------------------------------------------------------------------------
 
-# Enable verbose logging (true/false)
+# Logging and global behavior
+PIPELINE_LOG_LEVEL="INFO"
+LOG_TO_CONSOLE="true"
+LOG_TO_FILE="true"
 PIPELINE_VERBOSE_LOGGING="false"
-
-# Enable pipeline dry-run mode globally (true/false)
 PIPELINE_GLOBAL_DRY_RUN="false"
+
+# Monitoring / notifications
+MONITOR_INTERVAL="30"        # seconds between monitor polls
+MAX_MONITOR_ATTEMPTS="100"   # max monitor iterations
+EMAIL_NOTIFICATIONS="false"  # set true to send job notifications
+EMAIL_ADDRESS=""             # email target when notifications enabled
+
+# Resume / cleanup / backups
+ENABLE_RESUME="true"
+CLEANUP_TEMP_FILES="true"
+CLEANUP_INTERMEDIATE_FILES="false"
+PIPELINE_ENABLE_BACKUP="true"
+PIPELINE_BACKUP_STEPS="3,4,5,6"
+PIPELINE_SHARED_REF_TIMEOUT="120"
+PIPELINE_SHARED_REF_POLL_INTERVAL="3"
+
+# Runtime / tool knobs
+GATK_BATCH_SIZE="50"
+GATK_READER_THREADS="4"
+BWA_MEM_FLAGS="-M"
