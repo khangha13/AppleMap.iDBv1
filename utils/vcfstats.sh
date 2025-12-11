@@ -36,7 +36,7 @@ fi
 # Run the QC pipeline
 echo "Starting QC job on $VCF"
 
-# Count SNPs
+# Count SNPs #not necessary, already include in bcftools stats
 bcftools view -v snps $VCF | grep -v "^#" | wc -l > ${PREFIX}_snp_count.txt
 
 # Depth calculations

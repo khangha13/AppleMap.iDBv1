@@ -33,9 +33,9 @@ fi
 
 echo "Starting QC job on $VCF"
 
-# Ensure index exists for faster random access
-if [ ! -f "${VCF}.tbi" ]; then
-  bcftools index -t -f "$VCF"
+# Ensure CSI index exists for faster random access
+if [ ! -f "${VCF}.csi" ]; then
+  bcftools index -c -f "$VCF"
 fi
 
 # Count SNPs using bcftools index count
