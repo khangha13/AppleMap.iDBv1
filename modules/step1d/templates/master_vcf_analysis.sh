@@ -346,10 +346,11 @@ else
     exit 1
 fi
 
-if module load bcftools >/dev/null 2>&1; then
-    log_success "Loaded bcftools module"
+BCFTOOLS_MODULE="${BCFTOOLS_MODULE:-bcftools/1.18-GCC-12.3.0}"
+if module load "${BCFTOOLS_MODULE}" >/dev/null 2>&1; then
+    log_success "Loaded ${BCFTOOLS_MODULE} module"
 else
-    log_error "Failed to load bcftools module"
+    log_error "Failed to load ${BCFTOOLS_MODULE} module"
     exit 1
 fi
 

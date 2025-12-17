@@ -1166,4 +1166,4 @@ initial review.
 - QUILT2 runs interactively for now; SLURM parallelization will be added when
   the pipeline enters production.
 - All files are written to `WORK_DIR/quilt2_output/`; no TMPDIR involvement.
-- The bcftools module (`bcftools/1.18-gcc-12.3.0`) is auto-loaded if not on PATH.
+- The bcftools module (`bcftools/1.18-GCC-12.3.0`) is auto-loaded if not on PATH.

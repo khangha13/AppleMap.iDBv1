@@ -116,10 +116,10 @@ fi
 # Ensure bcftools is available (module load if needed)
 BCFTOOLS_BIN="${BCFTOOLS_BIN:-bcftools}"
 if ! command -v "${BCFTOOLS_BIN}" >/dev/null 2>&1; then
-    module load bcftools/1.18-gcc-12.3.0 >/dev/null 2>&1 || log_warn "Unable to load bcftools/1.18-gcc-12.3.0; assuming bcftools is already available on compute node."
+    module load bcftools/1.18-GCC-12.3.0 >/dev/null 2>&1 || log_warn "Unable to load bcftools/1.18-GCC-12.3.0; assuming bcftools is already available on compute node."
 fi
 if ! command -v "${BCFTOOLS_BIN}" >/dev/null 2>&1; then
-    error_exit "bcftools not found in PATH. Install or load bcftools/1.18-gcc-12.3.0."
+    error_exit "bcftools not found in PATH. Install or load bcftools/1.18-GCC-12.3.0."
 fi
 
 if [ -n "${TMPDIR:-}" ]; then

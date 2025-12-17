@@ -143,6 +143,10 @@ array_max=0"
         config_string="${config_string}
 qos=${config_map[QOS]}"
     fi
+    if [ -n "${config_map[CONSTRAINT]:-}" ]; then
+        config_string="${config_string}
+constraint=${config_map[CONSTRAINT]}"
+    fi
 
     create_slurm_script "${template}" "${config_string}" "${slurm_script}" "${dataset_name}" "1D" "${PIPELINE_ROOT}"
     echo "${slurm_script}"

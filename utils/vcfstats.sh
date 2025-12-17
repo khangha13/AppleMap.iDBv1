@@ -13,7 +13,7 @@
 #Execute
 module purge
 module load vcftools/0.1.16-gcc-11.3.0
-module load bcftools/1.18-gcc-12.3.0
+module load bcftools/1.18-GCC-12.3.0
 module load python/3.12.3-gcccore-13.3.0
 module load matplotlib/3.5.2-foss-2022a
 
