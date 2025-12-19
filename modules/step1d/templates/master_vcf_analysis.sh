@@ -12,16 +12,9 @@
 #   Interactive: bash master_vcf_analysis.sh
 #   SLURM: sbatch master_vcf_analysis.sh
 #
-# NOTE: Filtering Optimization
-# -----------------------------------------------------------------------------
-# This script uses a heuristic filename pattern check (looking for "snps", "snp",
-# or "biallelic" in filenames) to skip redundant biallelic SNP filtering. This
-# is a simple optimization that relies on consistent naming conventions.
 #
-# CAUTION: This is a heuristic check only - it does not verify the actual VCF
-# content. Files with these patterns in their names will skip filtering even if
-# they contain multiallelic variants or indels. A more robust content-based
-# check may be implemented in the future.
+# NOTE: This script always filters inputs to biallelic SNPs (bcftools view -m2 -M2 -v snps)
+# to ensure consistent QC metrics across datasets.
 ################################################################################
 
 set -Eeuo pipefail
@@ -50,23 +43,27 @@ trap 'log_error "Unexpected failure in master_vcf_analysis.sh"; exit 1' ERR
 
 usage() {
     cat <<'EOF'
-Usage: master_vcf_analysis.sh [--dry-run] [--beagle] [--pca-only] [--remove-relatives] [--help]
+Usage: master_vcf_analysis.sh [--dry-run] [--beagle] [--qc] [--PCA] [--duplicate-check] [--remove-relatives] [--help]
 
 Options:
   --dry-run, -n      Print the actions that would be performed without creating files
   --beagle           Treat input VCFs as Beagle-imputed (expected INFO tags: AF, DR2, IMP)
-  --pca-only         Skip QC stages and run only the PCA helper (plink2_PCA.sh)
-  --remove-relatives Remove close relatives before PCA (requires --pca-only)
+  --qc               Run QC-only mode (metrics + plots); default if no mode is specified
+  --PCA              Run PCA-only mode (expects merged or per-chrom VCFs)
+  --duplicate-check  Run KING-based duplicate detection only (writes duplicate pairs/list)
+  --remove-relatives Remove close relatives before PCA (requires --PCA)
   --help, -h         Show this message and exit
 EOF
 }
 
 DRY_RUN=false
 BEAGLE_MODE=false
-PCA_ONLY_CLI=false
 REMOVE_RELATIVES_CLI=false
 SHOW_USAGE=false
 EXIT_ERROR=false
+MODE_QC=false
+MODE_PCA=false
+MODE_DUP_CHECK=false
 
 for arg in "$@"; do
     case "$arg" in
@@ -76,8 +73,14 @@ for arg in "$@"; do
         --beagle)
             BEAGLE_MODE=true
             ;;
-        --pca-only)
-            PCA_ONLY_CLI=true
+        --qc)
+            MODE_QC=true
+            ;;
+        --PCA|--pca)
+            MODE_PCA=true
+            ;;
+        --duplicate-check)
+            MODE_DUP_CHECK=true
             ;;
         --remove-relatives)
             REMOVE_RELATIVES_CLI=true
@@ -100,6 +103,25 @@ if [ "${SHOW_USAGE}" = "true" ]; then
     else
         exit 0
     fi
+fi
+
+mode_count=0
+${MODE_QC} && mode_count=$((mode_count + 1))
+${MODE_PCA} && mode_count=$((mode_count + 1))
+${MODE_DUP_CHECK} && mode_count=$((mode_count + 1))
+
+if [ "${mode_count}" -gt 1 ]; then
+    echo "❌ Please select only one mode: --qc, --PCA, or --duplicate-check." >&2
+    exit 1
+fi
+
+if [ "${mode_count}" -eq 0 ]; then
+    MODE_QC=true
+fi
+
+if [ "${REMOVE_RELATIVES_CLI}" = "true" ] && [ "${MODE_PCA}" != "true" ]; then
+    echo "❌ --remove-relatives requires --PCA." >&2
+    exit 1
 fi
 
 # Utility helpers used during configuration
@@ -162,40 +184,35 @@ HETEROZYGOSITY_OUTPUT_DIR="${WORK_DIR}/${HETEROZYGOSITY_DIR}"
 QD_OUTPUT_DIR="${WORK_DIR}/${QD_PLOTS_DIR}"
 QD_OUTPUT_FILE="${QD_OUTPUT_DIR}/quality_by_depth_hist.${PLOT_IMAGE_FORMAT}"
 CALL_RATE_OUTPUT_DIR="${WORK_DIR}/${CALL_RATE_HEATMAP_DIR}"
+AF_PLOTS_DIR="${AF_PLOTS_DIR:-${STEP1D_AF_PLOTS_DIR:-af_distribution_plots}}"
+AF_HIST_BINS="${AF_HIST_BINS:-${STEP1D_AF_HIST_BINS:-50}}"
+AF_OUTPUT_DIR="${WORK_DIR}/${AF_PLOTS_DIR}"
 HAS_DP=false
 HAS_QD=false
 PCA_DIR_NAME="${STEP1D_PCA_DIR:-pca_analysis}"
 PCA_OUTPUT_DIR="${WORK_DIR}/${PCA_DIR_NAME}"
-PCA_ONLY_MODE="${STEP1D_PCA_ONLY:-false}"
-RUN_PCA="false"
+RUN_QC="${MODE_QC}"
+RUN_PCA="${MODE_PCA}"
+RUN_DUP_CHECK="${MODE_DUP_CHECK}"
 REMOVE_RELATIVES="${STEP1D_REMOVE_RELATIVES:-false}"
 PLINK2_BIN_PATH="${PLINK2_BIN:-plink2}"
 BCFTOOLS_BIN_PATH="${BCFTOOLS_BIN:-bcftools}"
+PCA_MERGED_PATTERN="${STEP1D_PCA_MERGED_PATTERN:-*merged*.vcf.gz,*merge*.vcf.gz}"
+DUPLICATE_MODE="${STEP1D_DUPLICATE_MODE:-flag}"
+DUPLICATE_KING_THRESHOLD="${STEP1D_DUPLICATE_KING_THRESHOLD:-0.45}"
 SHOW_LABELS="${STEP1D_PCA_SHOW_LABELS:-true}"
 LABEL_SIZE="${STEP1D_PCA_LABEL_SIZE:-1.5}"
 USE_GGREPEL="${STEP1D_PCA_USE_GGREPEL:-true}"
 PCA_EXECUTED="false"
 PCA_SKIP_REASON=""
 
-PCA_ONLY_MODE="$(normalize_bool "${PCA_ONLY_MODE}")"
 REMOVE_RELATIVES="$(normalize_bool "${REMOVE_RELATIVES}")"
-
-if [ "${PCA_ONLY_CLI}" = "true" ]; then
-    PCA_ONLY_MODE="true"
-fi
-
 if [ "${REMOVE_RELATIVES_CLI}" = "true" ]; then
     REMOVE_RELATIVES="true"
 fi
 
-if [ "${PCA_ONLY_MODE}" = "true" ]; then
-    RUN_PCA="true"
-else
-    RUN_PCA="false"
-fi
-
-if [ "${REMOVE_RELATIVES}" = "true" ] && [ "${PCA_ONLY_MODE}" != "true" ]; then
-    log_error "--remove-relatives requires --pca-only."
+if [ "${REMOVE_RELATIVES}" = "true" ] && [ "${RUN_PCA}" != "true" ]; then
+    log_error "--remove-relatives requires --PCA."
     exit 1
 fi
 
@@ -288,25 +305,6 @@ ensure_r_packages() {
     fi
 }
 
-is_likely_already_filtered() {
-    # Check if filename suggests VCF is already filtered to biallelic SNPs
-    # Returns 0 (true) if filename contains: snps, snp, or biallelic
-    # Returns 1 (false) otherwise
-    local filename="$1"
-    local basename=$(basename "${filename}" .vcf.gz)
-    basename=$(basename "${basename}" .vcf)
-    local basename_lower=$(echo "${basename}" | tr '[:upper:]' '[:lower:]')
-    
-    # Patterns that suggest the VCF is already filtered to biallelic SNPs
-    if [[ "${basename_lower}" == *"snps"* ]] || \
-       [[ "${basename_lower}" == *"snp"* ]] || \
-       [[ "${basename_lower}" == *"biallelic"* ]]; then
-        return 0  # Likely already filtered
-    fi
-    
-    return 1  # Probably needs filtering
-}
-
 # =============================================================================
 # SETUP
 # =============================================================================
@@ -320,7 +318,10 @@ log_info "R Scripts Directory: ${R_SCRIPTS_DIR}"
 if [ "${BEAGLE_MODE}" = "true" ]; then
     log_info "Beagle mode enabled: using AF/DR2/IMP metrics and skipping depth-dependent outputs."
 fi
-log_info "PCA-only mode: ${PCA_ONLY_MODE}; remove relatives: ${REMOVE_RELATIVES}"
+log_info "Selected mode -> QC: ${RUN_QC}, PCA: ${RUN_PCA}, Duplicate-check: ${RUN_DUP_CHECK}"
+if [ "${RUN_PCA}" = "true" ]; then
+    log_info "PCA settings: remove relatives: ${REMOVE_RELATIVES}; duplicate mode: ${DUPLICATE_MODE}; KING threshold: ${DUPLICATE_KING_THRESHOLD}"
+fi
 
 if [ "${DRY_RUN}" = "true" ]; then
     log_info "Dry-run mode enabled. No files will be created."
@@ -335,6 +336,16 @@ cd "${WORK_DIR}" || {
 # Reset module environment before loading required tools
 if command -v module >/dev/null 2>&1; then
     module purge
+fi
+
+NEED_R=false
+if [ "${RUN_QC}" = "true" ] || [ "${RUN_PCA}" = "true" ]; then
+    NEED_R=true
+fi
+
+NEED_PLINK=false
+if [ "${RUN_PCA}" = "true" ] || [ "${RUN_DUP_CHECK}" = "true" ]; then
+    NEED_PLINK=true
 fi
 
 # Load conda environment
@@ -354,38 +365,48 @@ else
     exit 1
 fi
 
-if module load plink/2.00a3.6-gcc-11.3.0 >/dev/null 2>&1; then
-    log_success "Loaded plink/2.00a3.6-gcc-11.3.0 module"
-else
-    log_error "Failed to load plink/2.00a3.6-gcc-11.3.0 module"
-    exit 1
-fi
-
-if [ -f "$ROOTMINIFORGE/etc/profile.d/conda.sh" ]; then
-    source "$ROOTMINIFORGE/etc/profile.d/conda.sh"
-    if conda activate "${CONDA_ENV}" >/dev/null 2>&1; then
-        log_success "Conda environment '${CONDA_ENV}' activated"
+if [ "${NEED_PLINK}" = "true" ]; then
+    if module load plink/2.00a3.6-gcc-11.3.0 >/dev/null 2>&1; then
+        log_success "Loaded plink/2.00a3.6-gcc-11.3.0 module"
     else
-        log_error "Failed to activate conda environment: ${CONDA_ENV}"
+        log_error "Failed to load plink/2.00a3.6-gcc-11.3.0 module"
         exit 1
     fi
 else
-    log_warning "Conda initialization script not found; assuming R is available in PATH"
+    log_info "Skipping plink module load (not required for this mode)"
+fi
+
+if [ "${NEED_R}" = "true" ]; then
+    if [ -f "$ROOTMINIFORGE/etc/profile.d/conda.sh" ]; then
+        source "$ROOTMINIFORGE/etc/profile.d/conda.sh"
+        if conda activate "${CONDA_ENV}" >/dev/null 2>&1; then
+            log_success "Conda environment '${CONDA_ENV}' activated"
+        else
+            log_error "Failed to activate conda environment: ${CONDA_ENV}"
+            exit 1
+        fi
+    else
+        log_warning "Conda initialization script not found; assuming R is available in PATH"
+    fi
 fi
 
 # Check required commands
 log_info "Checking required commands..."
 check_command bcftools || exit 1
-check_command plink2 || exit 1
-check_command Rscript || exit 1
-ensure_r_packages ggplot2 data.table ragg scales
-log_success "All required commands and R packages available"
+if [ "${NEED_PLINK}" = "true" ]; then
+    check_command plink2 || exit 1
+fi
+if [ "${NEED_R}" = "true" ]; then
+    check_command Rscript || exit 1
+    ensure_r_packages ggplot2 data.table ragg scales
+fi
+log_success "Required commands and packages available"
 
 # =============================================================================
 # STEP 1: BUILD SITE-LEVEL METRICS DATASET
 # =============================================================================
 
-if [ "${PCA_ONLY_MODE}" != "true" ]; then
+if [ "${RUN_QC}" = "true" ]; then
 
 log_section "Step 1: Build Site-Level Metrics Dataset"
 if [ "${BEAGLE_MODE}" = "true" ]; then
@@ -496,48 +517,20 @@ else
                 continue
             fi
             
-            # Check if filename suggests VCF is already filtered to biallelic SNPs
-            if is_likely_already_filtered "${vcf_basename}"; then
-                log_info "${chr_name}: Filename suggests VCF is already filtered (contains 'snps'/'snp'/'biallelic'), skipping filtering step"
-                # Use input VCF directly - copy into working directory if needed (matching original script approach)
-                if [ "${vcf_file}" != "${filtered_output}" ]; then
-                    if ! rsync -rhivPt "${vcf_file}" "${filtered_output}"; then
-                        log_error "${chr_name}: failed to stage input VCF"
-                        rm -rf "${TEMP_DIR}"
-                        exit 1
-                    fi
-                else
-                    log_info "${chr_name}: input VCF already located in working directory"
-                fi
-                # Copy index if it exists, otherwise create it
-                if [ -f "${vcf_file}.tbi" ]; then
-                    if [ "${vcf_file}.tbi" != "${filtered_output}.tbi" ]; then
-                        rsync -rhivPt "${vcf_file}.tbi" "${filtered_output}.tbi"
-                    fi
-                else
-                    if ! bcftools index -t "${filtered_output}"; then
-                        log_error "${chr_name}: failed to index VCF"
-                        rm -rf "${TEMP_DIR}"
-                        exit 1
-                    fi
-                fi
-                log_info "${chr_name}: Using input VCF directly (already filtered): ${filtered_output}"
-            else
-                log_info "${chr_name}: filtering to biallelic SNPs"
-                if ! bcftools view -m2 -M2 -v snps -Oz -o "${filtered_temp}" "${vcf_file}"; then
-                    log_error "${chr_name}: failed to filter biallelic SNPs"
-                    rm -rf "${TEMP_DIR}"
-                    exit 1
-                fi
-                if ! bcftools index -t "${filtered_temp}"; then
-                    log_error "${chr_name}: failed to index filtered SNP VCF"
-                    rm -rf "${TEMP_DIR}"
-                    exit 1
-                fi
-                mv -f "${filtered_temp}" "${filtered_output}"
-                mv -f "${filtered_temp}.tbi" "${filtered_output}.tbi"
-                log_info "${chr_name}: filtered SNP VCF written to ${filtered_output}"
+            log_info "${chr_name}: filtering to biallelic SNPs"
+            if ! bcftools view -m2 -M2 -v snps -Oz -o "${filtered_temp}" "${vcf_file}"; then
+                log_error "${chr_name}: failed to filter biallelic SNPs"
+                rm -rf "${TEMP_DIR}"
+                exit 1
             fi
+            if ! bcftools index -t "${filtered_temp}"; then
+                log_error "${chr_name}: failed to index filtered SNP VCF"
+                rm -rf "${TEMP_DIR}"
+                exit 1
+            fi
+            mv -f "${filtered_temp}" "${filtered_output}"
+            mv -f "${filtered_temp}.tbi" "${filtered_output}.tbi"
+            log_info "${chr_name}: filtered SNP VCF written to ${filtered_output}"
 
             log_info "${chr_name}: extracting site metrics..."
 
@@ -771,10 +764,42 @@ else
 fi
 
 # =============================================================================
-# STEP 2: GENERATE MEAN DEPTH PLOTS
+# STEP 2: ALLELE FREQUENCY DISTRIBUTION PLOTS
 # =============================================================================
 
-log_section "Step 2: Generate Mean Depth Plots"
+log_section "Step 2: Allele Frequency Distribution Plots"
+
+AF_R_SCRIPT="${R_SCRIPTS_DIR}/plot_af_distribution.R"
+
+if ! check_file "${AF_R_SCRIPT}"; then
+    log_error "R script not found: ${AF_R_SCRIPT}"
+    exit 1
+fi
+
+if [ "${DRY_RUN}" = "true" ]; then
+    log_info "[dry-run] Would create directory: ${AF_OUTPUT_DIR}"
+    log_info "[dry-run] Would run: Rscript ${AF_R_SCRIPT} ${SITE_METRICS_PATH} ${AF_OUTPUT_DIR} ${PLOT_IMAGE_FORMAT} ${AF_HIST_BINS}"
+else
+    mkdir -p "${AF_OUTPUT_DIR}"
+    existing_af_plots=$(find "${AF_OUTPUT_DIR}" -maxdepth 1 -type f -name "*_af_distribution.${PLOT_IMAGE_FORMAT}" | awk 'END{print NR}')
+    if [ "${existing_af_plots}" -gt 0 ]; then
+        log_info "Allele frequency plots already exist; regenerating to ensure consistency."
+    fi
+    if Rscript "${AF_R_SCRIPT}" "${SITE_METRICS_PATH}" "${AF_OUTPUT_DIR}" "${PLOT_IMAGE_FORMAT}" "${AF_HIST_BINS}"; then
+        AF_COUNT=$(find "${AF_OUTPUT_DIR}" -maxdepth 1 -type f -name "*_af_distribution.${PLOT_IMAGE_FORMAT}" | awk 'END{print NR}')
+        log_success "Generated ${AF_COUNT} allele frequency plots"
+        log_info "Location: ${AF_OUTPUT_DIR}/"
+    else
+        log_error "Allele frequency plotting script failed"
+        exit 1
+    fi
+fi
+
+# =============================================================================
+# STEP 3: GENERATE MEAN DEPTH PLOTS
+# =============================================================================
+
+log_section "Step 3: Generate Mean Depth Plots"
 
 if [ "${HAS_DP}" = "true" ]; then
     DEPTH_R_SCRIPT="${R_SCRIPTS_DIR}/plot_depth_vs_position.R"
@@ -817,10 +842,10 @@ else
 fi
 
 # =============================================================================
-# STEP 3: GENERATE MISSINGNESS PLOTS
+# STEP 4: GENERATE MISSINGNESS PLOTS
 # =============================================================================
 
-log_section "Step 3: Generate Missingness Plots"
+log_section "Step 4: Generate Missingness Plots"
 
 MISSINGNESS_R_SCRIPT="${R_SCRIPTS_DIR}/plot_missingness_vs_position.R"
 
@@ -854,10 +879,10 @@ else
 fi
 
 # =============================================================================
-# STEP 4: GENERATE DEPTH VS MISSINGNESS SCATTER PLOTS
+# STEP 5: GENERATE DEPTH VS MISSINGNESS SCATTER PLOTS
 # =============================================================================
 
-log_section "Step 4: Generate Depth vs Missingness Scatter Plots"
+log_section "Step 5: Generate Depth vs Missingness Scatter Plots"
 
 if [ "${HAS_DP}" = "true" ]; then
     DEPTH_MISS_R_SCRIPT="${R_SCRIPTS_DIR}/plot_depth_vs_missingness.R"
@@ -895,10 +920,10 @@ else
 fi
 
 # =============================================================================
-# STEP 5: GENERATE SITE QUALITY PLOTS
+# STEP 6: GENERATE SITE QUALITY PLOTS
 # =============================================================================
 
-log_section "Step 5: Generate Site Quality Plots"
+log_section "Step 6: Generate Site Quality Plots"
 
 SITE_QUALITY_R_SCRIPT="${R_SCRIPTS_DIR}/plot_site_quality.R"
 
@@ -932,10 +957,10 @@ else
 fi
 
 # =============================================================================
-# STEP 6: GENERATE HETEROZYGOSITY PLOTS
+# STEP 7: GENERATE HETEROZYGOSITY PLOTS
 # =============================================================================
 
-log_section "Step 6: Generate Heterozygosity Plots"
+log_section "Step 7: Generate Heterozygosity Plots"
 
 HETEROZYGOSITY_R_SCRIPT="${R_SCRIPTS_DIR}/plot_heterozygosity.R"
 
@@ -969,10 +994,10 @@ else
 fi
 
 # =============================================================================
-# STEP 7: GENERATE QUALITY-BY-DEPTH PLOTS
+# STEP 8: GENERATE QUALITY-BY-DEPTH PLOTS
 # =============================================================================
 
-log_section "Step 7: Generate Quality-by-Depth Plots"
+log_section "Step 8: Generate Quality-by-Depth Plots"
 
 if [ "${HAS_QD}" = "true" ]; then
     QD_R_SCRIPT="${R_SCRIPTS_DIR}/plot_quality_by_depth.R"
@@ -1007,10 +1032,10 @@ else
 fi
 
 # =============================================================================
-# STEP 8: GENERATE CALL RATE HEAT MAPS
+# STEP 9: GENERATE CALL RATE HEAT MAPS
 # =============================================================================
 
-log_section "Step 8: Generate Call Rate Heat Maps"
+log_section "Step 9: Generate Call Rate Heat Maps"
 
 CALL_RATE_R_SCRIPT="${R_SCRIPTS_DIR}/plot_call_rate_heatmap.R"
 
@@ -1045,14 +1070,35 @@ fi
 
 else
 log_section "QC Stages Skipped"
-log_info "PCA-only mode enabled; skipping Steps 1–8 (site metrics, depth/missingness plots, and call rate heatmaps)."
+log_info "QC mode not selected; skipping site metrics, depth/missingness/quality plots, AF distributions, and call rate heatmaps."
 fi
 
 # =============================================================================
-# STEP 9: PERFORM PCA (PLINK2)
+# STEP 10: PERFORM PCA (PLINK2)
 # =============================================================================
 
-log_section "Step 9: Principal Component Analysis"
+if [ "${RUN_DUP_CHECK}" = "true" ]; then
+    log_section "Step 10: Duplicate Check (KING)"
+    PCA_SCRIPT="${MODULE_DIR}/templates/plink2_PCA.sh"
+    if ! check_file "${PCA_SCRIPT}"; then
+        log_error "Duplicate check helper not found: ${PCA_SCRIPT}"
+        exit 1
+    fi
+
+    mkdir -p "${PCA_OUTPUT_DIR}"
+    if (cd "${PCA_OUTPUT_DIR}" && bash "${PCA_SCRIPT}" "${WORK_DIR}" "${R_SCRIPTS_DIR}" "${PLINK2_BIN_PATH}" "${BCFTOOLS_BIN_PATH}" "false" "false" "${LABEL_SIZE}" "false" "${PCA_MERGED_PATTERN}" "${DUPLICATE_MODE}" "${DUPLICATE_KING_THRESHOLD}" "duplicate"); then
+        log_success "Duplicate check completed"
+        log_info "Outputs located at ${PCA_OUTPUT_DIR}/ (king_duplicate_pairs.tsv, king_duplicate_samples.tsv)"
+    else
+        log_error "Duplicate check failed"
+        exit 1
+    fi
+fi
+
+# STEP 11: PERFORM PCA (PLINK2)
+# =============================================================================
+
+log_section "Step 11: Principal Component Analysis"
 
 if [ "${RUN_PCA}" = "true" ]; then
     PCA_SCRIPT="${MODULE_DIR}/templates/plink2_PCA.sh"
@@ -1078,7 +1124,7 @@ if [ "${RUN_PCA}" = "true" ]; then
         fi
 
         mkdir -p "${PCA_OUTPUT_DIR}"
-        if (cd "${PCA_OUTPUT_DIR}" && bash "${PCA_SCRIPT}" "${WORK_DIR}" "${R_SCRIPTS_DIR}" "${PLINK2_BIN_PATH}" "${BCFTOOLS_BIN_PATH}" "${REMOVE_RELATIVES}" "${SHOW_LABELS}" "${LABEL_SIZE}" "${USE_GGREPEL}"); then
+        if (cd "${PCA_OUTPUT_DIR}" && bash "${PCA_SCRIPT}" "${WORK_DIR}" "${R_SCRIPTS_DIR}" "${PLINK2_BIN_PATH}" "${BCFTOOLS_BIN_PATH}" "${REMOVE_RELATIVES}" "${SHOW_LABELS}" "${LABEL_SIZE}" "${USE_GGREPEL}" "${PCA_MERGED_PATTERN}" "${DUPLICATE_MODE}" "${DUPLICATE_KING_THRESHOLD}" "pca"); then
             PCA_EXECUTED="true"
             PCA_SKIP_REASON=""
             log_success "PCA analysis completed"
@@ -1090,8 +1136,14 @@ if [ "${RUN_PCA}" = "true" ]; then
         fi
     fi
 else
-    PCA_SKIP_REASON="PCA-only mode not enabled"
-    log_info "PCA analysis skipped (pca-only mode disabled)."
+    if [ "${RUN_DUP_CHECK}" = "true" ]; then
+        PCA_SKIP_REASON="Duplicate-check mode selected"
+    elif [ "${RUN_QC}" = "true" ]; then
+        PCA_SKIP_REASON="QC-only mode selected"
+    else
+        PCA_SKIP_REASON="PCA mode not selected"
+    fi
+    log_info "PCA analysis skipped (${PCA_SKIP_REASON})."
 fi
 
 # =============================================================================
@@ -1135,8 +1187,8 @@ if [ -f "${SITE_METRICS_PATH}" ]; then
     echo "   ✅ ${SITE_METRICS_PATH}"
     echo "      Lines: $(($(wc -l < "${SITE_METRICS_PATH}") - 1)) (excluding header)"
 else
-    if [ "${PCA_ONLY_MODE}" = "true" ]; then
-        echo "   ⚠️  Not generated (PCA-only mode skipped QC stages)."
+    if [ "${RUN_QC}" != "true" ]; then
+        echo "   ⚠️  Not generated (QC mode not selected)."
     else
         echo "   ⚠️  Expected file not found at ${SITE_METRICS_PATH}"
     fi
@@ -1165,8 +1217,8 @@ if [ -d "${METRICS_BY_CHROM_PATH}" ]; then
     echo "   ${status_icon} ${METRICS_BY_CHROM_PATH}/"
     echo "      Files: ${FILE_COUNT}/${EXPECTED_CHROM_COUNT}"
 else
-    if [ "${PCA_ONLY_MODE}" = "true" ]; then
-        echo "   ⚠️  Not generated (PCA-only mode skipped QC stages)."
+    if [ "${RUN_QC}" != "true" ]; then
+        echo "   ⚠️  Not generated (QC mode not selected)."
     else
         echo "   ⚠️  Metrics directory not found at ${METRICS_BY_CHROM_PATH}/"
     fi
@@ -1214,15 +1266,33 @@ if [ -d "${MISSINGNESS_OUTPUT_DIR}" ]; then
     echo "   ${status_icon} ${MISSINGNESS_OUTPUT_DIR}/"
     echo "      Plots: ${MISS_COUNT}/${EXPECTED_CHROM_COUNT}"
 else
-    if [ "${PCA_ONLY_MODE}" = "true" ]; then
-        echo "   ⚠️  Not generated (PCA-only mode skipped QC stages)."
+    if [ "${RUN_QC}" != "true" ]; then
+        echo "   ⚠️  Not generated (QC mode not selected)."
     else
         echo "   ⚠️  Missingness plot directory not found at ${MISSINGNESS_OUTPUT_DIR}/"
     fi
 fi
 echo ""
 
-echo "7. Depth vs Missingness Plots:"
+echo "7. Allele Frequency Plots:"
+if [ "${RUN_QC}" = "true" ]; then
+    if [ -d "${AF_OUTPUT_DIR}" ]; then
+        AF_COUNT=$(find "${AF_OUTPUT_DIR}" -maxdepth 1 -type f -name "*_af_distribution.${PLOT_IMAGE_FORMAT}" | awk 'END{print NR}')
+        status_icon="✅"
+        if [ "${AF_COUNT}" -lt "${EXPECTED_CHROM_COUNT}" ]; then
+            status_icon="⚠️"
+        fi
+        echo "   ${status_icon} ${AF_OUTPUT_DIR}/"
+        echo "      Plots: ${AF_COUNT} (including combined)"
+    else
+        echo "   ⚠️  Allele frequency directory not found at ${AF_OUTPUT_DIR}/"
+    fi
+else
+    echo "   ⚠️  Skipped (QC mode not selected)"
+fi
+echo ""
+
+echo "8. Depth vs Missingness Plots:"
 if [ "${HAS_DP}" = "true" ]; then
     if [ -d "${DEPTH_MISS_OUTPUT_DIR}" ]; then
         DM_COUNT=$(find "${DEPTH_MISS_OUTPUT_DIR}" -maxdepth 1 -type f -name "*_depth_vs_missingness.${PLOT_IMAGE_FORMAT}" | awk 'END{print NR}')
@@ -1240,7 +1310,7 @@ else
 fi
 echo ""
 
-echo "8. Site Quality Plots:"
+echo "9. Site Quality Plots:"
 if [ -d "${SITE_QUALITY_OUTPUT_DIR}" ]; then
     QUAL_COUNT=$(find "${SITE_QUALITY_OUTPUT_DIR}" -maxdepth 1 -type f -name "*_site_quality.${PLOT_IMAGE_FORMAT}" | awk 'END{print NR}')
     status_icon="✅"
@@ -1250,15 +1320,15 @@ if [ -d "${SITE_QUALITY_OUTPUT_DIR}" ]; then
     echo "   ${status_icon} ${SITE_QUALITY_OUTPUT_DIR}/"
     echo "      Plots: ${QUAL_COUNT}/${EXPECTED_CHROM_COUNT}"
 else
-    if [ "${PCA_ONLY_MODE}" = "true" ]; then
-        echo "   ⚠️  Not generated (PCA-only mode skipped QC stages)."
+    if [ "${RUN_QC}" != "true" ]; then
+        echo "   ⚠️  Not generated (QC mode not selected)."
     else
         echo "   ⚠️  Site quality directory not found at ${SITE_QUALITY_OUTPUT_DIR}/"
     fi
 fi
 echo ""
 
-echo "9. Heterozygosity Plots:"
+echo "10. Heterozygosity Plots:"
 if [ -d "${HETEROZYGOSITY_OUTPUT_DIR}" ]; then
     HET_COUNT=$(find "${HETEROZYGOSITY_OUTPUT_DIR}" -maxdepth 1 -type f -name "*_heterozygosity.${PLOT_IMAGE_FORMAT}" | awk 'END{print NR}')
     status_icon="✅"
@@ -1268,15 +1338,15 @@ if [ -d "${HETEROZYGOSITY_OUTPUT_DIR}" ]; then
     echo "   ${status_icon} ${HETEROZYGOSITY_OUTPUT_DIR}/"
     echo "      Plots: ${HET_COUNT}/${EXPECTED_CHROM_COUNT}"
 else
-    if [ "${PCA_ONLY_MODE}" = "true" ]; then
-        echo "   ⚠️  Not generated (PCA-only mode skipped QC stages)."
+    if [ "${RUN_QC}" != "true" ]; then
+        echo "   ⚠️  Not generated (QC mode not selected)."
     else
         echo "   ⚠️  Heterozygosity directory not found at ${HETEROZYGOSITY_OUTPUT_DIR}/"
     fi
 fi
 echo ""
 
-echo "10. Quality-by-Depth Plot:"
+echo "11. Quality-by-Depth Plot:"
 if [ "${HAS_QD}" = "true" ]; then
     if [ -d "${QD_OUTPUT_DIR}" ]; then
         if [ -f "${QD_OUTPUT_DIR}/quality_by_depth_hist.${PLOT_IMAGE_FORMAT}" ]; then
@@ -1292,7 +1362,7 @@ else
 fi
 echo ""
 
-echo "11. Call Rate Heat Maps:"
+echo "12. Call Rate Heat Maps:"
 if [ -d "${CALL_RATE_OUTPUT_DIR}" ]; then
     HEAT_COUNT=$(find "${CALL_RATE_OUTPUT_DIR}" -maxdepth 1 -type f -name "*_call_rate_heatmap.${PLOT_IMAGE_FORMAT}" | awk 'END{print NR}')
     status_icon="✅"
@@ -1302,15 +1372,15 @@ if [ -d "${CALL_RATE_OUTPUT_DIR}" ]; then
     echo "   ${status_icon} ${CALL_RATE_OUTPUT_DIR}/"
     echo "      Plots: ${HEAT_COUNT}/${EXPECTED_CHROM_COUNT}"
 else
-    if [ "${PCA_ONLY_MODE}" = "true" ]; then
-        echo "   ⚠️  Not generated (PCA-only mode skipped QC stages)."
+    if [ "${RUN_QC}" != "true" ]; then
+        echo "   ⚠️  Not generated (QC mode not selected)."
     else
         echo "   ⚠️  Call-rate heat map directory not found at ${CALL_RATE_OUTPUT_DIR}/"
     fi
 fi
 echo ""
 
-echo "12. PCA Outputs:"
+echo "13. PCA Outputs:"
 if [ "${RUN_PCA}" = "true" ]; then
     if [ "${PCA_EXECUTED}" = "true" ]; then
         if [ -d "${PCA_OUTPUT_DIR}" ]; then
@@ -1327,6 +1397,27 @@ else
     echo "   ⚠️  Skipped (PCA analysis disabled)"
 fi
 echo ""
+
+if [ "${RUN_DUP_CHECK}" = "true" ]; then
+    echo "14. Duplicate Check Outputs:"
+    if [ -d "${PCA_OUTPUT_DIR}" ]; then
+        pairs="${PCA_OUTPUT_DIR}/king_duplicate_pairs.tsv"
+        samples="${PCA_OUTPUT_DIR}/king_duplicate_samples.tsv"
+        if [ -f "${pairs}" ]; then
+            echo "   ✅ ${pairs}"
+        else
+            echo "   ⚠️  Duplicate pairs file not found at ${pairs}"
+        fi
+        if [ -f "${samples}" ]; then
+            echo "   ✅ ${samples}"
+        else
+            echo "   ⚠️  Duplicate sample list not found at ${samples}"
+        fi
+    else
+        echo "   ⚠️  Duplicate output directory not found at ${PCA_OUTPUT_DIR}/"
+    fi
+    echo ""
+fi
 
 log_success "All tasks completed successfully!"
 log_info "Pipeline finished at $(date)"

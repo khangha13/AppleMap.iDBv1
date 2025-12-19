@@ -1167,3 +1167,45 @@ initial review.
   the pipeline enters production.
 - All files are written to `WORK_DIR/quilt2_output/`; no TMPDIR involvement.
 - The bcftools module (`bcftools/1.18-GCC-12.3.0`) is auto-loaded if not on PATH.
+
+---
+
+## 9. Step 1D QC/PCA robustness updates (2025-12-19)
+
+**Context:** Step 1D previously skipped SNP filtering based on filename heuristics
+and PCA always concatenated per-chromosome VCFs (then deleted the merged file).
+There was also no explicit duplicate detection beyond optional KING relative
+removal.
+
+**Changes:**
+
+- **Always filter to biallelic SNPs** in `master_vcf_analysis.sh` (no filename
+  heuristics). This standardizes QC metrics across datasets regardless of input
+  naming conventions.
+- **PCA now prefers a pre-merged VCF** if one exists (pattern configurable via
+  `STEP1D_PCA_MERGED_PATTERN`). When using a merged input, the helper creates a
+  local symlink `combined_for_pca.vcf.gz` so downstream steps always see a
+  merged file in the PCA output folder.
+- **Duplicate detection added** via `plink2 --king` after basic QC:
+  - Pairs with kinship ≥ `STEP1D_DUPLICATE_KING_THRESHOLD` are written to
+    `king_duplicate_pairs.tsv`, and sample IDs to `king_duplicate_samples.tsv`.
+  - `STEP1D_DUPLICATE_MODE` controls behavior: `off`, `flag` (report/highlight),
+    or `remove` (exclude duplicates from PCA input).
+  - PCA plots annotate flagged duplicates for visual confirmation.
+
+**Why it matters:**
+
+- Filename heuristics can silently skip filtering; forcing biallelic SNP
+  filtering avoids mismatched QC statistics.
+- Large cohorts may already have a merged VCF. Preferring it avoids redundant
+  concatenation and preserves a single merged file for auditability.
+- PCA alone can miss duplicated or swapped samples; KING-based detection adds a
+  quantitative duplicate signal and makes duplicates visible on PCA plots.
+
+**Operational notes:**
+
+- If KING pairwise computation is too expensive, set
+  `STEP1D_DUPLICATE_MODE=off`.
+- Ensure `STEP1D_PCA_MERGED_PATTERN` matches only *true* merged multi-chromosome
+  files to avoid accidentally selecting a per-chromosome VCF with "merge" in the
+  filename.

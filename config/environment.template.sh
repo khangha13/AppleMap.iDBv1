@@ -102,6 +102,11 @@ STEP1D_PCA_SHOW_LABELS="true"      # show sample labels on PCA plots
 STEP1D_PCA_USE_GGREPEL="true"      # use ggrepel to avoid label overlap
 STEP1D_PCA_LABEL_SIZE="1.5"        # PCA label size
 STEP1D_PCA_DIR="pca_analysis"      # output directory name for PCA assets
+STEP1D_PCA_MERGED_PATTERN="*merged*.vcf.gz,*merge*.vcf.gz"  # comma-separated glob(s) to locate merged VCFs for PCA
+STEP1D_DUPLICATE_MODE="flag"       # off|flag|remove; KING-based duplicate detection for PCA
+STEP1D_DUPLICATE_KING_THRESHOLD="0.45"  # kinship threshold for duplicate detection (e.g. 0.45)
+STEP1D_AF_PLOTS_DIR="af_distribution_plots"  # output directory name for allele frequency plots
+STEP1D_AF_HIST_BINS="50"            # histogram bins for allele frequency plots
 
 # -----------------------------------------------------------------------------
 # ADVANCED / OPTIONAL SETTINGS

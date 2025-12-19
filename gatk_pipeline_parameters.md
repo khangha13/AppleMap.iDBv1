@@ -309,12 +309,18 @@ The following variables already exist in `pipeline_config.sh`:
 | `STEP1D_PCA_SHOW_LABELS` | `true` | Default for whether sample labels are shown on PCA plots. |
 | `STEP1D_PCA_LABEL_SIZE` | `1.5` | Default label size in PCA plots. |
 | `STEP1D_PCA_USE_GGREPEL` | `true` | If `true`, PCA plots use `ggrepel` to reduce label overlap. |
+| `STEP1D_PCA_MERGED_PATTERN` | `*merged*.vcf.gz,*merge*.vcf.gz` | Comma-separated glob(s) to locate a pre-merged multi-chromosome VCF for PCA. |
+| `STEP1D_DUPLICATE_MODE` | `flag` | KING-based duplicate detection mode: `off`, `flag` (report/highlight), or `remove` (exclude from PCA input). |
+| `STEP1D_DUPLICATE_KING_THRESHOLD` | `0.45` | Kinship threshold for duplicate detection (pairs ≥ threshold are flagged). |
+| `STEP1D_AF_PLOTS_DIR` | `af_distribution_plots` | Output directory name for allele frequency distribution plots. |
+| `STEP1D_AF_HIST_BINS` | `50` | Histogram bin count for allele frequency plots. |
 
 Script-level PCA and QC thresholds (not yet centralised) include:
 
 - PLINK2 QC thresholds: `--geno 0.05`, `--mind 0.10`, `--maf 0.01`
 - LD pruning: `--indep-pairwise 200 50 0.2`
 - KING cutoff: `--king-cutoff 0.125`
+- Duplicate detection threshold: `STEP1D_DUPLICATE_KING_THRESHOLD` (default `0.45`)
 - Number of principal components: `--pca 20`
 - Plot image format: `PLOT_IMAGE_FORMAT=png`
 - Call-rate heatmap bins: `CALL_RATE_HEATMAP_BINS=100`
@@ -369,4 +375,3 @@ There are three common ways to change pipeline behaviour:
    - Changes here will affect all subsequent runs unless overridden by environment variables.
 
 When in doubt, prefer setting values in `environment.sh` for site-specific paths and in `pipeline_config.sh` for logical defaults, and reserve per-job exports for exceptional cases.
-

@@ -35,9 +35,12 @@ Options:
   --vcf=LIST      Comma-separated list of VCF prefixes (e.g. Chr00,chr01).
                   Matching is case-insensitive; extensions default to .vcf.gz.
   --beagle        Pass --beagle to master_vcf_analysis.sh (Beagle-imputed VCFs).
-  --pca-only      Skip site-QC outputs and run only the PCA stage (requires plink2 & bcftools).
+  --qc            Run QC-only mode (metrics/plots, default).
+  --PCA           Run PCA-only mode (expects merged or per-chrom VCFs).
+  --duplicate-check
+                  Run KING duplicate detection only (writes tables).
   --remove-relatives
-                  (Requires --pca-only) Remove close relatives before PCA using KING 0.125.
+                  (Requires --PCA) Remove close relatives before PCA using KING 0.125.
   --dry-run       Pass --dry-run to master_vcf_analysis.sh (preview without creating files).
   --help          Show this message and exit.
 EOF
@@ -53,7 +56,8 @@ else
     EXPECTED_CHROM_COUNT=18
 fi
 EXPECTED_CHROM_DESC="Chr00–Chr17"
-PCA_ONLY_FLAG=false
+MODE="qc"
+MODE_SET=false
 REMOVE_REL_FLAG=false
 
 declare -a AVAILABLE_PRIMARY_VCFS=()
@@ -78,8 +82,29 @@ case "${arg}" in
         --beagle)
             BEAGLE_FLAG=true
             ;;
-        --pca-only)
-            PCA_ONLY_FLAG=true
+        --qc)
+            if ${MODE_SET}; then
+                echo "❌ Multiple modes provided; choose one of --qc, --PCA, or --duplicate-check." >&2
+                exit 1
+            fi
+            MODE="qc"
+            MODE_SET=true
+            ;;
+        --PCA|--pca|--pca-only)
+            if ${MODE_SET}; then
+                echo "❌ Multiple modes provided; choose one of --qc, --PCA, or --duplicate-check." >&2
+                exit 1
+            fi
+            MODE="pca"
+            MODE_SET=true
+            ;;
+        --duplicate-check)
+            if ${MODE_SET}; then
+                echo "❌ Multiple modes provided; choose one of --qc, --PCA, or --duplicate-check." >&2
+                exit 1
+            fi
+            MODE="duplicate-check"
+            MODE_SET=true
             ;;
         --remove-relatives)
             REMOVE_REL_FLAG=true
@@ -108,8 +133,8 @@ elif [ -n "${STEP1D_EXPECTED_CHROMS:-}" ]; then
     EXPECTED_CHROM_DESC="custom configuration"
 fi
 
-if [ "${REMOVE_REL_FLAG}" = true ] && [ "${PCA_ONLY_FLAG}" != true ]; then
-    echo "❌ --remove-relatives requires --pca-only." >&2
+if [ "${REMOVE_REL_FLAG}" = true ] && [ "${MODE}" != "pca" ]; then
+    echo "❌ --remove-relatives requires --PCA." >&2
     exit 1
 fi
 
@@ -427,12 +452,20 @@ fi
 if [ "${DRY_RUN_FLAG}" = "true" ]; then
     echo "    Mode:    --dry-run (preview mode, no files created)"
 fi
-if [ "${PCA_ONLY_FLAG}" = "true" ]; then
-    echo "    Mode:    PCA-only (QC disabled; plink2_PCA.sh)"
-    if [ "${REMOVE_REL_FLAG}" = "true" ]; then
-        echo "             └─ Removing close relatives (KING cutoff 0.125)"
-    fi
-fi
+case "${MODE}" in
+    qc)
+        echo "    Mode:    QC (metrics + plots + AF distributions)"
+        ;;
+    pca)
+        echo "    Mode:    PCA-only (merged VCF preferred)"
+        if [ "${REMOVE_REL_FLAG}" = "true" ]; then
+            echo "             └─ Removing close relatives (KING cutoff 0.125)"
+        fi
+        ;;
+    duplicate-check)
+        echo "    Mode:    Duplicate-check only (KING duplicates table)"
+        ;;
+esac
 echo ""
 
 if [ -z "${VCF_PATTERN:-}" ] && [ -z "${INFERRED_VCF_PATTERN}" ]; then
@@ -442,17 +475,6 @@ fi
 export VCF_DIR="${WORK_DIR_ABS}"
 export WORK_DIR="${WORK_DIR_ABS}"
 export R_SCRIPTS_DIR="${MODULE_DIR}/Rscripts"
-if [ "${PCA_ONLY_FLAG}" = "true" ]; then
-    export STEP1D_PCA_ONLY=true
-    if [ "${REMOVE_REL_FLAG}" = "true" ]; then
-        export STEP1D_REMOVE_RELATIVES=true
-    else
-        export STEP1D_REMOVE_RELATIVES=false
-    fi
-else
-    unset STEP1D_PCA_ONLY
-    unset STEP1D_REMOVE_RELATIVES
-fi
 if [ ${#EFFECTIVE_VCF_BASENAMES[@]} -gt 0 ]; then
     export VCF_INCLUDE_FILENAMES="${EFFECTIVE_VCF_BASENAMES[*]}"
 else
@@ -472,8 +494,13 @@ fi
 if [ "${DRY_RUN_FLAG}" = "true" ]; then
     MASTER_ARGS+=("--dry-run")
 fi
-if [ "${PCA_ONLY_FLAG}" = "true" ]; then
-    MASTER_ARGS+=("--pca-only")
+case "${MODE}" in
+    qc) MASTER_ARGS+=("--qc") ;;
+    pca) MASTER_ARGS+=("--PCA") ;;
+    duplicate-check) MASTER_ARGS+=("--duplicate-check") ;;
+esac
+if [ "${REMOVE_REL_FLAG}" = "true" ]; then
+    MASTER_ARGS+=("--remove-relatives")
 fi
 
 if ! bash "${MASTER_SCRIPT}" "${MASTER_ARGS[@]}"; then

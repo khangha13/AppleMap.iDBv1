@@ -4,6 +4,8 @@
 
 When passing a VCF file that is already biallelic SNPs into the `master_vcf_analysis.sh` pipeline, the current implementation will redundantly filter it again using `bcftools view -m2 -M2 -v snps`. This document explains two options to avoid this redundant filtering.
 
+**Note (2025-12-19):** Step 1D now always filters to biallelic SNPs for consistency. The options below are retained as historical/reference material.
+
 ---
 
 ## Option 1: Check if Input VCF is Already Biallelic SNPs
@@ -260,4 +262,3 @@ fi
 4. Can add Option 1 later if needed
 
 **Consider adding `--skip-filtering` flag** for explicit user control when they know their VCFs are already filtered.
-

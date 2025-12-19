@@ -19,7 +19,7 @@ suppressPackageStartupMessages({
 
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 3) {
-  stop("Usage: Rscript PCA_plot.R <eigenvec> <eigenval> <output_dir>", call. = FALSE)
+  stop("Usage: Rscript PCA_plot.R <eigenvec> <eigenval> <output_dir> [show_labels] [label_size] [use_ggrepel] [duplicate_samples]", call. = FALSE)
 }
 
 eigenvec_path <- args[[1]]
@@ -28,6 +28,7 @@ output_dir <- args[[3]]
 show_labels <- if (length(args) >= 4) as.logical(args[[4]]) else TRUE
 label_size <- if (length(args) >= 5) as.numeric(args[[5]]) else 3
 use_ggrepel <- if (length(args) >= 6) as.logical(args[[6]]) else TRUE
+duplicate_samples_path <- if (length(args) >= 7) args[[7]] else ""
 
 assert_file <- function(path, label) {
   if (!file.exists(path)) {
@@ -48,6 +49,19 @@ if (ncol(eig) < 4) {
 }
 colnames(eig) <- c("FID", "IID", paste0("PC", seq_len(ncol(eig) - 2)))
 
+dup_ids <- character(0)
+if (nzchar(duplicate_samples_path) && file.exists(duplicate_samples_path)) {
+  if (file.info(duplicate_samples_path)$size > 0) {
+    dup_tbl <- data.table::fread(duplicate_samples_path, header = FALSE, data.table = FALSE)
+    if (ncol(dup_tbl) == 1) {
+      dup_ids <- dup_tbl[[1]]
+    } else if (ncol(dup_tbl) >= 2) {
+      dup_ids <- dup_tbl[[2]]
+    }
+    dup_ids <- unique(dup_ids)
+  }
+}
+
 eigenvalues <- scan(eigenval_path)
 if (length(eigenvalues) == 0) {
   stop("Eigenvalue file is empty.", call. = FALSE)
@@ -65,15 +79,35 @@ axis_label <- function(pc_index) {
 
 library(ggplot2)
 
-scatter <- ggplot(eig, aes(x = PC1, y = PC2)) +
-  geom_point(alpha = 0.6, size = 0.8, colour = "#1f78b4") +
-  theme_minimal(base_size = 14) +
-  labs(
-    title = "Principal Component Analysis",
-    subtitle = sprintf("Samples: %d • Variants: %d (after pruning)", nrow(eig), length(eigenvalues)),
-    x = axis_label(1),
-    y = axis_label(2)
-  )
+dup_suffix <- ""
+if (length(dup_ids) > 0) {
+  dup_suffix <- sprintf(" • Duplicates flagged: %d", length(dup_ids))
+}
+
+if (length(dup_ids) > 0) {
+  eig$DupStatus <- ifelse(eig$IID %in% dup_ids, "Duplicate", "Unique")
+  scatter <- ggplot(eig, aes(x = PC1, y = PC2, colour = DupStatus)) +
+    geom_point(alpha = 0.6, size = 0.9) +
+    scale_color_manual(values = c("Unique" = "#1f78b4", "Duplicate" = "#e31a1c")) +
+    theme_minimal(base_size = 14) +
+    labs(
+      title = "Principal Component Analysis",
+      subtitle = sprintf("Samples: %d • Variants: %d (after pruning)%s", nrow(eig), length(eigenvalues), dup_suffix),
+      x = axis_label(1),
+      y = axis_label(2),
+      colour = "Sample status"
+    )
+} else {
+  scatter <- ggplot(eig, aes(x = PC1, y = PC2)) +
+    geom_point(alpha = 0.6, size = 0.8, colour = "#1f78b4") +
+    theme_minimal(base_size = 14) +
+    labs(
+      title = "Principal Component Analysis",
+      subtitle = sprintf("Samples: %d • Variants: %d (after pruning)", nrow(eig), length(eigenvalues)),
+      x = axis_label(1),
+      y = axis_label(2)
+    )
+}
 
 if (isTRUE(show_labels)) {
   if (isTRUE(use_ggrepel) && isTRUE(has_ggrepel)) {

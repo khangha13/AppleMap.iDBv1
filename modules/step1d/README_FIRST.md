@@ -88,11 +88,11 @@ TSV file     PDF plots        PNG per chr          Combined PNG
 
 ## 🧮 Optional PCA Stage (Step 1D+)
 
-Need a quick look at cohort structure after QC? Enable the PCA-only add-on (skips QC plotting and runs just PLINK2 PCA):
+Need a quick look at cohort structure after QC? Run PCA mode:
 
-- **Interactive wrapper:** `wrappers/interactive/step1d_interactive.sh --pca-only [--remove-relatives]`
-- **Batch wrapper:** `wrappers/sbatch/step1d_submit.sh <dataset> <vcf_dir> --pca-only`
-- **Manual:** `export STEP1D_PCA_ONLY=true` (and `STEP1D_REMOVE_RELATIVES=true` for KING 0.125 filtering) before launching `master_vcf_analysis.sh`.
+- **Interactive wrapper:** `wrappers/interactive/step1d_interactive.sh --PCA [--remove-relatives]`
+- **Batch wrapper:** `wrappers/sbatch/step1d_submit.sh <dataset> <vcf_dir> --PCA`
+- **Manual:** `bash modules/step1d/templates/master_vcf_analysis.sh --PCA` (set `STEP1D_REMOVE_RELATIVES=true` for KING 0.125 filtering).
 
 Requirements: `bcftools` and `plink2` available on the compute node plus R packages `ggplot2`, `data.table`, `ragg`, `scales`.  
 Outputs land under `${WORK_DIR}/pca_analysis/` (configurable via `STEP1D_PCA_DIR`) and include `pca.eigenvec`, `pca.eigenval`, and ready-to-share PNGs (`pca_PC1_PC2.png`, `pca_scree.png`).

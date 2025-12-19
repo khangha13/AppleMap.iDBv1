@@ -231,6 +231,11 @@ STEP1D_PCA_DIR="${STEP1D_PCA_DIR:-pca_analysis}"
 STEP1D_PCA_SHOW_LABELS="${STEP1D_PCA_SHOW_LABELS:-true}"
 STEP1D_PCA_LABEL_SIZE="${STEP1D_PCA_LABEL_SIZE:-1.5}"
 STEP1D_PCA_USE_GGREPEL="${STEP1D_PCA_USE_GGREPEL:-true}"
+STEP1D_PCA_MERGED_PATTERN="${STEP1D_PCA_MERGED_PATTERN:-*merged*.vcf.gz,*merge*.vcf.gz}"
+STEP1D_DUPLICATE_MODE="${STEP1D_DUPLICATE_MODE:-flag}"
+STEP1D_DUPLICATE_KING_THRESHOLD="${STEP1D_DUPLICATE_KING_THRESHOLD:-0.45}"
+STEP1D_AF_PLOTS_DIR="${STEP1D_AF_PLOTS_DIR:-af_distribution_plots}"
+STEP1D_AF_HIST_BINS="${STEP1D_AF_HIST_BINS:-50}"
 
 # -----------------------------------------------------------------------------
 # Software paths (allow module system to populate)

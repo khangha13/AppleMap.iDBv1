@@ -29,8 +29,9 @@ main() {
 
     local beagle_flag=false
     local dry_run_flag=false
-    local pca_only_flag=false
     local remove_rel_flag=false
+    local mode="qc"
+    local mode_set=false
     while (( "$#" )); do
         case "$1" in
             --beagle)
@@ -39,8 +40,29 @@ main() {
             --dry-run|-n)
                 dry_run_flag=true
                 ;;
-            --pca-only)
-                pca_only_flag=true
+            --qc)
+                if ${mode_set}; then
+                    log_error "Multiple modes provided; choose one of --qc, --PCA, or --duplicate-check."
+                    exit 1
+                fi
+                mode="qc"
+                mode_set=true
+                ;;
+            --PCA|--pca)
+                if ${mode_set}; then
+                    log_error "Multiple modes provided; choose one of --qc, --PCA, or --duplicate-check."
+                    exit 1
+                fi
+                mode="pca"
+                mode_set=true
+                ;;
+            --duplicate-check)
+                if ${mode_set}; then
+                    log_error "Multiple modes provided; choose one of --qc, --PCA, or --duplicate-check."
+                    exit 1
+                fi
+                mode="duplicate-check"
+                mode_set=true
                 ;;
             --remove-relatives)
                 remove_rel_flag=true
@@ -52,15 +74,15 @@ main() {
         shift || true
     done
 
-    if ${remove_rel_flag} && ! ${pca_only_flag}; then
-        log_error "--remove-relatives requires --pca-only."
+    if ${remove_rel_flag} && [ "${mode}" != "pca" ]; then
+        log_error "--remove-relatives requires --PCA."
         exit 1
     fi
 
     init_logging "step1d" "pipeline" "${dataset_name}"
 
     if [ -z "${dataset_name}" ] || [ -z "${vcf_dir}" ]; then
-        log_error "Usage: step1d main <dataset_name> <vcf_directory> [--beagle] [--dry-run] [--pca-only] [--remove-relatives]"
+        log_error "Usage: step1d main <dataset_name> <vcf_directory> [--beagle] [--dry-run] [--qc|--PCA|--duplicate-check] [--remove-relatives]"
         exit 1
     fi
 
@@ -72,13 +94,6 @@ main() {
     export VCF_DIR="${vcf_dir}"
     export WORK_DIR="${WORK_DIR_OVERRIDE:-${vcf_dir}}"
     export R_SCRIPTS_DIR="${R_SCRIPTS_DIR_OVERRIDE:-${MODULE_DIR}/Rscripts}"
-    unset STEP1D_PCA_ONLY STEP1D_REMOVE_RELATIVES
-    if ${pca_only_flag}; then
-        export STEP1D_PCA_ONLY=true
-        if ${remove_rel_flag}; then
-            export STEP1D_REMOVE_RELATIVES=true
-        fi
-    fi
 
     local config
     config=$(get_step1d_config)
@@ -101,7 +116,7 @@ main() {
     local job_args=()
     $beagle_flag && job_args+=("--beagle")
     $dry_run_flag && job_args+=("--dry-run")
-    $pca_only_flag && job_args+=("--pca-only")
+    job_args+=("--${mode}")
     $remove_rel_flag && job_args+=("--remove-relatives")
 
     local job_id

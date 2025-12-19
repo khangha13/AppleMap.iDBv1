@@ -7,10 +7,9 @@
 export VCF_DIR="/path/to/your/vcf/directory"
 export VCF_INCLUDE_FILENAMES="your_file.vcf.gz"
 export WORK_DIR="${VCF_DIR}"
-export STEP1D_PCA_ONLY=true
 
-# Run the script directly
-bash /path/to/GATK_Pipeline_KH_v1/modules/step1d/templates/master_vcf_analysis.sh --pca-only
+# Run PCA-only mode directly
+bash /path/to/GATK_Pipeline_KH_v1/modules/step1d/templates/master_vcf_analysis.sh --PCA
 ```
 
 ## Complete Example
@@ -36,14 +35,11 @@ export VCF_INCLUDE_FILENAMES="my_custom_file.vcf.gz"
 # 4. Set working directory (usually same as VCF_DIR)
 export WORK_DIR="${VCF_DIR}"
 
-# 5. Enable PCA-only mode
-export STEP1D_PCA_ONLY=true
-
-# 6. Optional: Set R scripts directory (auto-detected if not set)
+# 5. Optional: Set R scripts directory (auto-detected if not set)
 # export R_SCRIPTS_DIR="${PIPELINE_ROOT}/modules/step1d/Rscripts"
 
-# 7. Run the script
-bash "${PIPELINE_ROOT}/modules/step1d/templates/master_vcf_analysis.sh" --pca-only
+# 6. Run the script
+bash "${PIPELINE_ROOT}/modules/step1d/templates/master_vcf_analysis.sh" --PCA
 ```
 
 ## Single-Line Command (Copy-Paste Ready)
@@ -51,7 +47,7 @@ bash "${PIPELINE_ROOT}/modules/step1d/templates/master_vcf_analysis.sh" --pca-on
 Replace the paths and filename with your actual values:
 
 ```bash
-export VCF_DIR="/your/custom/path" && export VCF_INCLUDE_FILENAMES="your_file.vcf.gz" && export WORK_DIR="${VCF_DIR}" && export STEP1D_PCA_ONLY=true && bash /path/to/GATK_Pipeline_KH_v1/modules/step1d/templates/master_vcf_analysis.sh --pca-only
+export VCF_DIR="/your/custom/path" && export VCF_INCLUDE_FILENAMES="your_file.vcf.gz" && export WORK_DIR="${VCF_DIR}" && bash /path/to/GATK_Pipeline_KH_v1/modules/step1d/templates/master_vcf_analysis.sh --PCA
 ```
 
 ## Multiple VCF Files
@@ -62,9 +58,8 @@ If you have multiple VCF files in the same directory:
 export VCF_DIR="/path/to/vcfs"
 export VCF_INCLUDE_FILENAMES="file1.vcf.gz file2.vcf.gz file3.vcf.gz"
 export WORK_DIR="${VCF_DIR}"
-export STEP1D_PCA_ONLY=true
 
-bash /path/to/GATK_Pipeline_KH_v1/modules/step1d/templates/master_vcf_analysis.sh --pca-only
+bash /path/to/GATK_Pipeline_KH_v1/modules/step1d/templates/master_vcf_analysis.sh --PCA
 ```
 
 ## Important Notes

@@ -72,11 +72,14 @@ bash bin/gatk_pipeline.sh -d <dataset> -s 1b      # 1a/1b/1c/1d/full/auto
 - Outputs: Beagle-imputed VCFs + `.tbi` in `8.Imputated_VCF_BEAGLE/`.
 
 ### Step 1D – QC and PCA
-- Runs QC plots/metrics and optional PCA on per-chromosome VCFs.
+- Runs QC plots/metrics and optional PCA/duplicate-check on per-chromosome or merged VCFs.
 - Expects VCFs in the provided directory (pattern `Chr%02d.vcf.gz` by default). Set `VCF_PATTERN` for custom names or export `STEP1D_EXPECTED_CHROMS` to change chromosome count (Beagle mode defaults to 17).
-- Flags: `--beagle` (imputed metrics), `--pca-only`, `--remove-relatives` (requires `--pca-only`), `--dry-run`.
-- Submit: `bash wrappers/sbatch/step1d_submit.sh <dataset> <vcf_dir> [--beagle] [--pca-only] [--remove-relatives] [--dry-run]`.
-- Outputs (in `VCF_DIR` by default): `variant_site_metrics.tsv`, depth/missingness/quality plots, optional PCA folder (`STEP1D_PCA_DIR`, default `pca_analysis`).
+- Always filters inputs to biallelic SNPs with `bcftools view -m2 -M2 -v snps`, creating `*_snps.vcf.gz` outputs for downstream QC/PCA.
+- Modes: `--qc` (default; metrics + plots + allele-frequency distributions), `--PCA` (PCA-only), `--duplicate-check` (KING duplicate table only). `--remove-relatives` is valid only with `--PCA`. `--beagle` and `--dry-run` work across modes.
+- PCA prefers an existing merged VCF matching `STEP1D_PCA_MERGED_PATTERN` (default `*merged*.vcf.gz,*merge*.vcf.gz`); otherwise it concatenates per-chrom VCFs and keeps `combined_for_pca.vcf.gz` in the PCA output folder.
+- Duplicate detection (KING-based) is controlled by `STEP1D_DUPLICATE_MODE` (`off`/`flag`/`remove`) and `STEP1D_DUPLICATE_KING_THRESHOLD`; flagged samples are highlighted in PCA plots and reported as `king_duplicate_pairs.tsv` / `king_duplicate_samples.tsv`. `--duplicate-check` runs the detection without PCA.
+- Submit: `bash wrappers/sbatch/step1d_submit.sh <dataset> <vcf_dir> [--beagle] [--qc|--PCA|--duplicate-check] [--remove-relatives] [--dry-run]`.
+- Outputs (in `VCF_DIR` by default): `*_snps.vcf.gz`, `variant_site_metrics.tsv`, depth/missingness/quality plots, allele-frequency plots, optional PCA folder (`STEP1D_PCA_DIR`, default `pca_analysis`), optional duplicate tables.
 
 ## Module Launch Examples (direct and interactive)
 Use these when you want to drive a single module yourself rather than letting the master script orchestrate all steps.
@@ -107,13 +110,14 @@ Use these when you want to drive a single module yourself rather than letting th
 
 ### Step 1D (QC/PCA)
 - Slurm wrapper:  
-  `bash wrappers/sbatch/step1d_submit.sh <dataset> <vcf_dir> [--beagle] [--pca-only] [--remove-relatives] [--dry-run]`
+  `bash wrappers/sbatch/step1d_submit.sh <dataset> <vcf_dir> [--beagle] [--qc|--PCA|--duplicate-check] [--remove-relatives] [--dry-run]`
   - `--beagle`: expect Beagle-imputed inputs; uses AF/DR2/IMP metrics and adjusts plots.
-  - `--pca-only`: skip QC plots/metrics, run only PCA (output in `${STEP1D_PCA_DIR}`).
-  - `--remove-relatives`: drop KING-related samples before PCA (requires `--pca-only`).
+  - `--qc` (default): metrics + plots + AF distributions.
+  - `--PCA`: PCA-only; prefers merged VCF; `--remove-relatives` valid only here.
+  - `--duplicate-check`: KING duplicate tables only (no PCA/plots).
   - `--dry-run`: print planned actions; do not create files.
 - Interactive helper:  
-  `bash wrappers/interactive/step1d_interactive.sh [--dir=PATH] [--vcf=Chr00,Chr01,...] [--beagle] [--pca-only] [--remove-relatives]`
+  `bash wrappers/interactive/step1d_interactive.sh [--dir=PATH] [--vcf=Chr00,Chr01,...] [--beagle] [--qc|--PCA|--duplicate-check] [--remove-relatives]`
   - `--dir=PATH`: preselect the VCF directory (otherwise prompted).
   - `--vcf=LIST`: comma-separated basenames to include; otherwise auto-detects `Chr??` or `*_snps.vcf.gz`.
   - Auto-inferrs `VCF_PATTERN` when possible; exports `VCF_INCLUDE_FILENAMES` for the master script.
@@ -138,7 +142,7 @@ Use these when you want to drive a single module yourself rather than letting th
 - Slurm defaults: `PIPELINE_SLURM_ACCOUNT`, `PIPELINE_SLURM_PARTITION`, optional `PIPELINE_SLURM_QOS`.
 - Step resources (override as needed): `STEP1A_CPUS/MEMORY/TIME/ARRAY_LIMIT`, `STEP1B_CPUS/MEMORY/TIME/ARRAY_LIMIT`, `STEP1C_CPUS/MEMORY/TIME`, `STEP1D_CPUS/MEMORY/TIME`.
 - Chromosomes: `PIPELINE_CHROMOSOME_LIST` (default `Chr00 Chr01 … Chr17`).
-- Step 1D tools/options: `PLINK2_BIN`, `BCFTOOLS_BIN`, `STEP1D_PCA_DIR`, `STEP1D_PCA_SHOW_LABELS`, `STEP1D_PCA_LABEL_SIZE`, `STEP1D_PCA_USE_GGREPEL`, `STEP1D_PCA_ONLY`, `STEP1D_REMOVE_RELATIVES`.
+- Step 1D tools/options: `PLINK2_BIN`, `BCFTOOLS_BIN`, `STEP1D_PCA_DIR`, `STEP1D_PCA_SHOW_LABELS`, `STEP1D_PCA_LABEL_SIZE`, `STEP1D_PCA_USE_GGREPEL`, `STEP1D_PCA_MERGED_PATTERN`, `STEP1D_DUPLICATE_MODE`, `STEP1D_DUPLICATE_KING_THRESHOLD`, `STEP1D_AF_PLOTS_DIR`, `STEP1D_AF_HIST_BINS`, `STEP1D_REMOVE_RELATIVES`.
 - Master polling: `PIPELINE_MASTER_POLL_SECS` (falls back to `MONITOR_INTERVAL`, default 30s).
 
 ## Testing

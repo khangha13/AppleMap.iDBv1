@@ -13,10 +13,10 @@ This is the simplest way to run PCA. The script will prompt you for the director
 cd /path/to/GATK_Pipeline_KH_v1
 
 # Run PCA-only analysis interactively
-bash wrappers/interactive/step1d_interactive.sh --pca-only
+bash wrappers/interactive/step1d_interactive.sh --PCA
 
 # If you want to remove close relatives before PCA (optional)
-bash wrappers/interactive/step1d_interactive.sh --pca-only --remove-relatives
+bash wrappers/interactive/step1d_interactive.sh --PCA --remove-relatives
 ```
 
 **What it does:**
@@ -34,16 +34,16 @@ If you're on an HPC cluster with SLURM, use this method:
 cd /path/to/GATK_Pipeline_KH_v1
 
 # Submit PCA-only job
-bash wrappers/sbatch/step1d_submit.sh <dataset_name> <vcf_directory> --pca-only
+bash wrappers/sbatch/step1d_submit.sh <dataset_name> <vcf_directory> --PCA
 
 # Example:
-bash wrappers/sbatch/step1d_submit.sh my_dataset /path/to/vcfs --pca-only
+bash wrappers/sbatch/step1d_submit.sh my_dataset /path/to/vcfs --PCA
 ```
 
 **Parameters:**
 - `<dataset_name>`: A name for your dataset (used in job naming)
 - `<vcf_directory>`: Full path to directory containing your VCF files
-- `--pca-only`: Skip QC and run only PCA
+- `--PCA`: Skip QC and run only PCA
 
 ### Option 3: Direct Script Call
 
@@ -56,13 +56,10 @@ cd /path/to/GATK_Pipeline_KH_v1
 export VCF_DIR="/path/to/your/vcf/directory"
 export VCF_INCLUDE_FILENAMES="your_file.vcf.gz"
 export WORK_DIR="${VCF_DIR}"
-export STEP1D_PCA_ONLY=true
-
-# Optional: Remove relatives before PCA
-export STEP1D_REMOVE_RELATIVES=true
+export STEP1D_REMOVE_RELATIVES=true   # optional
 
 # Run the analysis
-bash modules/step1d/templates/master_vcf_analysis.sh --pca-only
+bash modules/step1d/templates/master_vcf_analysis.sh --PCA
 ```
 
 ## VCF File Requirements
@@ -85,15 +82,14 @@ If your VCF files have different names, you can specify them:
 bash wrappers/interactive/step1d_interactive.sh \
   --dir=/path/to/vcfs \
   --vcf=Chr00,Chr01,Chr02 \
-  --pca-only
+  --PCA
 ```
 
 **For direct script:**
 ```bash
 export VCF_INCLUDE_FILENAMES="Chr00.vcf.gz Chr01.vcf.gz Chr02.vcf.gz"
 export VCF_DIR="/path/to/vcfs"
-export STEP1D_PCA_ONLY=true
-bash modules/step1d/templates/master_vcf_analysis.sh --pca-only
+bash modules/step1d/templates/master_vcf_analysis.sh --PCA
 ```
 
 ### Custom VCF Pattern
@@ -103,8 +99,7 @@ If your files follow a different pattern (e.g., `chr1.vcf.gz`, `chromosome_01.vc
 ```bash
 export VCF_PATTERN="chr%02d.vcf.gz"  # For chr00.vcf.gz, chr01.vcf.gz, etc.
 export VCF_DIR="/path/to/vcfs"
-export STEP1D_PCA_ONLY=true
-bash modules/step1d/templates/master_vcf_analysis.sh --pca-only
+bash modules/step1d/templates/master_vcf_analysis.sh --PCA
 ```
 
 ## Output Files
@@ -126,18 +121,18 @@ After running PCA, you'll find results in:
 
 ## Options and Flags
 
-### `--pca-only`
-- **What it does:** Skips all QC stages (depth plots, missingness plots, etc.) and runs only PCA
-- **When to use:** When you only need PCA results and don't need quality control plots
-- **Time saved:** Significantly faster (skips hours of QC processing)
+### `--PCA`
+- **What it does:** Skips QC stages (depth/missingness/quality plots) and runs only PCA (merged VCF preferred).
+- **When to use:** When you only need PCA results and don't need quality control plots.
+- **Time saved:** Faster than full QC (plots are skipped).
 
 ### `--remove-relatives`
 - **What it does:** Removes close relatives (KING coefficient > 0.125) before running PCA
-- **Requires:** `--pca-only` flag
+- **Requires:** `--PCA` mode
 - **When to use:** When you want to remove related individuals that might bias PCA results
 - **Example:**
   ```bash
-  bash wrappers/interactive/step1d_interactive.sh --pca-only --remove-relatives
+  bash wrappers/interactive/step1d_interactive.sh --PCA --remove-relatives
   ```
 
 ### `--beagle`
@@ -170,7 +165,7 @@ If your HPC uses different module names, you may need to adjust the script or pr
 ### Example 1: Basic PCA on Standard VCF Files
 ```bash
 cd /path/to/GATK_Pipeline_KH_v1
-bash wrappers/interactive/step1d_interactive.sh --pca-only
+bash wrappers/interactive/step1d_interactive.sh --PCA
 # When prompted, enter: /scratch/user/myproject/vcfs
 ```
 
@@ -179,7 +174,7 @@ bash wrappers/interactive/step1d_interactive.sh --pca-only
 cd /path/to/GATK_Pipeline_KH_v1
 bash wrappers/interactive/step1d_interactive.sh \
   --dir=/scratch/user/myproject/vcfs \
-  --pca-only \
+  --PCA \
   --remove-relatives
 ```
 
@@ -189,7 +184,7 @@ cd /path/to/GATK_Pipeline_KH_v1
 bash wrappers/interactive/step1d_interactive.sh \
   --dir=/scratch/user/myproject/beagle_vcfs \
   --beagle \
-  --pca-only
+  --PCA
 ```
 
 ### Example 4: Custom VCF File Names
@@ -198,7 +193,7 @@ cd /path/to/GATK_Pipeline_KH_v1
 bash wrappers/interactive/step1d_interactive.sh \
   --dir=/scratch/user/myproject/vcfs \
   --vcf=apple_chr1,apple_chr2,apple_chr3 \
-  --pca-only
+  --PCA
 ```
 
 ### Example 5: SLURM Batch Submission
@@ -207,7 +202,7 @@ cd /path/to/GATK_Pipeline_KH_v1
 bash wrappers/sbatch/step1d_submit.sh \
   apple_genome \
   /scratch/user/myproject/vcfs \
-  --pca-only
+  --PCA
 ```
 
 ## Troubleshooting
@@ -255,7 +250,7 @@ Rscript -e "install.packages(c('ggplot2', 'data.table', 'ragg', 'scales', 'ggrep
 bash wrappers/interactive/step1d_interactive.sh \
   --dir=/path/to/vcfs \
   --vcf=file1,file2,file3 \
-  --pca-only
+  --PCA
 
 # Or export variable
 export VCF_INCLUDE_FILENAMES="file1.vcf.gz file2.vcf.gz file3.vcf.gz"
@@ -310,7 +305,7 @@ After PCA completes:
 **Easiest way to run PCA:**
 ```bash
 cd /path/to/GATK_Pipeline_KH_v1
-bash wrappers/interactive/step1d_interactive.sh --pca-only
+bash wrappers/interactive/step1d_interactive.sh --PCA
 ```
 
 Enter your VCF directory when prompted, and the pipeline will handle the rest!
