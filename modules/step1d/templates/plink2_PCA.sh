@@ -369,10 +369,10 @@ if [ ! -f "${PCA_INPUT}.pgen" ]; then
     exit 1
 fi
 
-log_info "Running PCA (20 components)"
+log_info "Running PCA (10 components with variant weights)"
 "${PLINK2_BIN}" \
     --pfile "${PCA_INPUT}" \
-    --pca 20 \
+    --pca 10 var-wts \
     --out pca
 
 log_info "Rendering PCA plots"
