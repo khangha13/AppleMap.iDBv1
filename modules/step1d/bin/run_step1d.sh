@@ -23,9 +23,24 @@ source "${PIPELINE_ROOT}/lib/slurm.sh"
 source "${PIPELINE_ROOT}/config/pipeline_config.sh"
 
 main() {
-    local dataset_name="$1"
-    local vcf_dir="$2"
-    shift 2 || true
+    local dataset_name=""
+    local vcf_dir=""
+
+    if [ $# -eq 0 ]; then
+        log_error "Usage: step1d main <dataset_name> <vcf_directory> [--beagle] [--dry-run] [--qc|--PCA|--duplicate-check] [--remove-relatives]
+       or: step1d main <vcf_directory> [--beagle] [--dry-run] [--qc|--PCA|--duplicate-check] [--remove-relatives] (dataset defaults to directory name)"
+        exit 1
+    fi
+
+    if [ -d "${1}" ] && { [ $# -eq 1 ] || [[ "${2:-}" == --* ]]; }; then
+        vcf_dir="$1"
+        dataset_name="$(basename "${vcf_dir}")"
+        shift 1 || true
+    else
+        dataset_name="$1"
+        vcf_dir="${2:-}"
+        shift 2 || true
+    fi
 
     local beagle_flag=false
     local dry_run_flag=false
@@ -79,10 +94,9 @@ main() {
         exit 1
     fi
 
-    init_logging "step1d" "pipeline" "${dataset_name}"
-
-    if [ -z "${dataset_name}" ] || [ -z "${vcf_dir}" ]; then
-        log_error "Usage: step1d main <dataset_name> <vcf_directory> [--beagle] [--dry-run] [--qc|--PCA|--duplicate-check] [--remove-relatives]"
+    if [ -z "${vcf_dir}" ] || [[ "${vcf_dir}" == --* ]]; then
+        log_error "Usage: step1d main <dataset_name> <vcf_directory> [--beagle] [--dry-run] [--qc|--PCA|--duplicate-check] [--remove-relatives]
+       or: step1d main <vcf_directory> [--beagle] [--dry-run] [--qc|--PCA|--duplicate-check] [--remove-relatives] (dataset defaults to directory name)"
         exit 1
     fi
 
@@ -90,6 +104,12 @@ main() {
         log_error "VCF directory not found: ${vcf_dir}"
         exit 1
     fi
+
+    if [ -z "${dataset_name}" ]; then
+        dataset_name="$(basename "${vcf_dir}")"
+    fi
+
+    init_logging "step1d" "pipeline" "${dataset_name}"
 
     export VCF_DIR="${vcf_dir}"
     export WORK_DIR="${WORK_DIR_OVERRIDE:-${vcf_dir}}"

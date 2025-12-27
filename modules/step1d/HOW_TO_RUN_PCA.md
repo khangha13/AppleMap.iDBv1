@@ -34,14 +34,16 @@ If you're on an HPC cluster with SLURM, use this method:
 cd /path/to/GATK_Pipeline_KH_v1
 
 # Submit PCA-only job
-bash wrappers/sbatch/step1d_submit.sh <dataset_name> <vcf_directory> --PCA
+bash wrappers/sbatch/step1d_submit.sh [<dataset_name>] <vcf_directory> --PCA
 
 # Example:
 bash wrappers/sbatch/step1d_submit.sh my_dataset /path/to/vcfs --PCA
+# Or omit dataset name (defaults to directory name):
+bash wrappers/sbatch/step1d_submit.sh /path/to/vcfs --PCA
 ```
 
 **Parameters:**
-- `<dataset_name>`: A name for your dataset (used in job naming)
+- `<dataset_name>`: Optional dataset label for job/log naming (defaults to `<vcf_directory>` basename)
 - `<vcf_directory>`: Full path to directory containing your VCF files
 - `--PCA`: Skip QC and run only PCA
 
@@ -200,7 +202,6 @@ bash wrappers/interactive/step1d_interactive.sh \
 ```bash
 cd /path/to/GATK_Pipeline_KH_v1
 bash wrappers/sbatch/step1d_submit.sh \
-  apple_genome \
   /scratch/user/myproject/vcfs \
   --PCA
 ```
@@ -272,6 +273,12 @@ export STEP1D_PCA_LABEL_SIZE=2.0
 
 # Use ggrepel for better label positioning (default: true)
 export STEP1D_PCA_USE_GGREPEL=true
+
+# Force concatenation even if a merged VCF is detected (default: false)
+export STEP1D_PCA_FORCE_CONCAT=true
+
+# Ignore merged candidates containing "Chr" in the filename (default: true)
+export STEP1D_PCA_MERGED_EXCLUDE_CHR=false
 ```
 
 ## Time Estimates

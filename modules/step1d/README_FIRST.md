@@ -91,11 +91,12 @@ TSV file     PDF plots        PNG per chr          Combined PNG
 Need a quick look at cohort structure after QC? Run PCA mode:
 
 - **Interactive wrapper:** `wrappers/interactive/step1d_interactive.sh --PCA [--remove-relatives]`
-- **Batch wrapper:** `wrappers/sbatch/step1d_submit.sh <dataset> <vcf_dir> --PCA`
+- **Batch wrapper:** `wrappers/sbatch/step1d_submit.sh [<dataset>] <vcf_dir> --PCA` (defaults to `<vcf_dir>` basename if omitted)
 - **Manual:** `bash modules/step1d/templates/master_vcf_analysis.sh --PCA` (set `STEP1D_REMOVE_RELATIVES=true` for KING 0.125 filtering).
 
 Requirements: `bcftools` and `plink2` available on the compute node plus R packages `ggplot2`, `data.table`, `ragg`, `scales`.  
 Outputs land under `${WORK_DIR}/pca_analysis/` (configurable via `STEP1D_PCA_DIR`) and include `pca.eigenvec`, `pca.eigenval`, and ready-to-share PNGs (`pca_PC1_PC2.png`, `pca_scree.png`).
+Use `STEP1D_PCA_FORCE_CONCAT=true` to always concatenate per-chrom VCFs; merged detection ignores filenames containing `Chr` by default (set `STEP1D_PCA_MERGED_EXCLUDE_CHR=false` to allow).
 
 > The automation loads `miniforge/25.3.0-3`, `bcftools`, and `plink/2.00a3.6-gcc-11.3.0` modules by default. Adjust those module names (or preload your own) if your HPC environment differs.
 

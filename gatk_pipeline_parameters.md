@@ -309,7 +309,9 @@ The following variables already exist in `pipeline_config.sh`:
 | `STEP1D_PCA_SHOW_LABELS` | `true` | Default for whether sample labels are shown on PCA plots. |
 | `STEP1D_PCA_LABEL_SIZE` | `1.5` | Default label size in PCA plots. |
 | `STEP1D_PCA_USE_GGREPEL` | `true` | If `true`, PCA plots use `ggrepel` to reduce label overlap. |
-| `STEP1D_PCA_MERGED_PATTERN` | `*merged*.vcf.gz,*merge*.vcf.gz` | Comma-separated glob(s) to locate a pre-merged multi-chromosome VCF for PCA. |
+| `STEP1D_PCA_MERGED_PATTERN` | `*merged*.vcf.gz,*merge*.vcf.gz` | Comma-separated glob(s) to locate a pre-merged multi-chromosome VCF for PCA (candidates containing `Chr` are ignored by default). |
+| `STEP1D_PCA_FORCE_CONCAT` | `false` | If `true`, always concatenate per-chromosome VCFs and skip merged VCF detection. |
+| `STEP1D_PCA_MERGED_EXCLUDE_CHR` | `true` | If `true`, ignore merged candidates containing `Chr` (case-insensitive) in the filename. |
 | `STEP1D_DUPLICATE_MODE` | `flag` | KING-based duplicate detection mode: `off`, `flag` (report/highlight), or `remove` (exclude from PCA input). |
 | `STEP1D_DUPLICATE_KING_THRESHOLD` | `0.45` | Kinship threshold for duplicate detection (pairs ≥ threshold are flagged). |
 | `STEP1D_AF_PLOTS_DIR` | `af_distribution_plots` | Output directory name for allele frequency distribution plots. |

@@ -40,6 +40,8 @@ SHOW_LABELS_RAW="${6:-true}"
 LABEL_SIZE_RAW="${7:-3}"
 USE_GGREPEL_RAW="${8:-true}"
 MERGED_PATTERN_RAW="${9:-${STEP1D_PCA_MERGED_PATTERN:-}}"
+FORCE_CONCAT_RAW="${STEP1D_PCA_FORCE_CONCAT:-false}"
+MERGED_EXCLUDE_CHR_RAW="${STEP1D_PCA_MERGED_EXCLUDE_CHR:-true}"
 DUPLICATE_MODE_RAW="${10:-${STEP1D_DUPLICATE_MODE:-flag}}"
 DUPLICATE_THRESHOLD_RAW="${11:-${STEP1D_DUPLICATE_KING_THRESHOLD:-0.45}}"
 RUN_MODE_RAW="${12:-pca}"
@@ -81,6 +83,8 @@ normalize_run_mode() {
 REMOVE_RELATIVES="$(normalize_bool "${REMOVE_RELATIVES_RAW}")"
 SHOW_LABELS="$(normalize_bool "${SHOW_LABELS_RAW}")"
 USE_GGREPEL="$(normalize_bool "${USE_GGREPEL_RAW}")"
+FORCE_CONCAT="$(normalize_bool "${FORCE_CONCAT_RAW}")"
+MERGED_EXCLUDE_CHR="$(normalize_bool "${MERGED_EXCLUDE_CHR_RAW}")"
 DUPLICATE_MODE="$(normalize_duplicate_mode "${DUPLICATE_MODE_RAW}")"
 RUN_MODE="$(normalize_run_mode "${RUN_MODE_RAW}")"
 
@@ -142,15 +146,35 @@ fi
 
 COMBINED_VCF=""
 MERGED_VCF=""
-if [ -n "${MERGED_PATTERN_RAW}" ]; then
+if [ "${FORCE_CONCAT}" = "true" ]; then
+    log_info "Force-concat enabled; ignoring merged VCF detection."
+fi
+
+if [ "${FORCE_CONCAT}" != "true" ] && [ -n "${MERGED_PATTERN_RAW}" ]; then
+    if [ "${MERGED_EXCLUDE_CHR}" = "true" ]; then
+        log_info "Merged VCF detection will ignore filenames containing 'Chr'."
+    fi
     IFS=',' read -r -a MERGED_PATTERNS <<< "${MERGED_PATTERN_RAW}"
     for pattern in "${MERGED_PATTERNS[@]}"; do
         pattern="$(trim_pattern "${pattern}")"
         [ -z "${pattern}" ] && continue
         mapfile -d '' -t merged_candidates < <(LC_ALL=C find "${VCF_SOURCE_DIR}" -maxdepth 1 -type f -iname "${pattern}" -print0 | LC_ALL=C sort -z) || true
         if [ ${#merged_candidates[@]} -gt 0 ]; then
-            MERGED_VCF="${merged_candidates[0]}"
-            break
+            if [ "${MERGED_EXCLUDE_CHR}" = "true" ]; then
+                filtered_candidates=()
+                for candidate in "${merged_candidates[@]}"; do
+                    candidate_base="$(basename "${candidate}")"
+                    if [[ "${candidate_base}" =~ [Cc][Hh][Rr] ]]; then
+                        continue
+                    fi
+                    filtered_candidates+=("${candidate}")
+                done
+                merged_candidates=("${filtered_candidates[@]}")
+            fi
+            if [ ${#merged_candidates[@]} -gt 0 ]; then
+                MERGED_VCF="${merged_candidates[0]}"
+                break
+            fi
         fi
     done
 fi
