@@ -163,7 +163,10 @@ create_step1d_slurm_script() {
 
     mkdir -p "${PIPELINE_SLURM_SCRIPT_DIR}"
     local slurm_script="${PIPELINE_SLURM_SCRIPT_DIR}/Apple_GATK_1D_${dataset_name}_$(date +%Y%m%d_%H%M%S).sh"
-    local template="${SCRIPT_DIR}/../templates/master_vcf_analysis.sh"
+    # NOTE: Do not use SCRIPT_DIR here. It is also defined in config/pipeline_config.sh
+    # and can be overwritten when that file is sourced, causing the template path to
+    # resolve incorrectly (e.g. ${PIPELINE_ROOT}/templates instead of modules/step1d/templates).
+    local template="${MODULE_DIR}/templates/master_vcf_analysis.sh"
 
     local config_string="job_name=Apple_GATK_1D_${dataset_name}
 account=${config_map[ACCOUNT]}
