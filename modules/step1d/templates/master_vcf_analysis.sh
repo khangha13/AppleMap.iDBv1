@@ -380,11 +380,12 @@ else
     exit 1
 fi
 
-BCFTOOLS_MODULE="${BCFTOOLS_MODULE:-bcftools/1.18-GCC-12.3.0}"
+BCFTOOLS_MODULE="${BCFTOOLS_MODULE:-bcftools/1.18-gcc-12.3.0}"
 if module load "${BCFTOOLS_MODULE}" >/dev/null 2>&1; then
     log_success "Loaded ${BCFTOOLS_MODULE} module"
 else
     log_error "Failed to load ${BCFTOOLS_MODULE} module"
+    log_error "Tip: module names can be case-sensitive; use the exact string shown by 'module avail'."
     exit 1
 fi
 

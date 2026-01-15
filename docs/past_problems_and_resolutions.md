@@ -1013,16 +1013,35 @@ cp step1c_job.legacy.sh step1c_job.sh
 - Step 1C array tasks crashed during the bcftools normalization/filter stage with `Illegal instruction (core dumped)` on Bunya compute nodes (both epyc3 and epyc4), before any real work began.
 
 **Root cause**
-- The job picked up a non-module bcftools binary built for a different CPU ISA (likely Intel/AVX512). The binary segfaulted immediately on AMD nodes. The intended bcftools module (`bcftools/1.18-GCC-12.3.0`) was not loaded because the environment already had a conflicting `bcftools` in `PATH`.
+- The job picked up a non-module bcftools binary built for a different CPU ISA (likely Intel/AVX512). The binary segfaulted immediately on AMD nodes. The intended bcftools module (`bcftools/1.18-gcc-12.3.0`) was not loaded because the environment already had a conflicting `bcftools` in `PATH`.
 
 **Fix**
 - Standardised all pipelines to `module purge` before any `module load`, then load the known-good bcftools module. Added this purge+load guard in Step 1C templates and other module users across `GATK_Pipeline_KH_v1` and `QUILT2_Pipeline_KH_v1`.
 - Verification sbatch probes (1-minute jobs) confirmed the correct binaries on epyc3 (`/sw/auto/rocky8c/epyc3/software/BCFtools/1.18-GCC-12.3.0/bin/bcftools`) and epyc4 (`.../epyc4/...`).
 
 **Operational guidance**
-- If bcftools is missing or crashes, run a tiny sbatch probe on the target partition/architecture:
-  - `module purge; module load bcftools/1.18-GCC-12.3.0; which bcftools; bcftools --version`
+- If bcftools is missing or crashes, run a tiny sbatch probe on the target partition/architecture (use the **exact** module name shown by `module avail` on your cluster; module names can be case-sensitive):
+  - `module purge; module load bcftools/1.18-gcc-12.3.0; which bcftools; bcftools --version`
 - Avoid relying on ad-hoc conda/user installs for core pipeline tools on mixed-architecture clusters; always prefer the site module after `module purge`.
+
+### 5.26 Step 1D failed to load bcftools due to module name capitalisation mismatch (2026‑01‑15)
+
+**Symptom**
+
+- Step 1D PCA jobs failed early with `Failed to load bcftools/... module` on Bunya.
+
+**Root cause**
+
+- The pipeline referenced a bcftools module name with different capitalisation than what exists on the cluster.
+  On Bunya, the available module is `bcftools/1.18-gcc-12.3.0` (lowercase `gcc`), and `module load bcftools/1.18-GCC-12.3.0` fails.
+
+**Fix**
+
+- Standardise Step 1D (and other scripts that `module load bcftools`) to use the exact Bunya module string: `bcftools/1.18-gcc-12.3.0`.
+
+**AI guidance**
+
+- Do **not** “correct” or normalise module-name capitalisation. Use the module string exactly as provided by the site environment (e.g., via `module avail`).
 
 ### 5.25 Step 1C constrained to epyc4 nodes (2025‑12‑10)
 
@@ -1030,7 +1049,7 @@ cp step1c_job.legacy.sh step1c_job.sh
 - Step 1C array tasks sometimes crashed with `Illegal instruction` during bcftools normalize/filter on specific nodes (e.g., bun006, epyc3), while the same tasks succeeded on epyc4 nodes (e.g., bun108).
 
 **Root cause**
-- The site bcftools module (`bcftools/1.18-GCC-12.3.0`) is built for newer ISA and can fault on some epyc3 hosts. epyc4 nodes run it correctly.
+- The site bcftools module (`bcftools/1.18-gcc-12.3.0`) is built for newer ISA and can fault on some epyc3 hosts. epyc4 nodes run it correctly.
 
 **Fix**
 - Step 1C submission now passes a SLURM constraint `--constraint=epyc4` by default (via `STEP1C_CONSTRAINT`, default `epyc4`) so arrays land only on compatible nodes.
@@ -1166,7 +1185,7 @@ initial review.
 - QUILT2 runs interactively for now; SLURM parallelization will be added when
   the pipeline enters production.
 - All files are written to `WORK_DIR/quilt2_output/`; no TMPDIR involvement.
-- The bcftools module (`bcftools/1.18-GCC-12.3.0`) is auto-loaded if not on PATH.
+- The bcftools module (`bcftools/1.18-gcc-12.3.0`) is auto-loaded if not on PATH.
 
 ---
 
