@@ -239,8 +239,27 @@ done
 VCF_TARGETS=("${EXISTING_VCF_TARGETS[@]}")
 
 if [ ${#VCF_TARGETS[@]} -eq 0 ]; then
-    log_error "No VCF files specified for analysis."
-    exit 1
+    # PCA / duplicate-check modes can operate on arbitrary VCF filenames (including single merged VCFs
+    # or non-standard per-chromosome naming). If the default Chr%02d pattern yields nothing and no
+    # explicit VCF_INCLUDE_FILENAMES was provided, fall back to auto-detecting VCFs in VCF_DIR.
+    if [ "${RUN_PCA}" = "true" ] || [ "${RUN_DUP_CHECK}" = "true" ]; then
+        declare -a AUTO_VCFS=()
+        while IFS= read -r -d '' candidate; do
+            AUTO_VCFS+=("$(basename "${candidate}")")
+        done < <(find "${VCF_DIR}" -maxdepth 1 -type f \( -name "*.vcf.gz" -o -name "*.vcf" \) -print0 | LC_ALL=C sort -z)
+
+        if [ ${#AUTO_VCFS[@]} -eq 0 ]; then
+            log_error "No VCF files found in ${VCF_DIR} (looked for *.vcf.gz and *.vcf)."
+            exit 1
+        fi
+
+        VCF_TARGETS=("${AUTO_VCFS[@]}")
+        log_warn "No Chr-pattern VCFs found (VCF_PATTERN=${VCF_PATTERN}). Auto-detected ${#VCF_TARGETS[@]} VCF(s) for ${RUN_PCA:+PCA}${RUN_DUP_CHECK:+duplicate-check} mode."
+        log_info "Auto-detected VCFs: ${VCF_TARGETS[*]}"
+    else
+        log_error "No VCF files specified for analysis."
+        exit 1
+    fi
 fi
 
 declare -a CHR_LABELS=()
