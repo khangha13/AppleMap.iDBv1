@@ -1103,7 +1103,10 @@ fi
 
 if [ "${RUN_DUP_CHECK}" = "true" ]; then
     log_section "Step 10: Duplicate Check (KING)"
-    PCA_SCRIPT="${MODULE_DIR}/templates/plink2_PCA.sh"
+    # IMPORTANT: Slurm may execute a spooled copy of this script under /var/spool,
+    # so module-relative paths (via SCRIPT_DIR/MODULE_DIR) can break. Always anchor
+    # helper script paths at PIPELINE_ROOT.
+    PCA_SCRIPT="${PIPELINE_ROOT}/modules/step1d/templates/plink2_PCA.sh"
     if ! check_file "${PCA_SCRIPT}"; then
         log_error "Duplicate check helper not found: ${PCA_SCRIPT}"
         exit 1
@@ -1125,7 +1128,10 @@ fi
 log_section "Step 11: Principal Component Analysis"
 
 if [ "${RUN_PCA}" = "true" ]; then
-    PCA_SCRIPT="${MODULE_DIR}/templates/plink2_PCA.sh"
+    # IMPORTANT: Slurm may execute a spooled copy of this script under /var/spool,
+    # so module-relative paths (via SCRIPT_DIR/MODULE_DIR) can break. Always anchor
+    # helper script paths at PIPELINE_ROOT.
+    PCA_SCRIPT="${PIPELINE_ROOT}/modules/step1d/templates/plink2_PCA.sh"
     if ! check_file "${PCA_SCRIPT}"; then
         PCA_SKIP_REASON="Required PCA helper script missing"
         log_error "PCA script not found: ${PCA_SCRIPT}"
