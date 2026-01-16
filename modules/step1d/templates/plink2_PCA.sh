@@ -42,6 +42,7 @@ USE_GGREPEL_RAW="${8:-true}"
 MERGED_PATTERN_RAW="${9:-${STEP1D_PCA_MERGED_PATTERN:-}}"
 FORCE_CONCAT_RAW="${STEP1D_PCA_FORCE_CONCAT:-false}"
 MERGED_EXCLUDE_CHR_RAW="${STEP1D_PCA_MERGED_EXCLUDE_CHR:-true}"
+REUSE_COMBINED_RAW="${STEP1D_PCA_REUSE_COMBINED:-true}"
 DUPLICATE_MODE_RAW="${10:-${STEP1D_DUPLICATE_MODE:-flag}}"
 DUPLICATE_THRESHOLD_RAW="${11:-${STEP1D_DUPLICATE_KING_THRESHOLD:-0.45}}"
 RUN_MODE_RAW="${12:-pca}"
@@ -85,6 +86,7 @@ SHOW_LABELS="$(normalize_bool "${SHOW_LABELS_RAW}")"
 USE_GGREPEL="$(normalize_bool "${USE_GGREPEL_RAW}")"
 FORCE_CONCAT="$(normalize_bool "${FORCE_CONCAT_RAW}")"
 MERGED_EXCLUDE_CHR="$(normalize_bool "${MERGED_EXCLUDE_CHR_RAW}")"
+REUSE_COMBINED="$(normalize_bool "${REUSE_COMBINED_RAW}")"
 DUPLICATE_MODE="$(normalize_duplicate_mode "${DUPLICATE_MODE_RAW}")"
 RUN_MODE="$(normalize_run_mode "${RUN_MODE_RAW}")"
 
@@ -220,8 +222,30 @@ else
     printf '   • %s\n' "${FILTERED_VCFS[@]}"
 
     COMBINED_VCF="combined_for_pca.vcf.gz"
-    "${BCFTOOLS_BIN}" concat -Oz -o "${COMBINED_VCF}" "${FILTERED_VCFS[@]}"
-    "${BCFTOOLS_BIN}" index -f "${COMBINED_VCF}"
+    combined_index=""
+    if [ -f "${COMBINED_VCF}.csi" ]; then
+        combined_index="${COMBINED_VCF}.csi"
+    elif [ -f "${COMBINED_VCF}.tbi" ]; then
+        combined_index="${COMBINED_VCF}.tbi"
+    fi
+
+    combined_up_to_date="false"
+    if [ "${REUSE_COMBINED}" = "true" ] && [ -f "${COMBINED_VCF}" ] && [ -n "${combined_index}" ]; then
+        combined_up_to_date="true"
+        for input_vcf in "${FILTERED_VCFS[@]}"; do
+            if [ "${input_vcf}" -nt "${COMBINED_VCF}" ]; then
+                combined_up_to_date="false"
+                break
+            fi
+        done
+    fi
+
+    if [ "${combined_up_to_date}" = "true" ]; then
+        log_info "Reusing existing ${COMBINED_VCF} (appears up-to-date; set STEP1D_PCA_REUSE_COMBINED=false to force rebuild)."
+    else
+        "${BCFTOOLS_BIN}" concat -Oz -o "${COMBINED_VCF}" "${FILTERED_VCFS[@]}"
+        "${BCFTOOLS_BIN}" index -f "${COMBINED_VCF}"
+    fi
 fi
 
 log_info "Converting VCF to PLINK2 pgen format"
@@ -230,6 +254,9 @@ log_info "Converting VCF to PLINK2 pgen format"
     --double-id \
     --allow-extra-chr \
     --set-all-var-ids '@:#:$r:$a' \
+    --snps-only just-acgt \
+    --max-alleles 2 \
+    --new-id-max-allele-len 1000 \
     --make-pgen \
     --out all_chromosomes
 
