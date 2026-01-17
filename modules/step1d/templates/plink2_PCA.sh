@@ -341,7 +341,7 @@ if [ "${DUPLICATE_MODE}" != "off" ]; then
     KING_PREFIX="king_duplicates"
     "${PLINK2_BIN}" \
         --pfile qc \
-        --king \
+        --make-king-table \
         --out "${KING_PREFIX}"
 
     KING_FILE=""
