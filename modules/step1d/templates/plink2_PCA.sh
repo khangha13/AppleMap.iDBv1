@@ -43,6 +43,10 @@ MERGED_PATTERN_RAW="${9:-${STEP1D_PCA_MERGED_PATTERN:-}}"
 FORCE_CONCAT_RAW="${STEP1D_PCA_FORCE_CONCAT:-false}"
 MERGED_EXCLUDE_CHR_RAW="${STEP1D_PCA_MERGED_EXCLUDE_CHR:-true}"
 REUSE_COMBINED_RAW="${STEP1D_PCA_REUSE_COMBINED:-true}"
+# PLINK QC thresholds (override via environment at submit time)
+PCA_GENO_RAW="${STEP1D_PCA_GENO:-0.05}"
+PCA_MIND_RAW="${STEP1D_PCA_MIND:-0.10}"
+PCA_MAF_RAW="${STEP1D_PCA_MAF:-0.01}"
 DUPLICATE_MODE_RAW="${10:-${STEP1D_DUPLICATE_MODE:-flag}}"
 DUPLICATE_THRESHOLD_RAW="${11:-${STEP1D_DUPLICATE_KING_THRESHOLD:-0.45}}"
 RUN_MODE_RAW="${12:-pca}"
@@ -89,6 +93,20 @@ MERGED_EXCLUDE_CHR="$(normalize_bool "${MERGED_EXCLUDE_CHR_RAW}")"
 REUSE_COMBINED="$(normalize_bool "${REUSE_COMBINED_RAW}")"
 DUPLICATE_MODE="$(normalize_duplicate_mode "${DUPLICATE_MODE_RAW}")"
 RUN_MODE="$(normalize_run_mode "${RUN_MODE_RAW}")"
+
+normalize_num() {
+    local value="$1"
+    local fallback="$2"
+    if [[ "${value}" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+        printf '%s' "${value}"
+    else
+        printf '%s' "${fallback}"
+    fi
+}
+
+PCA_GENO="$(normalize_num "${PCA_GENO_RAW}" "0.05")"
+PCA_MIND="$(normalize_num "${PCA_MIND_RAW}" "0.10")"
+PCA_MAF="$(normalize_num "${PCA_MAF_RAW}" "0.01")"
 
 if [[ "${DUPLICATE_THRESHOLD_RAW}" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
     DUPLICATE_THRESHOLD="${DUPLICATE_THRESHOLD_RAW}"
@@ -248,27 +266,74 @@ else
     fi
 fi
 
-log_info "Converting VCF to PLINK2 pgen format"
-"${PLINK2_BIN}" \
-    --vcf "${COMBINED_VCF}" \
-    --double-id \
-    --allow-extra-chr \
-    --set-all-var-ids '@:#:$r:$a' \
-    --snps-only just-acgt \
-    --max-alleles 2 \
-    --new-id-max-allele-len 1000 \
-    --make-pgen \
-    --out all_chromosomes
+IMPORT_PREFIX="all_chromosomes"
+QC_PREFIX="qc"
 
-log_info "Basic QC (geno=0.05, mind=0.10, maf=0.01)"
-"${PLINK2_BIN}" \
-    --pfile all_chromosomes \
-    --geno 0.05 \
-    --mind 0.10 \
-    --maf 0.01 \
-    --max-alleles 2 \
-    --make-pgen \
-    --out qc
+import_stamp="${IMPORT_PREFIX}.import.params.txt"
+qc_stamp="${QC_PREFIX}.qc.params.txt"
+
+log_info "Converting VCF to PLINK2 pgen format"
+import_params="$(cat <<EOF
+vcf=${COMBINED_VCF}
+snps_only=just-acgt
+max_alleles=2
+set_all_var_ids=@:#:\$r:\$a
+new_id_max_allele_len=1000
+EOF
+)"
+
+needs_import="true"
+if [ -f "${IMPORT_PREFIX}.pgen" ] && [ -f "${IMPORT_PREFIX}.pvar" ] && [ -f "${IMPORT_PREFIX}.psam" ] && [ -f "${import_stamp}" ]; then
+    if diff -q <(printf '%s' "${import_params}") "${import_stamp}" >/dev/null 2>&1 && [ "${IMPORT_PREFIX}.pgen" -nt "${COMBINED_VCF}" ]; then
+        needs_import="false"
+        log_info "Reusing existing ${IMPORT_PREFIX}.{pgen,pvar,psam} (import params unchanged; newer than ${COMBINED_VCF})."
+    fi
+fi
+
+if [ "${needs_import}" = "true" ]; then
+    "${PLINK2_BIN}" \
+        --vcf "${COMBINED_VCF}" \
+        --double-id \
+        --allow-extra-chr \
+        --set-all-var-ids '@:#:$r:$a' \
+        --snps-only just-acgt \
+        --max-alleles 2 \
+        --new-id-max-allele-len 1000 \
+        --make-pgen \
+        --out "${IMPORT_PREFIX}"
+    printf '%s' "${import_params}" > "${import_stamp}"
+fi
+
+log_info "Basic QC (geno=${PCA_GENO}, mind=${PCA_MIND}, maf=${PCA_MAF})"
+qc_params="$(cat <<EOF
+pfile=${IMPORT_PREFIX}
+geno=${PCA_GENO}
+mind=${PCA_MIND}
+maf=${PCA_MAF}
+max_alleles=2
+EOF
+)"
+
+needs_qc="true"
+if [ -f "${QC_PREFIX}.pgen" ] && [ -f "${QC_PREFIX}.pvar" ] && [ -f "${QC_PREFIX}.psam" ] && [ -f "${qc_stamp}" ]; then
+    # Reuse only when params match and qc output is newer than import output
+    if diff -q <(printf '%s' "${qc_params}") "${qc_stamp}" >/dev/null 2>&1 && [ "${QC_PREFIX}.pgen" -nt "${IMPORT_PREFIX}.pgen" ]; then
+        needs_qc="false"
+        log_info "Reusing existing ${QC_PREFIX}.{pgen,pvar,psam} (QC params unchanged; newer than ${IMPORT_PREFIX})."
+    fi
+fi
+
+if [ "${needs_qc}" = "true" ]; then
+    "${PLINK2_BIN}" \
+        --pfile "${IMPORT_PREFIX}" \
+        --geno "${PCA_GENO}" \
+        --mind "${PCA_MIND}" \
+        --maf "${PCA_MAF}" \
+        --max-alleles 2 \
+        --make-pgen \
+        --out "${QC_PREFIX}"
+    printf '%s' "${qc_params}" > "${qc_stamp}"
+fi
 
 DUPLICATE_SAMPLES_FILE=""
 if [ "${DUPLICATE_MODE}" != "off" ]; then
