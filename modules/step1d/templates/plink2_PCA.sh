@@ -488,7 +488,7 @@ fi
 log_info "Running PCA (10 components with variant weights)"
 "${PLINK2_BIN}" \
     --pfile "${PCA_INPUT}" \
-    --pca 10 var-wts \
+    --pca 10 biallelic-var-wts \
     --out pca
 
 log_info "Rendering PCA plots"
