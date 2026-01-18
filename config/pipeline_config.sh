@@ -215,8 +215,8 @@ STEP1C_CONSTRAINT="${STEP1C_CONSTRAINT:-epyc4}"
 # -----------------------------------------------------------------------------
 # Step 1D defaults
 # -----------------------------------------------------------------------------
-STEP1D_CPUS_PER_TASK="${STEP1D_CPUS:-16}"
-STEP1D_MEMORY="${STEP1D_MEMORY:-256G}"
+STEP1D_CPUS_PER_TASK="${STEP1D_CPUS:-6}"
+STEP1D_MEMORY="${STEP1D_MEMORY:-80G}"
 STEP1D_TIME_LIMIT="${STEP1D_TIME:-72:00:00}"
 STEP1D_ACCOUNT="${STEP1D_ACCOUNT:-$PIPELINE_SLURM_ACCOUNT}"
 STEP1D_PARTITION="${STEP1D_PARTITION:-$PIPELINE_SLURM_PARTITION}"

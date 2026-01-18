@@ -88,8 +88,8 @@ STEP1C_NTASKS=""          # Optional: override default ntasks (leave empty to us
 STEP1C_SELF_IMPUTE="false"
 
 # Step 1D (QC analysis)
-STEP1D_CPUS=16
-STEP1D_MEMORY="256G"
+STEP1D_CPUS=6
+STEP1D_MEMORY="80G"
 STEP1D_TIME="72:00:00"
 STEP1D_ACCOUNT=""          # Optional: override default account (leave empty to use PIPELINE_SLURM_ACCOUNT)
 STEP1D_PARTITION=""       # Optional: override default partition (leave empty to use PIPELINE_SLURM_PARTITION)
