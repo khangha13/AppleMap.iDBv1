@@ -60,6 +60,7 @@ Options:
   --work-dir <dir>       Output directory (env: WORK_DIR, default: VCF_DIR)
   --out <path>           Output path (env: OUT_FILE, default: WORK_DIR/snps_per_sample_counts.csv.gz)
   --name-filter <pat>    Case-insensitive filename filter (env: VCF_NAME_FILTER, default: *chr*)
+  --filter <list>        bcftools -f filter list (env: FILTER_EXPR, default: PASS,.)
   --bcftools-module <m>  Module to load (env: BCFTOOLS_MODULE, default: bcftools/1.18-gcc-12.3.0)
   --samples <file>       Optional sample list file for bcftools stats -s (env: SAMPLES_FILE)
   --dry-run              Print intended actions and exit 0 (env: DRY_RUN)
@@ -106,6 +107,7 @@ VCF_DIR="${VCF_DIR:-$PWD}"
 WORK_DIR="${WORK_DIR:-}"
 OUT_FILE="${OUT_FILE:-}"
 VCF_NAME_FILTER="${VCF_NAME_FILTER:-*chr*}"
+FILTER_EXPR="${FILTER_EXPR:-PASS,.}"
 BCFTOOLS_MODULE="${BCFTOOLS_MODULE:-bcftools/1.18-gcc-12.3.0}"
 SAMPLES_FILE="${SAMPLES_FILE:-}"
 DRY_RUN="$(normalize_bool "${DRY_RUN:-false}")"
@@ -130,6 +132,11 @@ while [ "$#" -gt 0 ]; do
         --name-filter)
             require_arg "$1" "${2:-}"
             VCF_NAME_FILTER="$2"
+            shift 2
+            ;;
+        --filter)
+            require_arg "$1" "${2:-}"
+            FILTER_EXPR="$2"
             shift 2
             ;;
         --bcftools-module)
@@ -186,7 +193,7 @@ if [ "${#VCF_FILES[@]}" -eq 0 ]; then
 fi
 
 log_info "Detected ${#VCF_FILES[@]} VCFs in ${VCF_DIR}"
-log_info "Filters: bcftools view -m2 -M2 -v snps -f PASS | bcftools stats -s <samples>"
+log_info "Filters: bcftools view -m2 -M2 -v snps -f ${FILTER_EXPR} | bcftools stats -s <samples>"
 
 if [ "${DRY_RUN}" = "true" ]; then
     log_info "Dry-run enabled; no output will be created."
@@ -194,6 +201,7 @@ if [ "${DRY_RUN}" = "true" ]; then
     log_info "WORK_DIR: ${WORK_DIR}"
     log_info "OUT_FILE: ${OUT_FILE}"
     log_info "VCF_NAME_FILTER: ${VCF_NAME_FILTER}"
+    log_info "FILTER_EXPR: ${FILTER_EXPR}"
     log_info "BCFTOOLS_MODULE: ${BCFTOOLS_MODULE}"
     if [ -n "${SAMPLES_FILE}" ]; then
         log_info "SAMPLES_FILE: ${SAMPLES_FILE}"
@@ -270,7 +278,7 @@ for vcf in "${VCF_FILES[@]}"; do
     chr_label="${chr_label%.vcf.gz}"
     log_info "Processing ${chr_label}"
 
-    if ! bcftools view -m2 -M2 -v snps -f PASS -Ou "${vcf}" \
+    if ! bcftools view -m2 -M2 -v snps -f "${FILTER_EXPR}" -Ou "${vcf}" \
         | bcftools stats -s "${SAMPLES_ARG}" - \
         | awk -v chr_label="${chr_label}" -v source_vcf="${vcf}" -v OFS="," '
             BEGIN {
