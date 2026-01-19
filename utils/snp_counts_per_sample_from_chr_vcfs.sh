@@ -278,12 +278,14 @@ for vcf in "${VCF_FILES[@]}"; do
                 miss_idx = ""
             }
             $0 ~ /^# PSC/ {
+                if ($0 !~ /\[[0-9]+\]/) {
+                    next
+                }
                 header_seen = 1
-                n = split($0, parts, ",")
-                for (i = 1; i <= n; i++) {
-                    if (match(parts[i], /\[([0-9]+)\]([A-Za-z0-9_]+)/, m)) {
-                        idx[m[2]] = m[1]
-                    }
+                line = $0
+                while (match(line, /\[([0-9]+)\]([A-Za-z0-9_]+)/, m)) {
+                    idx[m[2]] = m[1] + 0
+                    line = substr(line, RSTART + RLENGTH)
                 }
                 if (!("sample" in idx) || !("nRefHom" in idx) || !("nNonRefHom" in idx) || !("nHets" in idx)) {
                     print "ERROR: Missing required PSC columns in stats header for " source_vcf > "/dev/stderr"
@@ -350,4 +352,3 @@ awk -F ',' -v OFS=',' '{
 } | gzip -c > "${OUT_FILE}"
 
 log_info "Wrote output to ${OUT_FILE}"
-
