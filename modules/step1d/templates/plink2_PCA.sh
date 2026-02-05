@@ -2,11 +2,62 @@
 # =============================================================================
 # Step 1D - PCA Helper
 # -----------------------------------------------------------------------------
-# Combines per-chromosome VCFs, converts them to PLINK2 format, applies
-# light-weight QC, (optionally) removes close relatives, runs PCA, and
-# generates publication-ready plots.
+# Converts combined VCF to PLINK2 format, applies light-weight QC, 
+# (optionally) removes close relatives, runs PCA, and generates 
+# publication-ready plots.
+#
+# NOTE: This script expects combined_for_pca.vcf.gz to already exist in the
+# VCF source directory. Use prepare_combined_for_pca.sh to create it, or
+# the master_vcf_analysis.sh --PCA workflow will auto-prepare it.
 # =============================================================================
 set -Eeuo pipefail
+
+usage() {
+    cat <<'EOF'
+Usage: plink2_PCA.sh <vcf_dir> <rscripts_dir> [plink2_bin] [bcftools_bin] \
+                     [remove_relatives] [show_labels] [label_size] [use_ggrepel] \
+                     [merged_vcf_pattern] [duplicate_mode] [duplicate_king_threshold] \
+                     [run_mode]
+
+Arguments:
+  vcf_dir              Directory containing combined_for_pca.vcf.gz
+  rscripts_dir         Directory containing PCA_plot.R
+
+Optional Arguments (with defaults):
+  plink2_bin           Path to plink2 binary (default: plink2)
+  bcftools_bin         Path to bcftools binary (default: bcftools)
+  remove_relatives     Remove close relatives before PCA (default: false)
+  show_labels          Show sample labels on plots (default: true)
+  label_size           Plot label size (default: 3)
+  use_ggrepel          Use ggrepel for non-overlapping labels (default: true)
+  merged_vcf_pattern   Pattern for merged VCF detection (default: *merged*.vcf.gz,*merge*.vcf.gz)
+  duplicate_mode       Duplicate handling: off|flag|remove (default: flag)
+  duplicate_king_threshold  KING threshold for duplicates (default: 0.45)
+  run_mode             Run mode: pca|duplicate (default: pca)
+
+Outputs:
+  pca.eigenvec              Eigenvectors (sample coordinates)
+  pca.eigenval              Eigenvalues (variance explained)
+  pca_plot_PC1_PC2.png      PCA scatter plot
+  king_duplicate_pairs.tsv  Duplicate pairs (if detected)
+  king_duplicate_samples.tsv Flagged samples (if detected)
+
+Requirements:
+  - combined_for_pca.vcf.gz must exist in vcf_dir
+  - PLINK2 and bcftools available
+  - R with ggplot2, data.table, ragg, scales
+
+Examples:
+  # Basic PCA
+  plink2_PCA.sh /data/vcfs /path/to/Rscripts
+
+  # With relative removal
+  plink2_PCA.sh /data/vcfs /path/to/Rscripts plink2 bcftools true
+
+  # Duplicate detection only
+  plink2_PCA.sh /data/vcfs /path/to/Rscripts plink2 bcftools false true 3 true "" flag 0.45 duplicate
+EOF
+}
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ -n "${PIPELINE_ROOT:-}" ]; then
@@ -26,8 +77,15 @@ if [ -f "${PIPELINE_ROOT}/lib/logging.sh" ]; then
 fi
 trap 'log_error "Unexpected failure in plink2_PCA.sh"; exit 1' ERR
 
+# Handle --help flag
+if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+    usage
+    exit 0
+fi
+
 if [ "$#" -lt 2 ]; then
     log_error "Usage: plink2_PCA.sh <vcf_dir> <rscripts_dir> [plink2_bin] [bcftools_bin] [remove_relatives] [show_labels] [label_size] [use_ggrepel] [merged_vcf_pattern] [duplicate_mode] [duplicate_king_threshold] [run_mode]"
+    log_error "Run 'plink2_PCA.sh --help' for detailed usage information"
     exit 1
 fi
 
@@ -164,107 +222,41 @@ if ! command -v "${BCFTOOLS_BIN}" >/dev/null 2>&1; then
     exit 1
 fi
 
-COMBINED_VCF=""
-MERGED_VCF=""
-if [ "${FORCE_CONCAT}" = "true" ]; then
-    log_info "Force-concat enabled; ignoring merged VCF detection."
+# Expect combined_for_pca.vcf.gz to already exist
+# (prepared by master_vcf_analysis.sh or prepare_combined_for_pca.sh)
+COMBINED_VCF="combined_for_pca.vcf.gz"
+
+if [ ! -f "${VCF_SOURCE_DIR}/${COMBINED_VCF}" ]; then
+    log_error "Required combined VCF not found: ${VCF_SOURCE_DIR}/${COMBINED_VCF}"
+    log_error ""
+    log_error "This script expects combined_for_pca.vcf.gz to already exist."
+    log_error "Please prepare it first using one of these methods:"
+    log_error ""
+    log_error "  Option 1 (Recommended): Use the PCA workflow which auto-prepares it:"
+    log_error "    bash modules/step1d/bin/run_step1d.sh ${VCF_SOURCE_DIR} --PCA"
+    log_error ""
+    log_error "  Option 2: Manually prepare the combined VCF:"
+    log_error "    bash modules/step1d/bin/prepare_combined_for_pca.sh ${VCF_SOURCE_DIR}"
+    log_error "    # Then run this script again"
+    log_error ""
+    exit 1
 fi
 
-if [ "${FORCE_CONCAT}" != "true" ] && [ -n "${MERGED_PATTERN_RAW}" ]; then
-    if [ "${MERGED_EXCLUDE_CHR}" = "true" ]; then
-        log_info "Merged VCF detection will ignore filenames containing 'Chr'."
+# Work in PCA output directory, link combined VCF if needed
+if [ "${VCF_SOURCE_DIR}/${COMBINED_VCF}" != "${PWD}/${COMBINED_VCF}" ]; then
+    log_info "Linking combined VCF from source directory"
+    ln -sf "${VCF_SOURCE_DIR}/${COMBINED_VCF}" "${COMBINED_VCF}"
+    
+    # Link index files (try both CSI and TBI)
+    if [ -f "${VCF_SOURCE_DIR}/${COMBINED_VCF}.csi" ]; then
+        ln -sf "${VCF_SOURCE_DIR}/${COMBINED_VCF}.csi" "${COMBINED_VCF}.csi"
     fi
-    IFS=',' read -r -a MERGED_PATTERNS <<< "${MERGED_PATTERN_RAW}"
-    for pattern in "${MERGED_PATTERNS[@]}"; do
-        pattern="$(trim_pattern "${pattern}")"
-        [ -z "${pattern}" ] && continue
-        mapfile -d '' -t merged_candidates < <(LC_ALL=C find "${VCF_SOURCE_DIR}" -maxdepth 1 -type f -iname "${pattern}" -print0 | LC_ALL=C sort -z) || true
-        if [ ${#merged_candidates[@]} -gt 0 ]; then
-            if [ "${MERGED_EXCLUDE_CHR}" = "true" ]; then
-                filtered_candidates=()
-                for candidate in "${merged_candidates[@]}"; do
-                    candidate_base="$(basename "${candidate}")"
-                    if [[ "${candidate_base}" =~ [Cc][Hh][Rr] ]]; then
-                        continue
-                    fi
-                    filtered_candidates+=("${candidate}")
-                done
-                merged_candidates=("${filtered_candidates[@]}")
-            fi
-            if [ ${#merged_candidates[@]} -gt 0 ]; then
-                MERGED_VCF="${merged_candidates[0]}"
-                break
-            fi
-        fi
-    done
-fi
-
-if [ -n "${MERGED_VCF}" ]; then
-    LOCAL_MERGED_VCF="combined_for_pca.vcf.gz"
-    if [ "${MERGED_VCF}" != "${PWD}/${LOCAL_MERGED_VCF}" ]; then
-        if ln -sf "${MERGED_VCF}" "${LOCAL_MERGED_VCF}"; then
-            if [ -f "${MERGED_VCF}.tbi" ]; then
-                ln -sf "${MERGED_VCF}.tbi" "${LOCAL_MERGED_VCF}.tbi"
-            fi
-            COMBINED_VCF="${LOCAL_MERGED_VCF}"
-        else
-            log_warn "Failed to link merged VCF; using source path instead."
-            COMBINED_VCF="${MERGED_VCF}"
-        fi
-    else
-        COMBINED_VCF="${MERGED_VCF}"
-    fi
-    log_info "Using merged VCF for PCA: ${COMBINED_VCF}"
-    if [[ "${COMBINED_VCF}" == *.vcf.gz ]] && [ ! -f "${COMBINED_VCF}.tbi" ]; then
-        log_info "Indexing merged VCF: ${COMBINED_VCF}"
-        "${BCFTOOLS_BIN}" index -t "${COMBINED_VCF}"
-    fi
-else
-    declare -a FILTERED_VCFS=()
-    mapfile -d '' -t FILTERED_VCFS < <(LC_ALL=C find "${VCF_SOURCE_DIR}" -maxdepth 1 -type f -name '*_snps.vcf.gz' -print0 | LC_ALL=C sort -z) || true
-
-    if [ ${#FILTERED_VCFS[@]} -eq 0 ]; then
-        mapfile -d '' -t FILTERED_VCFS < <(LC_ALL=C find "${VCF_SOURCE_DIR}" -maxdepth 1 -type f -name '*.vcf.gz' ! -name '*_snps.vcf.gz' -print0 | LC_ALL=C sort -z) || true
-    fi
-
-    if [ ${#FILTERED_VCFS[@]} -eq 0 ]; then
-        mapfile -d '' -t FILTERED_VCFS < <(LC_ALL=C find "${VCF_SOURCE_DIR}" -maxdepth 1 -type f -name '*.vcf' -print0 | LC_ALL=C sort -z) || true
-    fi
-
-    if [ ${#FILTERED_VCFS[@]} -eq 0 ]; then
-        log_error "No VCF files found in ${VCF_SOURCE_DIR}"
-        exit 1
-    fi
-
-    log_info "Combining ${#FILTERED_VCFS[@]} VCF file(s) for PCA:"
-    printf '   • %s\n' "${FILTERED_VCFS[@]}"
-
-    COMBINED_VCF="combined_for_pca.vcf.gz"
-    combined_index=""
-    if [ -f "${COMBINED_VCF}.csi" ]; then
-        combined_index="${COMBINED_VCF}.csi"
-    elif [ -f "${COMBINED_VCF}.tbi" ]; then
-        combined_index="${COMBINED_VCF}.tbi"
-    fi
-
-    combined_up_to_date="false"
-    if [ "${REUSE_COMBINED}" = "true" ] && [ -f "${COMBINED_VCF}" ] && [ -n "${combined_index}" ]; then
-        combined_up_to_date="true"
-        for input_vcf in "${FILTERED_VCFS[@]}"; do
-            if [ "${input_vcf}" -nt "${COMBINED_VCF}" ]; then
-                combined_up_to_date="false"
-                break
-            fi
-        done
-    fi
-
-    if [ "${combined_up_to_date}" = "true" ]; then
-        log_info "Reusing existing ${COMBINED_VCF} (appears up-to-date; set STEP1D_PCA_REUSE_COMBINED=false to force rebuild)."
-    else
-        "${BCFTOOLS_BIN}" concat -Oz -o "${COMBINED_VCF}" "${FILTERED_VCFS[@]}"
-        "${BCFTOOLS_BIN}" index -f "${COMBINED_VCF}"
+    if [ -f "${VCF_SOURCE_DIR}/${COMBINED_VCF}.tbi" ]; then
+        ln -sf "${VCF_SOURCE_DIR}/${COMBINED_VCF}.tbi" "${COMBINED_VCF}.tbi"
     fi
 fi
+
+log_info "Using combined VCF for PCA: ${COMBINED_VCF}"
 
 IMPORT_PREFIX="all_chromosomes"
 QC_PREFIX="qc"

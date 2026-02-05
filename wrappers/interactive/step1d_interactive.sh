@@ -28,7 +28,7 @@ fi
 
 usage() {
     cat <<'EOF'
-Usage: step1d_interactive.sh [--dir=PATH] [--vcf=NAME[,NAME...]] [--beagle] [--pca-only] [--remove-relatives] [--dry-run] [--help]
+Usage: step1d_interactive.sh [--dir=PATH] [--vcf=NAME[,NAME...]] [--beagle] [--PCA] [--remove-relatives] [--dry-run] [--help]
 
 Options:
   --dir=PATH      Full path to directory containing VCF files (skips prompt).
@@ -36,7 +36,7 @@ Options:
                   Matching is case-insensitive; extensions default to .vcf.gz.
   --beagle        Pass --beagle to master_vcf_analysis.sh (Beagle-imputed VCFs).
   --qc            Run QC-only mode (metrics/plots, default).
-  --PCA           Run PCA-only mode (expects merged or per-chrom VCFs).
+  --PCA, --pca    Run PCA-only mode (expects merged or per-chrom VCFs).
   --duplicate-check
                   Run KING duplicate detection only (writes tables).
   --remove-relatives
@@ -90,7 +90,7 @@ case "${arg}" in
             MODE="qc"
             MODE_SET=true
             ;;
-        --PCA|--pca|--pca-only)
+        --PCA|--pca)
             if ${MODE_SET}; then
                 echo "❌ Multiple modes provided; choose one of --qc, --PCA, or --duplicate-check." >&2
                 exit 1

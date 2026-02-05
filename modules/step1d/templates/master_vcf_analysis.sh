@@ -88,8 +88,26 @@ for arg in "$@"; do
         --help|-h)
             SHOW_USAGE=true
             ;;
-        *)
+        -*)
             echo "❌ Unknown option: ${arg}" >&2
+            SHOW_USAGE=true
+            EXIT_ERROR=true
+            ;;
+        *)
+            # User likely passed a directory as positional argument
+            echo "❌ Unexpected argument: ${arg}" >&2
+            echo "" >&2
+            echo "This script does not accept directory arguments directly." >&2
+            echo "Use environment variables instead:" >&2
+            echo "" >&2
+            echo "  export VCF_DIR=${arg}" >&2
+            echo "  bash master_vcf_analysis.sh --PCA" >&2
+            echo "" >&2
+            echo "Or use a wrapper script:" >&2
+            echo "  bash modules/step1d/bin/run_step1d.sh ${arg} --PCA" >&2
+            echo "  # OR" >&2
+            echo "  bash wrappers/interactive/step1d_interactive.sh --dir=${arg} --PCA" >&2
+            echo "" >&2
             SHOW_USAGE=true
             EXIT_ERROR=true
             ;;
@@ -1136,6 +1154,60 @@ if [ "${RUN_PCA}" = "true" ]; then
         PCA_SKIP_REASON="Required PCA helper script missing"
         log_error "PCA script not found: ${PCA_SCRIPT}"
         exit 1
+    fi
+    
+    # Prepare combined VCF if needed
+    PREPARE_COMBINED_SCRIPT="${PIPELINE_ROOT}/modules/step1d/bin/prepare_combined_for_pca.sh"
+    COMBINED_FOR_PCA="${VCF_DIR}/combined_for_pca.vcf.gz"
+    COMBINED_STATS="${VCF_DIR}/combined_for_pca.stats.txt"
+    
+    if ! check_file "${PREPARE_COMBINED_SCRIPT}"; then
+        log_warn "prepare_combined_for_pca.sh not found; PCA will rely on existing merged VCF or concatenate per-chromosome VCFs on-the-fly."
+    else
+        # Check if combined VCF exists and is up-to-date
+        NEED_COMBINED="false"
+        if [ ! -f "${COMBINED_FOR_PCA}" ]; then
+            log_info "Combined VCF for PCA not found; will prepare it now."
+            NEED_COMBINED="true"
+        else
+            # Check if any source VCF is newer than combined file
+            NEWEST_VCF=""
+            for vcf_basename in "${VCF_TARGETS[@]}"; do
+                vcf_path="${VCF_DIR}/${vcf_basename}"
+                if [ -f "${vcf_path}" ] && [ "${vcf_path}" -nt "${COMBINED_FOR_PCA}" ]; then
+                    NEWEST_VCF="${vcf_basename}"
+                    break
+                fi
+            done
+            if [ -n "${NEWEST_VCF}" ]; then
+                log_info "Source VCF ${NEWEST_VCF} is newer than combined VCF; will regenerate."
+                NEED_COMBINED="true"
+            fi
+        fi
+        
+        if [ "${NEED_COMBINED}" = "true" ]; then
+            if [ "${DRY_RUN}" = "true" ]; then
+                log_info "[dry-run] Would prepare combined VCF for PCA: bash ${PREPARE_COMBINED_SCRIPT} ${VCF_DIR}"
+            else
+                log_info "Preparing combined VCF for PCA..."
+                if bash "${PREPARE_COMBINED_SCRIPT}" "${VCF_DIR}"; then
+                    log_success "Combined VCF prepared: ${COMBINED_FOR_PCA}"
+                    if [ -f "${COMBINED_STATS}" ]; then
+                        snp_count=$(grep "^SN" "${COMBINED_STATS}" | grep "number of SNPs:" | awk '{print $NF}' || echo "unknown")
+                        log_info "Total SNPs in combined VCF: ${snp_count}"
+                    fi
+                else
+                    log_error "Failed to prepare combined VCF for PCA"
+                    exit 1
+                fi
+            fi
+        else
+            log_info "Combined VCF already exists and is up-to-date: ${COMBINED_FOR_PCA}"
+            if [ -f "${COMBINED_STATS}" ]; then
+                snp_count=$(grep "^SN" "${COMBINED_STATS}" | grep "number of SNPs:" | awk '{print $NF}' || echo "unknown")
+                log_info "Total SNPs in combined VCF: ${snp_count}"
+            fi
+        fi
     fi
 
     if [ "${DRY_RUN}" = "true" ]; then

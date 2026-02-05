@@ -30,6 +30,21 @@ bash wrappers/sbatch/step1d_submit.sh [<dataset>] <vcf_dir> --PCA [--remove-rela
 bash wrappers/sbatch/step1d_submit.sh [<dataset>] <vcf_dir> --duplicate-check
 ```
 
+### Prepare Combined VCF (utility)
+If your VCFs need cleaning (removing Chr00, standardizing contig names to ChrNN), use the prep utility **before** running PCA:
+```bash
+cd /path/to/GATK_Pipeline_KH_v1
+# Dry-run to preview what would be done
+bash modules/step1d/bin/prepare_combined_for_pca.sh /path/to/vcf/directory --dry-run
+
+# Create cleaned combined_for_pca.vcf.gz (removes Chr00, standardizes to Chr01..Chr17)
+bash modules/step1d/bin/prepare_combined_for_pca.sh /path/to/vcf/directory
+
+# Then run PCA on the cleaned output
+bash modules/step1d/templates/master_vcf_analysis.sh --PCA
+```
+**What it does:** Detects merged VCF or concatenates per-chromosome VCFs, removes Chr00 records, standardizes contigs to ChrNN format, sorts and indexes. See `--help` for details.
+
 ## Run Modes (details)
 **Interactive wrapper** (`wrappers/interactive/step1d_interactive.sh`)  
 Flags: `--dir=/path/to/vcfs`, `--vcf=Chr00,Chr01`, `--beagle`, `--qc` (default), `--PCA`, `--duplicate-check`, `--remove-relatives`, `--dry-run`.
