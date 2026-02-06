@@ -40,6 +40,13 @@ fi
 
 DATASET_NAME="$1"
 
+# Guard: reject flag-like strings consumed as positional arguments.
+if [[ "${DATASET_NAME}" == -* ]]; then
+    echo "[step1c_submit] ❌ First argument '${DATASET_NAME}' looks like a flag, not a dataset name." >&2
+    echo "[step1c_submit] Expected usage: ${0##*/} <dataset_name> [rdm_base_path]" >&2
+    exit 1
+fi
+
 # Source config early to get helper functions
 source "${PIPELINE_ROOT}/config/pipeline_config.sh"
 

@@ -42,6 +42,21 @@ main() {
         shift 2 || true
     fi
 
+    # Guard: reject flag-like strings consumed as dataset_name or vcf_dir.
+    # This catches the common mistake of putting flags before the directory:
+    #   step1d_submit.sh --pca /path/to/vcfs   (wrong order)
+    if [[ "${dataset_name}" == -* ]]; then
+        log_error "First argument '${dataset_name}' looks like a flag, not a dataset name or directory."
+        log_error ""
+        log_error "Did you put flags before the directory path? Try reordering:"
+        log_error "  bash step1d_submit.sh <vcf_directory> ${dataset_name}"
+        log_error ""
+        log_error "Expected usage:"
+        log_error "  bash step1d_submit.sh <vcf_directory> [--PCA|--qc|--duplicate-check] [options]"
+        log_error "  bash step1d_submit.sh <dataset_name> <vcf_directory> [--PCA|--qc] [options]"
+        exit 1
+    fi
+
     local beagle_flag=false
     local dry_run_flag=false
     local remove_rel_flag=false

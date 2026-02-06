@@ -30,6 +30,18 @@ fi
 DATASET_NAME="$1"
 DATASET_RDM_PATH="$2"
 
+# Guard: reject flag-like strings consumed as positional arguments.
+if [[ "${DATASET_NAME}" == -* ]]; then
+    echo "[step1b_submit] ❌ First argument '${DATASET_NAME}' looks like a flag, not a dataset name." >&2
+    echo "[step1b_submit] Expected usage: ${0##*/} <dataset_name> <rdm_base_path>" >&2
+    exit 1
+fi
+if [[ "${DATASET_RDM_PATH}" == -* ]]; then
+    echo "[step1b_submit] ❌ Second argument '${DATASET_RDM_PATH}' looks like a flag, not an RDM path." >&2
+    echo "[step1b_submit] Expected usage: ${0##*/} <dataset_name> <rdm_base_path>" >&2
+    exit 1
+fi
+
 shift 2 || true
 
 source "${PIPELINE_ROOT}/config/pipeline_config.sh"

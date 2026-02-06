@@ -47,6 +47,24 @@ main() {
     local rdm_base_path="$2"
     shift 2
 
+    # Guard: reject flag-like strings consumed as positional arguments.
+    # Catches the common mistake of putting flags before required arguments:
+    #   step1a_submit.sh --sample MyDataset /path/to/rdm   (wrong order)
+    if [[ "${dataset_name}" == -* ]]; then
+        log_error "First argument '${dataset_name}' looks like a flag, not a dataset name."
+        log_error ""
+        log_error "Expected usage:"
+        log_error "  step1a_submit.sh <dataset_name> <rdm_base_path> [--sample NAME] [--sample-list PATH]"
+        exit 1
+    fi
+    if [[ "${rdm_base_path}" == -* ]]; then
+        log_error "Second argument '${rdm_base_path}' looks like a flag, not an RDM path."
+        log_error ""
+        log_error "Expected usage:"
+        log_error "  step1a_submit.sh <dataset_name> <rdm_base_path> [--sample NAME] [--sample-list PATH]"
+        exit 1
+    fi
+
     # Optional overrides
     local custom_sample_name=""
     local custom_sample_list=""

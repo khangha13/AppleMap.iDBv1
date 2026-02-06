@@ -38,6 +38,20 @@ main() {
         exit 1
     fi
 
+    # Guard: reject flag-like strings consumed as positional arguments.
+    if [[ "${dataset_name}" == -* ]]; then
+        log_error "First argument '${dataset_name}' looks like a flag, not a dataset name."
+        log_error "Expected usage:"
+        log_error "  step1c_submit.sh <dataset_name> [rdm_base_path]"
+        exit 1
+    fi
+    if [[ "${rdm_base_path}" == -* ]]; then
+        log_error "Second argument '${rdm_base_path}' looks like a flag, not an RDM path."
+        log_error "Expected usage:"
+        log_error "  step1c_submit.sh <dataset_name> [rdm_base_path]"
+        exit 1
+    fi
+
     validate_step1c_inputs "${rdm_base_path}"
 
     local reference_genome

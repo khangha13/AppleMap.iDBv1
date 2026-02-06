@@ -176,6 +176,21 @@ ensure_step1b_prereqs() {
 main() {
     local dataset_name="$1"
     local rdm_base_path="$2"
+
+    # Guard: reject flag-like strings consumed as positional arguments.
+    if [[ "${dataset_name}" == -* ]]; then
+        echo "[step1b] ERROR: First argument '${dataset_name}' looks like a flag, not a dataset name." >&2
+        echo "[step1b] Expected usage:" >&2
+        echo "[step1b]   step1b_submit.sh <dataset_name> <rdm_base_path>" >&2
+        exit 1
+    fi
+    if [[ "${rdm_base_path:-}" == -* ]]; then
+        echo "[step1b] ERROR: Second argument '${rdm_base_path}' looks like a flag, not an RDM path." >&2
+        echo "[step1b] Expected usage:" >&2
+        echo "[step1b]   step1b_submit.sh <dataset_name> <rdm_base_path>" >&2
+        exit 1
+    fi
+
     STEP1B_LAST_ERROR="Step 1B failed before reason was recorded."
     setup_step1b_failure_tracking "${dataset_name}"
     trap 'step1b_failure_trap $?' EXIT
