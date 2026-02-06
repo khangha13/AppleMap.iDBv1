@@ -232,7 +232,7 @@ R_SCRIPTS_DIR=/path/to/Rscripts    # Optional, auto-detected
 
 4. **Duplicate Detection** (if enabled)
    - KING kinship calculation
-   - Flag pairs with kinship ≥0.45 (configurable)
+   - Flag pairs with kinship ≥0.485 (configurable)
    - Output: `king_duplicate_pairs.tsv`, `king_duplicate_samples.tsv`
 
 5. **LD Pruning**
@@ -286,7 +286,7 @@ plink2_PCA.sh <vcf_dir> <rscripts_dir> [plink2_bin] [bcftools_bin] \
 | 8 | use_ggrepel | Boolean | `true` | Use ggrepel for labels |
 | 9 | merged_vcf_pattern | String | `*merged*.vcf.gz` | Merged VCF glob |
 | 10 | duplicate_mode | String | `flag` | `off`/`flag`/`remove` |
-| 11 | duplicate_king_threshold | Number | `0.45` | Kinship threshold |
+| 11 | duplicate_king_threshold | Number | `0.485` | Kinship threshold |
 | 12 | run_mode | String | `pca` | `pca` or `duplicate` |
 
 **No flag interface - pure positional!**
@@ -566,7 +566,7 @@ STEP1D_PCA_MERGED_PATTERN       # Default: *merged*.vcf.gz,*merge*.vcf.gz
 STEP1D_PCA_FORCE_CONCAT         # Default: false
 STEP1D_PCA_MERGED_EXCLUDE_CHR   # Default: true
 STEP1D_DUPLICATE_MODE           # Default: flag
-STEP1D_DUPLICATE_KING_THRESHOLD # Default: 0.45
+STEP1D_DUPLICATE_KING_THRESHOLD # Default: 0.485
 ```
 
 **Status:** 🔴 Overwhelming - needs documentation

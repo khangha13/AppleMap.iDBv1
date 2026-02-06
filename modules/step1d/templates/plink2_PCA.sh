@@ -9,6 +9,12 @@
 # NOTE: This script expects combined_for_pca.vcf.gz to already exist in the
 # VCF source directory. Use prepare_combined_for_pca.sh to create it, or
 # the master_vcf_analysis.sh --PCA workflow will auto-prepare it.
+#
+# NOTE: DATA MANAGEMENT
+#   This script writes PCA outputs (eigenvec, eigenval, plots, KING tables)
+#   into the current working directory (cd'd into PCA_OUTPUT_DIR by the
+#   caller). Layout is ad-hoc; see master_vcf_analysis.sh header for the
+#   recommended future refactor to separate INPUT/OUTPUT/TEMP paths.
 # =============================================================================
 set -Eeuo pipefail
 
@@ -32,7 +38,7 @@ Optional Arguments (with defaults):
   use_ggrepel          Use ggrepel for non-overlapping labels (default: true)
   merged_vcf_pattern   Pattern for merged VCF detection (default: *merged*.vcf.gz,*merge*.vcf.gz)
   duplicate_mode       Duplicate handling: off|flag|remove (default: flag)
-  duplicate_king_threshold  KING threshold for duplicates (default: 0.45)
+  duplicate_king_threshold  KING threshold for duplicates (default: 0.485)
   run_mode             Run mode: pca|duplicate (default: pca)
 
 Outputs:
@@ -55,7 +61,7 @@ Examples:
   plink2_PCA.sh /data/vcfs /path/to/Rscripts plink2 bcftools true
 
   # Duplicate detection only
-  plink2_PCA.sh /data/vcfs /path/to/Rscripts plink2 bcftools false true 3 true "" flag 0.45 duplicate
+  plink2_PCA.sh /data/vcfs /path/to/Rscripts plink2 bcftools false true 3 true "" flag 0.485 duplicate
 EOF
 }
 
@@ -106,7 +112,7 @@ PCA_GENO_RAW="${STEP1D_PCA_GENO:-0.05}"
 PCA_MIND_RAW="${STEP1D_PCA_MIND:-0.10}"
 PCA_MAF_RAW="${STEP1D_PCA_MAF:-0.01}"
 DUPLICATE_MODE_RAW="${10:-${STEP1D_DUPLICATE_MODE:-flag}}"
-DUPLICATE_THRESHOLD_RAW="${11:-${STEP1D_DUPLICATE_KING_THRESHOLD:-0.45}}"
+DUPLICATE_THRESHOLD_RAW="${11:-${STEP1D_DUPLICATE_KING_THRESHOLD:-0.485}}"
 RUN_MODE_RAW="${12:-pca}"
 
 normalize_bool() {
@@ -169,7 +175,7 @@ PCA_MAF="$(normalize_num "${PCA_MAF_RAW}" "0.01")"
 if [[ "${DUPLICATE_THRESHOLD_RAW}" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
     DUPLICATE_THRESHOLD="${DUPLICATE_THRESHOLD_RAW}"
 else
-    DUPLICATE_THRESHOLD="0.45"
+    DUPLICATE_THRESHOLD="0.485"
 fi
 
 case "${DUPLICATE_MODE}" in

@@ -262,7 +262,7 @@ PLOT_IMAGE_FORMAT="png"            # png|pdf|svg
 ```bash
 STEP1D_PCA_MERGED_PATTERN="*merged*.vcf.gz"    # Merged VCF detection
 STEP1D_DUPLICATE_MODE="flag"                    # off|flag|remove
-STEP1D_DUPLICATE_KING_THRESHOLD="0.45"          # Kinship threshold
+STEP1D_DUPLICATE_KING_THRESHOLD="0.485"         # Kinship threshold
 STEP1D_REMOVE_RELATIVES="false"                 # Remove close relatives
 ```
 

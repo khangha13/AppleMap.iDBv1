@@ -76,7 +76,7 @@ One-liner example:
 - Output location defaults to `WORK_DIR`; PCA results land in `${WORK_DIR}/${STEP1D_PCA_DIR:-pca_analysis}`.
 
 ## PCA & Kinship Toggles
-- `STEP1D_DUPLICATE_MODE=flag|remove|off` (default `flag`), `STEP1D_DUPLICATE_KING_THRESHOLD=0.45`
+- `STEP1D_DUPLICATE_MODE=flag|remove|off` (default `flag`), `STEP1D_DUPLICATE_KING_THRESHOLD=0.485`
 - `STEP1D_REMOVE_RELATIVES=true` to drop KING >0.125 before PCA (requires `--PCA`)
 - `STEP1D_PCA_SHOW_LABELS=true|false`, `STEP1D_PCA_LABEL_SIZE=1.5`, `STEP1D_PCA_USE_GGREPEL=true|false`
 - `STEP1D_PCA_FORCE_CONCAT=true` and `STEP1D_PCA_MERGED_EXCLUDE_CHR=true|false` control merge/concat behavior

@@ -7,12 +7,13 @@ source(file.path(script_dir, "common_plot_utils.R"))
 
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 2) {
-  stop("Usage: Rscript plot_depth_vs_position.R <metrics_tsv> <output_dir> [image_format]", call. = FALSE)
+  stop("Usage: Rscript plot_depth_vs_position.R <metrics_tsv> <output_dir> [image_format] [chromosomes]", call. = FALSE)
 }
 
 metrics_path <- normalizePath(args[1], mustWork = FALSE)
 output_dir <- args[2]
 image_format <- if (length(args) >= 3) args[3] else "png"
+target_chroms <- if (length(args) >= 4 && args[4] != "") strsplit(args[4], ",")[[1]] else NULL
 
 required_cols <- c("CHROM", "POS", "MEAN_DEPTH")
 metrics_dt <- read_metrics_dataset(metrics_path, required_cols)
@@ -21,6 +22,16 @@ metrics_dt <- normalise_positions(metrics_dt)
 ensure_directory(output_dir)
 
 chromosomes <- sort(unique(metrics_dt$CHROM))
+
+# Filter to target chromosomes if specified
+if (!is.null(target_chroms)) {
+  chromosomes <- intersect(chromosomes, target_chroms)
+  if (length(chromosomes) == 0) {
+    message("No matching chromosomes found. Requested: ", paste(target_chroms, collapse = ", "))
+    quit(save = "no", status = 0)
+  }
+  message("Generating plots for: ", paste(chromosomes, collapse = ", "))
+}
 
 for (chrom in chromosomes) {
   chr_data <- metrics_dt[CHROM == chrom & !is.na(MEAN_DEPTH)]

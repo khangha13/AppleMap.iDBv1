@@ -8,6 +8,35 @@
 #   3. Generate per-site missingness vs depth plots
 #   4. Combine all missingness plots into single image
 #
+# ┌─────────────────────────────────────────────────────────────────────────────┐
+# │ NOTE: DATA MANAGEMENT (Future Improvement)                                 │
+# │                                                                            │
+# │ Current behaviour is AD-HOC:                                               │
+# │  - All outputs (TSVs, plots, PCA results) are written directly into        │
+# │    WORK_DIR, which defaults to VCF_DIR (the same folder as the input       │
+# │    VCFs). This means results sit alongside raw input data with no          │
+# │    separation between input, intermediate, and output files.               │
+# │                                                                            │
+# │  - $TMPDIR is used for short-lived scratch files during QC metric          │
+# │    extraction (requires SLURM to set it). prepare_combined_for_pca.sh      │
+# │    falls back to /tmp if $TMPDIR is unset.                                 │
+# │                                                                            │
+# │ Recommended future refactor:                                               │
+# │  1. Separate input/output/intermediate paths clearly, e.g.:               │
+# │       INPUT_DIR  = where the source VCFs live (read-only)                  │
+# │       OUTPUT_DIR = where final results are written (TSVs, plots, PCA)      │
+# │       TEMP_DIR   = ephemeral scratch (cleaned up automatically)            │
+# │  2. Default OUTPUT_DIR to ${WORK_DIR}/step1d_results/ instead of          │
+# │     dumping everything next to the VCFs.                                   │
+# │  3. Optionally copy final results back to RDM after completion.            │
+# │  4. Consistent $TMPDIR handling across all scripts (strict or fallback).   │
+# │                                                                            │
+# │ For now, override WORK_DIR to control where outputs land:                  │
+# │   export VCF_DIR="/QRISdata/.../my_vcfs"  # input (read)                  │
+# │   export WORK_DIR="/scratch/.../results"   # output (write)               │
+# │   bash master_vcf_analysis.sh --qc                                        │
+# └─────────────────────────────────────────────────────────────────────────────┘
+#
 # Usage:
 #   Interactive: bash master_vcf_analysis.sh
 #   SLURM: sbatch master_vcf_analysis.sh
@@ -219,7 +248,7 @@ PCA_MERGED_PATTERN="${STEP1D_PCA_MERGED_PATTERN:-*merged*.vcf.gz,*merge*.vcf.gz}
 PCA_FORCE_CONCAT="${STEP1D_PCA_FORCE_CONCAT:-false}"
 PCA_MERGED_EXCLUDE_CHR="${STEP1D_PCA_MERGED_EXCLUDE_CHR:-true}"
 DUPLICATE_MODE="${STEP1D_DUPLICATE_MODE:-flag}"
-DUPLICATE_KING_THRESHOLD="${STEP1D_DUPLICATE_KING_THRESHOLD:-0.45}"
+DUPLICATE_KING_THRESHOLD="${STEP1D_DUPLICATE_KING_THRESHOLD:-0.485}"
 SHOW_LABELS="${STEP1D_PCA_SHOW_LABELS:-true}"
 LABEL_SIZE="${STEP1D_PCA_LABEL_SIZE:-1.5}"
 USE_GGREPEL="${STEP1D_PCA_USE_GGREPEL:-true}"
@@ -866,12 +895,16 @@ if [ "${HAS_DP}" = "true" ]; then
         if [ ${#missing_depth_plots[@]} -eq 0 ]; then
             log_info "All depth plots already exist; skipping generation."
         else
-            log_info "Running depth plotting script..."
+            log_info "Regenerating ${#missing_depth_plots[@]} missing depth plot(s): ${missing_depth_plots[*]}"
             log_info "Metrics: ${SITE_METRICS_PATH}"
             log_info "Output directory: ${DEPTH_OUTPUT_DIR}"
-            if Rscript "${DEPTH_R_SCRIPT}" "${SITE_METRICS_PATH}" "${DEPTH_OUTPUT_DIR}" "${PLOT_IMAGE_FORMAT}"; then
+            
+            # Convert array to comma-separated list
+            missing_chroms_csv=$(IFS=,; echo "${missing_depth_plots[*]}")
+            
+            if Rscript "${DEPTH_R_SCRIPT}" "${SITE_METRICS_PATH}" "${DEPTH_OUTPUT_DIR}" "${PLOT_IMAGE_FORMAT}" "${missing_chroms_csv}"; then
                 DEPTH_COUNT=$(find "${DEPTH_OUTPUT_DIR}" -maxdepth 1 -type f -name "*_depth_vs_position.${PLOT_IMAGE_FORMAT}" | awk 'END{print NR}')
-                log_success "Generated ${DEPTH_COUNT} depth plots"
+                log_success "Generated ${#missing_depth_plots[@]} depth plot(s) (total: ${DEPTH_COUNT})"
                 log_info "Location: ${DEPTH_OUTPUT_DIR}/"
             else
                 log_error "Depth plotting script failed"
@@ -909,9 +942,14 @@ else
     if [ ${#missing_missingness[@]} -eq 0 ]; then
         log_info "All missingness plots already exist; skipping generation."
     else
-        if Rscript "${MISSINGNESS_R_SCRIPT}" "${SITE_METRICS_PATH}" "${MISSINGNESS_OUTPUT_DIR}" "${PLOT_IMAGE_FORMAT}"; then
+        log_info "Regenerating ${#missing_missingness[@]} missing missingness plot(s): ${missing_missingness[*]}"
+        
+        # Convert array to comma-separated list
+        missing_chroms_csv=$(IFS=,; echo "${missing_missingness[*]}")
+        
+        if Rscript "${MISSINGNESS_R_SCRIPT}" "${SITE_METRICS_PATH}" "${MISSINGNESS_OUTPUT_DIR}" "${PLOT_IMAGE_FORMAT}" "${missing_chroms_csv}"; then
             MISSINGNESS_COUNT=$(find "${MISSINGNESS_OUTPUT_DIR}" -maxdepth 1 -type f -name "*_missingness_vs_position.${PLOT_IMAGE_FORMAT}" | awk 'END{print NR}')
-            log_success "Generated ${MISSINGNESS_COUNT} missingness plots"
+            log_success "Generated ${#missing_missingness[@]} missingness plot(s) (total: ${MISSINGNESS_COUNT})"
             log_info "Location: ${MISSINGNESS_OUTPUT_DIR}/"
         else
             log_error "Missingness plotting script failed"
@@ -947,9 +985,14 @@ if [ "${HAS_DP}" = "true" ]; then
         if [ ${#missing_depth_miss[@]} -eq 0 ]; then
             log_info "All depth vs missingness plots already exist; skipping generation."
         else
-            if Rscript "${DEPTH_MISS_R_SCRIPT}" "${SITE_METRICS_PATH}" "${DEPTH_MISS_OUTPUT_DIR}" "${PLOT_IMAGE_FORMAT}"; then
+            log_info "Regenerating ${#missing_depth_miss[@]} missing depth vs missingness plot(s): ${missing_depth_miss[*]}"
+            
+            # Convert array to comma-separated list
+            missing_chroms_csv=$(IFS=,; echo "${missing_depth_miss[*]}")
+            
+            if Rscript "${DEPTH_MISS_R_SCRIPT}" "${SITE_METRICS_PATH}" "${DEPTH_MISS_OUTPUT_DIR}" "${PLOT_IMAGE_FORMAT}" "${missing_chroms_csv}"; then
                 DEPTH_MISS_COUNT=$(find "${DEPTH_MISS_OUTPUT_DIR}" -maxdepth 1 -type f -name "*_depth_vs_missingness.${PLOT_IMAGE_FORMAT}" | awk 'END{print NR}')
-                log_success "Generated ${DEPTH_MISS_COUNT} depth vs missingness plots"
+                log_success "Generated ${#missing_depth_miss[@]} depth vs missingness plot(s) (total: ${DEPTH_MISS_COUNT})"
                 log_info "Location: ${DEPTH_MISS_OUTPUT_DIR}/"
             else
                 log_error "Depth vs missingness plotting script failed"

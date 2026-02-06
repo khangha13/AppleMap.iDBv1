@@ -23,6 +23,12 @@
 #   <vcf_directory>/combined_for_pca.vcf.gz (+ .csi index)
 #   <vcf_directory>/combined_for_pca.stats.txt (bcftools stats output)
 #
+# NOTE: DATA MANAGEMENT
+#   Output files are written into the same directory as the input VCFs
+#   (ad-hoc layout). Temporary scratch files use ${TMPDIR:-/tmp}.
+#   See the header note in master_vcf_analysis.sh for a full description
+#   of the recommended future refactor (separate INPUT/OUTPUT/TEMP paths).
+#
 # Notes:
 #   - If a merged VCF is detected (*merged*.vcf.gz/*merge*.vcf.gz, ignoring
 #     names with 'Chr'), it will be cleaned and used.
