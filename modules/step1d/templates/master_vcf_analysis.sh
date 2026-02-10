@@ -1246,6 +1246,15 @@ if [ "${RUN_PCA}" = "true" ]; then
             fi
         else
             log_info "Combined VCF already exists and is up-to-date: ${COMBINED_FOR_PCA}"
+            # Generate stats if the stats file is missing (e.g. previous run crashed after VCF creation)
+            if [ ! -f "${COMBINED_STATS}" ]; then
+                log_info "Stats file missing — generating bcftools stats..."
+                if bash "${PREPARE_COMBINED_SCRIPT}" "${VCF_DIR}"; then
+                    log_success "Stats generated for existing combined VCF"
+                else
+                    log_warn "Failed to generate stats; PCA will continue without stats summary"
+                fi
+            fi
             if [ -f "${COMBINED_STATS}" ]; then
                 snp_count=$(grep "^SN" "${COMBINED_STATS}" | grep "number of SNPs:" | awk '{print $NF}' || echo "unknown")
                 log_info "Total SNPs in combined VCF: ${snp_count}"

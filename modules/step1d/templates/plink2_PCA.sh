@@ -333,97 +333,131 @@ if [ "${needs_qc}" = "true" ]; then
     printf '%s' "${qc_params}" > "${qc_stamp}"
 fi
 
+# =============================================================================
+# KING duplicate detection (skip if params unchanged & outputs present)
+# =============================================================================
 DUPLICATE_SAMPLES_FILE=""
-if [ "${DUPLICATE_MODE}" != "off" ]; then
-    log_info "Estimating KING kinship for duplicate detection (threshold ${DUPLICATE_THRESHOLD})"
-    KING_PREFIX="king_duplicates"
-    "${PLINK2_BIN}" \
-        --pfile qc \
-        --make-king-table \
-        --out "${KING_PREFIX}"
+DUPLICATE_PAIRS_FILE="king_duplicate_pairs.tsv"
+DUPLICATE_PAIR_COUNT=0
+DUPLICATE_SAMPLE_COUNT=0
 
-    KING_FILE=""
-    for candidate in "${KING_PREFIX}.king" "${KING_PREFIX}.kin0"; do
-        if [ -f "${candidate}" ]; then
-            KING_FILE="${candidate}"
-            break
+if [ "${DUPLICATE_MODE}" != "off" ]; then
+    KING_PREFIX="king_duplicates"
+    king_stamp="${KING_PREFIX}.king.params.txt"
+    king_params="$(cat <<EOF
+pfile=${QC_PREFIX}
+duplicate_mode=${DUPLICATE_MODE}
+duplicate_threshold=${DUPLICATE_THRESHOLD}
+EOF
+)"
+    DUPLICATE_SAMPLES_FILE="king_duplicate_samples.tsv"
+
+    needs_king="true"
+    if [ -f "${king_stamp}" ]; then
+        if diff -q <(printf '%s' "${king_params}") "${king_stamp}" >/dev/null 2>&1 \
+           && [ "${king_stamp}" -nt "${QC_PREFIX}.pgen" ]; then
+            needs_king="false"
+            # Restore counts from existing files
+            if [ -s "${DUPLICATE_PAIRS_FILE}" ]; then
+                DUPLICATE_PAIR_COUNT=$(($(wc -l < "${DUPLICATE_PAIRS_FILE}") - 1))
+                [ -s "${DUPLICATE_SAMPLES_FILE}" ] && DUPLICATE_SAMPLE_COUNT=$(wc -l < "${DUPLICATE_SAMPLES_FILE}")
+                log_info "Reusing KING results (${DUPLICATE_PAIR_COUNT} pair(s), ${DUPLICATE_SAMPLE_COUNT} sample(s); params unchanged)."
+            else
+                log_info "Reusing KING results (no duplicates detected; params unchanged)."
+                DUPLICATE_SAMPLES_FILE=""
+            fi
         fi
-    done
-    if [ -z "${KING_FILE}" ]; then
-        log_error "KING output not found for prefix: ${KING_PREFIX}"
-        exit 1
     fi
 
-    DUPLICATE_PAIRS_FILE="king_duplicate_pairs.tsv"
-    DUPLICATE_SAMPLES_FILE="king_duplicate_samples.tsv"
-    DUPLICATE_SAMPLES_TMP="${DUPLICATE_SAMPLES_FILE}.tmp"
+    if [ "${needs_king}" = "true" ]; then
+        log_info "Estimating KING kinship for duplicate detection (threshold ${DUPLICATE_THRESHOLD})"
+        "${PLINK2_BIN}" \
+            --pfile qc \
+            --make-king-table \
+            --out "${KING_PREFIX}"
 
-    awk -v thr="${DUPLICATE_THRESHOLD}" \
-        -v pairs="${DUPLICATE_PAIRS_FILE}" \
-        -v samples="${DUPLICATE_SAMPLES_TMP}" '
-        BEGIN {
-            FS = "[[:space:]]+";
-            OFS = "\t";
-        }
-        NR == 1 {
-            for (i = 1; i <= NF; i++) {
-                col = tolower($i);
-                sub(/^#/, "", col);
-                if (col == "fid1") fid1 = i;
-                else if (col == "iid1") iid1 = i;
-                else if (col == "fid2") fid2 = i;
-                else if (col == "iid2") iid2 = i;
-                else if (col == "kinship" || col == "king" || col ~ /kinship/) kin = i;
+        KING_FILE=""
+        for candidate in "${KING_PREFIX}.king" "${KING_PREFIX}.kin0"; do
+            if [ -f "${candidate}" ]; then
+                KING_FILE="${candidate}"
+                break
+            fi
+        done
+        if [ -z "${KING_FILE}" ]; then
+            log_error "KING output not found for prefix: ${KING_PREFIX}"
+            exit 1
+        fi
+
+        DUPLICATE_SAMPLES_TMP="${DUPLICATE_SAMPLES_FILE}.tmp"
+
+        awk -v thr="${DUPLICATE_THRESHOLD}" \
+            -v pairs="${DUPLICATE_PAIRS_FILE}" \
+            -v samples="${DUPLICATE_SAMPLES_TMP}" '
+            BEGIN {
+                FS = "[[:space:]]+";
+                OFS = "\t";
             }
-            if (!fid1) fid1 = 1;
-            if (!iid1) iid1 = 2;
-            if (!fid2) fid2 = 3;
-            if (!iid2) iid2 = 4;
-            if (!kin) kin = NF;
-            print "FID1", "IID1", "FID2", "IID2", "KINSHIP" > pairs;
-            next;
-        }
-        {
-            if ($kin == "" || $kin == "NA") {
+            NR == 1 {
+                for (i = 1; i <= NF; i++) {
+                    col = tolower($i);
+                    sub(/^#/, "", col);
+                    if (col == "fid1") fid1 = i;
+                    else if (col == "iid1") iid1 = i;
+                    else if (col == "fid2") fid2 = i;
+                    else if (col == "iid2") iid2 = i;
+                    else if (col == "kinship" || col == "king" || col ~ /kinship/) kin = i;
+                }
+                if (!fid1) fid1 = 1;
+                if (!iid1) iid1 = 2;
+                if (!fid2) fid2 = 3;
+                if (!iid2) iid2 = 4;
+                if (!kin) kin = NF;
+                print "FID1", "IID1", "FID2", "IID2", "KINSHIP" > pairs;
                 next;
             }
-            if ($kin + 0 >= thr) {
-                f1 = $fid1;
-                i1 = $iid1;
-                f2 = $fid2;
-                i2 = $iid2;
-                printf "%s\t%s\t%s\t%s\t%s\n", f1, i1, f2, i2, $kin >> pairs;
-                printf "%s\t%s\n", f1, i1 >> samples;
-                printf "%s\t%s\n", f2, i2 >> samples;
+            {
+                if ($kin == "" || $kin == "NA") {
+                    next;
+                }
+                if ($kin + 0 >= thr) {
+                    f1 = $fid1;
+                    i1 = $iid1;
+                    f2 = $fid2;
+                    i2 = $iid2;
+                    printf "%s\t%s\t%s\t%s\t%s\n", f1, i1, f2, i2, $kin >> pairs;
+                    printf "%s\t%s\n", f1, i1 >> samples;
+                    printf "%s\t%s\n", f2, i2 >> samples;
+                }
             }
-        }
-    ' "${KING_FILE}"
+        ' "${KING_FILE}"
 
-    if [ -s "${DUPLICATE_SAMPLES_TMP}" ]; then
-        LC_ALL=C sort -u "${DUPLICATE_SAMPLES_TMP}" > "${DUPLICATE_SAMPLES_FILE}"
-    else
-        rm -f "${DUPLICATE_SAMPLES_FILE}" 2>/dev/null || true
-    fi
-    rm -f "${DUPLICATE_SAMPLES_TMP}" 2>/dev/null || true
+        if [ -s "${DUPLICATE_SAMPLES_TMP}" ]; then
+            LC_ALL=C sort -u "${DUPLICATE_SAMPLES_TMP}" > "${DUPLICATE_SAMPLES_FILE}"
+        else
+            rm -f "${DUPLICATE_SAMPLES_FILE}" 2>/dev/null || true
+        fi
+        rm -f "${DUPLICATE_SAMPLES_TMP}" 2>/dev/null || true
 
-    DUPLICATE_PAIR_COUNT=0
-    if [ -s "${DUPLICATE_PAIRS_FILE}" ]; then
-        DUPLICATE_PAIR_COUNT=$(($(wc -l < "${DUPLICATE_PAIRS_FILE}") - 1))
-    fi
-    DUPLICATE_SAMPLE_COUNT=0
-    if [ -s "${DUPLICATE_SAMPLES_FILE}" ]; then
-        DUPLICATE_SAMPLE_COUNT=$(wc -l < "${DUPLICATE_SAMPLES_FILE}")
-    fi
+        DUPLICATE_PAIR_COUNT=0
+        if [ -s "${DUPLICATE_PAIRS_FILE}" ]; then
+            DUPLICATE_PAIR_COUNT=$(($(wc -l < "${DUPLICATE_PAIRS_FILE}") - 1))
+        fi
+        DUPLICATE_SAMPLE_COUNT=0
+        if [ -s "${DUPLICATE_SAMPLES_FILE}" ]; then
+            DUPLICATE_SAMPLE_COUNT=$(wc -l < "${DUPLICATE_SAMPLES_FILE}")
+        fi
 
-    if [ "${DUPLICATE_PAIR_COUNT}" -eq 0 ]; then
-        log_info "No duplicate-level kinship pairs detected (threshold ${DUPLICATE_THRESHOLD})"
-        rm -f "${DUPLICATE_PAIRS_FILE}" "${DUPLICATE_SAMPLES_FILE}" 2>/dev/null || true
-        DUPLICATE_SAMPLES_FILE=""
-    else
-        log_info "Duplicate detection: ${DUPLICATE_PAIR_COUNT} pair(s), ${DUPLICATE_SAMPLE_COUNT} sample(s) flagged"
-    fi
+        if [ "${DUPLICATE_PAIR_COUNT}" -eq 0 ]; then
+            log_info "No duplicate-level kinship pairs detected (threshold ${DUPLICATE_THRESHOLD})"
+            rm -f "${DUPLICATE_PAIRS_FILE}" "${DUPLICATE_SAMPLES_FILE}" 2>/dev/null || true
+            DUPLICATE_SAMPLES_FILE=""
+        else
+            log_info "Duplicate detection: ${DUPLICATE_PAIR_COUNT} pair(s), ${DUPLICATE_SAMPLE_COUNT} sample(s) flagged"
+        fi
 
-    rm -f "${KING_FILE}" "${KING_PREFIX}.log" 2>/dev/null || true
+        rm -f "${KING_FILE}" "${KING_PREFIX}.log" 2>/dev/null || true
+        printf '%s' "${king_params}" > "${king_stamp}"
+    fi
 
     if [ "${RUN_MODE}" = "duplicate" ]; then
         if [ -n "${DUPLICATE_PAIRS_FILE:-}" ] && [ -f "${DUPLICATE_PAIRS_FILE}" ]; then
@@ -435,45 +469,119 @@ if [ "${DUPLICATE_MODE}" != "off" ]; then
     fi
 fi
 
-log_info "LD pruning (200 kb window, step 50, r² 0.2)"
-"${PLINK2_BIN}" \
-    --pfile qc \
-    --indep-pairwise 200 50 0.2 \
-    --out pruned
+# =============================================================================
+# LD pruning (skip if params unchanged & outputs present)
+# =============================================================================
+LD_PRUNED_PREFIX="qc_pruned"
+ld_stamp="${LD_PRUNED_PREFIX}.ld.params.txt"
+ld_params="$(cat <<EOF
+pfile=${QC_PREFIX}
+window=200
+step=50
+r2=0.2
+EOF
+)"
 
-"${PLINK2_BIN}" \
-    --pfile qc \
-    --extract pruned.prune.in \
-    --make-pgen \
-    --out qc_pruned
-
-PCA_INPUT="qc_pruned"
-if [ "${DUPLICATE_MODE}" = "remove" ] && [ -n "${DUPLICATE_SAMPLES_FILE}" ] && [ -s "${DUPLICATE_SAMPLES_FILE}" ]; then
-    log_info "Removing duplicate samples for PCA"
-    "${PLINK2_BIN}" \
-        --pfile "${PCA_INPUT}" \
-        --remove "${DUPLICATE_SAMPLES_FILE}" \
-        --make-pgen \
-        --out qc_pruned_dedup
-    PCA_INPUT="qc_pruned_dedup"
+needs_ld="true"
+if [ -f "${LD_PRUNED_PREFIX}.pgen" ] && [ -f "${LD_PRUNED_PREFIX}.pvar" ] && [ -f "${LD_PRUNED_PREFIX}.psam" ] && [ -f "${ld_stamp}" ]; then
+    if diff -q <(printf '%s' "${ld_params}") "${ld_stamp}" >/dev/null 2>&1 \
+       && [ "${LD_PRUNED_PREFIX}.pgen" -nt "${QC_PREFIX}.pgen" ]; then
+        needs_ld="false"
+        log_info "Reusing existing ${LD_PRUNED_PREFIX}.{pgen,pvar,psam} (LD params unchanged; newer than ${QC_PREFIX})."
+    fi
 fi
 
-if [ "${REMOVE_RELATIVES}" = "true" ]; then
-    log_info "Removing close relatives (KING cutoff 0.125)"
+if [ "${needs_ld}" = "true" ]; then
+    log_info "LD pruning (200 kb window, step 50, r² 0.2)"
     "${PLINK2_BIN}" \
-        --pfile "${PCA_INPUT}" \
-        --king-cutoff 0.125 \
-        --out kin
+        --pfile qc \
+        --indep-pairwise 200 50 0.2 \
+        --out pruned
 
-    if [ ! -s "kin.king.cutoff.in.id" ]; then
-        log_warn "No individuals passed the KING cutoff; continuing with all samples."
-    else
-        NOREL_OUT="${PCA_INPUT}_norel"
+    "${PLINK2_BIN}" \
+        --pfile qc \
+        --extract pruned.prune.in \
+        --make-pgen \
+        --out "${LD_PRUNED_PREFIX}"
+    printf '%s' "${ld_params}" > "${ld_stamp}"
+fi
+
+# =============================================================================
+# Duplicate removal (skip if params unchanged & outputs present)
+# =============================================================================
+PCA_INPUT="${LD_PRUNED_PREFIX}"
+if [ "${DUPLICATE_MODE}" = "remove" ] && [ -n "${DUPLICATE_SAMPLES_FILE}" ] && [ -s "${DUPLICATE_SAMPLES_FILE}" ]; then
+    DEDUP_PREFIX="qc_pruned_dedup"
+    dedup_stamp="${DEDUP_PREFIX}.dedup.params.txt"
+    # Include a hash of the duplicate samples list so a changed list triggers re-run
+    dup_samples_hash="$(LC_ALL=C sort "${DUPLICATE_SAMPLES_FILE}" | cksum | awk '{print $1}')"
+    dedup_params="$(cat <<EOF
+pfile=${LD_PRUNED_PREFIX}
+duplicate_samples_hash=${dup_samples_hash}
+EOF
+)"
+
+    needs_dedup="true"
+    if [ -f "${DEDUP_PREFIX}.pgen" ] && [ -f "${DEDUP_PREFIX}.pvar" ] && [ -f "${DEDUP_PREFIX}.psam" ] && [ -f "${dedup_stamp}" ]; then
+        if diff -q <(printf '%s' "${dedup_params}") "${dedup_stamp}" >/dev/null 2>&1 \
+           && [ "${DEDUP_PREFIX}.pgen" -nt "${LD_PRUNED_PREFIX}.pgen" ]; then
+            needs_dedup="false"
+            log_info "Reusing existing ${DEDUP_PREFIX}.{pgen,pvar,psam} (dedup params unchanged)."
+        fi
+    fi
+
+    if [ "${needs_dedup}" = "true" ]; then
+        log_info "Removing duplicate samples for PCA"
         "${PLINK2_BIN}" \
             --pfile "${PCA_INPUT}" \
-            --keep kin.king.cutoff.in.id \
+            --remove "${DUPLICATE_SAMPLES_FILE}" \
             --make-pgen \
-            --out "${NOREL_OUT}"
+            --out "${DEDUP_PREFIX}"
+        printf '%s' "${dedup_params}" > "${dedup_stamp}"
+    fi
+    PCA_INPUT="${DEDUP_PREFIX}"
+fi
+
+# =============================================================================
+# Relative removal (skip if params unchanged & outputs present)
+# =============================================================================
+if [ "${REMOVE_RELATIVES}" = "true" ]; then
+    NOREL_OUT="${PCA_INPUT}_norel"
+    rel_stamp="${NOREL_OUT}.rel.params.txt"
+    rel_params="$(cat <<EOF
+pfile=${PCA_INPUT}
+king_cutoff=0.125
+EOF
+)"
+
+    needs_rel="true"
+    if [ -f "${NOREL_OUT}.pgen" ] && [ -f "${NOREL_OUT}.pvar" ] && [ -f "${NOREL_OUT}.psam" ] && [ -f "${rel_stamp}" ]; then
+        if diff -q <(printf '%s' "${rel_params}") "${rel_stamp}" >/dev/null 2>&1 \
+           && [ "${NOREL_OUT}.pgen" -nt "${PCA_INPUT}.pgen" ]; then
+            needs_rel="false"
+            log_info "Reusing existing ${NOREL_OUT}.{pgen,pvar,psam} (relative-removal params unchanged)."
+        fi
+    fi
+
+    if [ "${needs_rel}" = "true" ]; then
+        log_info "Removing close relatives (KING cutoff 0.125)"
+        "${PLINK2_BIN}" \
+            --pfile "${PCA_INPUT}" \
+            --king-cutoff 0.125 \
+            --out kin
+
+        if [ ! -s "kin.king.cutoff.in.id" ]; then
+            log_warn "No individuals passed the KING cutoff; continuing with all samples."
+        else
+            "${PLINK2_BIN}" \
+                --pfile "${PCA_INPUT}" \
+                --keep kin.king.cutoff.in.id \
+                --make-pgen \
+                --out "${NOREL_OUT}"
+            PCA_INPUT="${NOREL_OUT}"
+            printf '%s' "${rel_params}" > "${rel_stamp}"
+        fi
+    else
         PCA_INPUT="${NOREL_OUT}"
     fi
 fi
@@ -483,22 +591,68 @@ if [ ! -f "${PCA_INPUT}.pgen" ]; then
     exit 1
 fi
 
-log_info "Running PCA (10 components with variant weights)"
-"${PLINK2_BIN}" \
-    --pfile "${PCA_INPUT}" \
-    --pca 10 biallelic-var-wts \
-    --out pca
+# =============================================================================
+# PCA computation (skip if params unchanged & outputs present)
+# =============================================================================
+pca_stamp="pca.pca.params.txt"
+pca_params="$(cat <<EOF
+pfile=${PCA_INPUT}
+pca_components=10
+biallelic_var_wts=true
+EOF
+)"
 
-log_info "Rendering PCA plots"
+needs_pca="true"
+if [ -f "pca.eigenvec" ] && [ -f "pca.eigenval" ] && [ -f "${pca_stamp}" ]; then
+    if diff -q <(printf '%s' "${pca_params}") "${pca_stamp}" >/dev/null 2>&1 \
+       && [ "pca.eigenvec" -nt "${PCA_INPUT}.pgen" ]; then
+        needs_pca="false"
+        log_info "Reusing existing pca.eigenvec/eigenval (PCA params unchanged; newer than ${PCA_INPUT})."
+    fi
+fi
+
+if [ "${needs_pca}" = "true" ]; then
+    log_info "Running PCA (10 components with variant weights)"
+    "${PLINK2_BIN}" \
+        --pfile "${PCA_INPUT}" \
+        --pca 10 biallelic-var-wts \
+        --out pca
+    printf '%s' "${pca_params}" > "${pca_stamp}"
+fi
+
+# =============================================================================
+# PCA plots (skip if PNGs exist & newer than eigenvec + duplicate list)
+# =============================================================================
 PCA_DUPLICATE_FILE=""
 if [ -n "${DUPLICATE_SAMPLES_FILE}" ] && [ -s "${DUPLICATE_SAMPLES_FILE}" ]; then
     PCA_DUPLICATE_FILE="${DUPLICATE_SAMPLES_FILE}"
 fi
-Rscript "${RSCRIPTS_DIR}/PCA_plot.R" "${PWD}/pca.eigenvec" "${PWD}/pca.eigenval" "${PWD}" "${SHOW_LABELS}" "${LABEL_SIZE}" "${USE_GGREPEL}" "${PCA_DUPLICATE_FILE}"
 
-log_info "Cleaning up large intermediate files"
-rm -f all_chromosomes.pgen all_chromosomes.pvar all_chromosomes.psam all_chromosomes.log 2>/dev/null || true
-rm -f qc.log qc.nosex qc.pgen qc.pvar qc.psam pruned.log pruned.prune.in pruned.prune.out 2>/dev/null || true
+needs_plots="true"
+if [ -f "pca_PC1_PC2.png" ] && [ -f "pca_scree.png" ]; then
+    if [ "pca_PC1_PC2.png" -nt "pca.eigenvec" ]; then
+        # Also check if duplicate list changed since the plot was generated
+        if [ -z "${PCA_DUPLICATE_FILE}" ] || [ "pca_PC1_PC2.png" -nt "${PCA_DUPLICATE_FILE}" ]; then
+            needs_plots="false"
+            log_info "Reusing existing PCA plots (newer than pca.eigenvec)."
+        fi
+    fi
+fi
+
+if [ "${needs_plots}" = "true" ]; then
+    log_info "Rendering PCA plots"
+    Rscript "${RSCRIPTS_DIR}/PCA_plot.R" "${PWD}/pca.eigenvec" "${PWD}/pca.eigenval" "${PWD}" "${SHOW_LABELS}" "${LABEL_SIZE}" "${USE_GGREPEL}" "${PCA_DUPLICATE_FILE}"
+fi
+
+# =============================================================================
+# Cleanup: remove only log/temp files; keep data files for skip checks
+# =============================================================================
+log_info "Cleaning up temporary files (preserving data for future skip checks)"
+rm -f "${IMPORT_PREFIX}".log 2>/dev/null || true
+rm -f "${QC_PREFIX}".log "${QC_PREFIX}".nosex 2>/dev/null || true
+rm -f pruned.log 2>/dev/null || true
+rm -f qc_pruned.log qc_pruned_dedup.log 2>/dev/null || true
 rm -f kin.log kin.king.cutoff.in.id kin.king.cutoff.out.id 2>/dev/null || true
+rm -f pca.log 2>/dev/null || true
 
 log_info "PCA workflow completed."

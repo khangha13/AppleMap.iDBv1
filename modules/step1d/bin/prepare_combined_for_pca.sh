@@ -165,9 +165,51 @@ OUTPUT_VCF="${VCF_DIR}/combined_for_pca.vcf.gz"
 OUTPUT_STATS="${VCF_DIR}/combined_for_pca.stats.txt"
 
 if [ -f "${OUTPUT_VCF}" ] && [ "${FORCE}" != "true" ]; then
-    log_error "Output file already exists: ${OUTPUT_VCF}"
-    log_error "Use --force to overwrite or remove the file manually"
-    exit 1
+    # VCF exists — check if the stats file is the only thing missing.
+    if [ ! -f "${OUTPUT_STATS}" ]; then
+        log_info "Combined VCF already exists: ${OUTPUT_VCF}"
+        log_info "Stats file missing — generating bcftools stats only..."
+
+        # Load bcftools if needed (same logic as the main path below)
+        if ! command -v bcftools >/dev/null 2>&1; then
+            if command -v module >/dev/null 2>&1; then
+                log_info "bcftools not found, attempting to load module..."
+                module purge
+                if module load bcftools/1.18-gcc-12.3.0 >/dev/null 2>&1; then
+                    log_success "Loaded bcftools/1.18-gcc-12.3.0 module"
+                else
+                    log_error "Failed to load bcftools module"
+                    exit 1
+                fi
+            else
+                log_error "bcftools not found and module system not available"
+                exit 1
+            fi
+        fi
+
+        if bcftools stats "${OUTPUT_VCF}" > "${OUTPUT_STATS}"; then
+            log_success "Created stats file: ${OUTPUT_STATS}"
+
+            # Print summary from the freshly generated stats
+            snp_count=$(grep "^SN" "${OUTPUT_STATS}" | grep "number of SNPs:" | awk '{print $NF}' || echo "0")
+            total_records=$(grep "^SN" "${OUTPUT_STATS}" | grep "number of records:" | awk '{print $NF}' || echo "0")
+            sample_count=$(grep "^SN" "${OUTPUT_STATS}" | grep "number of samples:" | awk '{print $NF}' || echo "0")
+            log_info "=== VCF Statistics ==="
+            log_info "Total records: ${total_records}"
+            log_info "Total SNPs: ${snp_count}"
+            log_info "Samples: ${sample_count}"
+        else
+            log_error "Failed to generate bcftools stats"
+            exit 1
+        fi
+        exit 0
+    fi
+
+    log_info "Combined VCF and stats already exist — nothing to do."
+    log_info "  VCF:   ${OUTPUT_VCF}"
+    log_info "  Stats: ${OUTPUT_STATS}"
+    log_info "Use --force to regenerate from scratch."
+    exit 0
 fi
 
 # Load bcftools if not available
