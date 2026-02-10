@@ -1059,6 +1059,78 @@ cp step1c_job.legacy.sh step1c_job.sh
 
 ---
 
+### 5.N `log_success: command not found` crashes `prepare_combined_for_pca.sh` (2026-02-06)
+
+**Symptom**
+```
+[2026-02-06 15:28:33] [INFO] [prepare_combined_for_pca] Generating bcftools stats...
+/scratch/.../prepare_combined_for_pca.sh: line 449: log_success: command not found
+[2026-02-06 15:31:28] [ERROR] [step1d] Failed to prepare combined VCF for PCA
+```
+The combined VCF was created successfully, bcftools stats completed, but the
+script crashed on the very next line — a `log_success` call. Because the script
+runs with `set -euo pipefail`, the "command not found" exit code (127) triggered
+immediate termination. `master_vcf_analysis.sh` then reported "Failed to prepare
+combined VCF" and the entire `--pca` workflow aborted.
+
+**Root cause**
+`lib/logging.sh` defines `log_info`, `log_warn`, `log_error`, `log_debug`, and
+`log_fatal` — but **does not define `log_success`**. The script
+`prepare_combined_for_pca.sh` had a fallback block that defined `log_success`,
+but it was inside the `else` branch:
+
+```bash
+if [ -f "${PIPELINE_ROOT}/lib/logging.sh" ]; then
+    source "${PIPELINE_ROOT}/lib/logging.sh"       # ← succeeds on HPC
+    init_logging "prepare_combined_for_pca" "pipeline"
+else
+    log_info()    { echo "[INFO] $*" >&2; }
+    log_warn()    { echo "[WARN] $*" >&2; }
+    log_error()   { echo "[ERROR] $*" >&2; }
+    log_success() { echo "[SUCCESS] $*" >&2; }  # ← only defined here
+fi
+```
+
+On HPC, `logging.sh` exists and loads successfully, so the `else` block (where
+`log_success` is defined) is **never reached**. The function is therefore
+undefined at runtime.
+
+`master_vcf_analysis.sh` avoids this by defining its own shim at line 338:
+`log_success() { log_info "$1"; }`. But `prepare_combined_for_pca.sh` is invoked
+as a **separate subprocess** (`bash prepare_combined_for_pca.sh …`), so it does
+not inherit that function definition.
+
+**Fix**
+Added a standalone guard **after** the `if/else` block in
+`prepare_combined_for_pca.sh`:
+
+```bash
+# logging.sh does not define log_success; ensure it always exists.
+if ! command -v log_success >/dev/null 2>&1; then
+    log_success() { log_info "$1"; }
+fi
+```
+
+This works regardless of whether `logging.sh` was sourced or not.
+
+**Lesson for AI agents**
+1. **`lib/logging.sh` does NOT provide `log_success`.** If you use
+   `log_success` in any script, you must define it yourself. The recommended
+   pattern is `log_success() { log_info "$1"; }` placed after sourcing
+   `logging.sh`.
+2. **Fallback definitions inside `else` blocks are invisible when the `if`
+   branch succeeds.** If a function must always exist, define it (or guard it
+   with `command -v`) outside conditional blocks.
+3. **`set -euo pipefail` turns "command not found" into a hard crash.** A
+   missing log function doesn't just skip the message — it kills the entire
+   script and everything downstream.
+4. **Subprocess scripts do not inherit shell functions.** When a script is
+   called via `bash script.sh`, it starts a fresh shell. Functions defined in
+   the caller (like `master_vcf_analysis.sh`'s `log_success` shim) are not
+   available in the callee.
+
+---
+
 ## 6. Configuration & Troubleshooting Checklist
 
 This is the condensed, pipeline‑wide checklist that replaces the separate

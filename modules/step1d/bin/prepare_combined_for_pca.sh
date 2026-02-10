@@ -61,7 +61,11 @@ else
     log_info() { echo "[INFO] $*" >&2; }
     log_warn() { echo "[WARN] $*" >&2; }
     log_error() { echo "[ERROR] $*" >&2; }
-    log_success() { echo "[SUCCESS] $*" >&2; }
+fi
+
+# logging.sh does not define log_success; ensure it always exists.
+if ! command -v log_success >/dev/null 2>&1; then
+    log_success() { log_info "$1"; }
 fi
 
 usage() {
