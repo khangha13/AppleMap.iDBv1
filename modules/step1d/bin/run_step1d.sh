@@ -1,6 +1,10 @@
 #!/bin/bash
 # =============================================================================
-# STEP 1D SUBMISSION WRAPPER
+# STEP 1D SUBMISSION WRAPPER (v2 -- report-data)
+# =============================================================================
+# Submits a SLURM job for the Step1D report-data pipeline.
+# Old mode flags (--qc, --PCA, --duplicate-check, --remove-relatives) are
+# accepted with a deprecation warning and mapped to report-data.
 # =============================================================================
 
 STEP1D_BIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -9,7 +13,7 @@ if [ -n "${PIPELINE_ROOT:-}" ]; then
     if [ -d "${PIPELINE_ROOT}" ]; then
         PIPELINE_ROOT="$(cd "${PIPELINE_ROOT}" && pwd)"
     else
-        echo "[step1d] ⚠️  Provided PIPELINE_ROOT (${PIPELINE_ROOT}) does not exist; falling back to module-relative path." >&2
+        echo "[step1d] Warning: Provided PIPELINE_ROOT (${PIPELINE_ROOT}) does not exist; falling back to module-relative path." >&2
         PIPELINE_ROOT="$(cd "${STEP1D_BIN_DIR}/../../.." && pwd)"
     fi
 else
@@ -27,8 +31,8 @@ main() {
     local vcf_dir=""
 
     if [ $# -eq 0 ]; then
-        log_error "Usage: step1d main <dataset_name> <vcf_directory> [--beagle] [--dry-run] [--qc|--PCA|--duplicate-check] [--remove-relatives]
-       or: step1d main <vcf_directory> [--beagle] [--dry-run] [--qc|--PCA|--duplicate-check] [--remove-relatives] (dataset defaults to directory name)"
+        log_error "Usage: step1d main <dataset_name> <vcf_directory> [--beagle] [--dry-run]
+       or: step1d main <vcf_directory> [--beagle] [--dry-run] (dataset defaults to directory name)"
         exit 1
     fi
 
@@ -43,8 +47,6 @@ main() {
     fi
 
     # Guard: reject flag-like strings consumed as dataset_name or vcf_dir.
-    # This catches the common mistake of putting flags before the directory:
-    #   step1d_submit.sh --pca /path/to/vcfs   (wrong order)
     if [[ "${dataset_name}" == -* ]]; then
         log_error "First argument '${dataset_name}' looks like a flag, not a dataset name or directory."
         log_error ""
@@ -52,16 +54,13 @@ main() {
         log_error "  bash step1d_submit.sh <vcf_directory> ${dataset_name}"
         log_error ""
         log_error "Expected usage:"
-        log_error "  bash step1d_submit.sh <vcf_directory> [--PCA|--qc|--duplicate-check] [options]"
-        log_error "  bash step1d_submit.sh <dataset_name> <vcf_directory> [--PCA|--qc] [options]"
+        log_error "  bash step1d_submit.sh <vcf_directory> [--beagle] [--dry-run]"
+        log_error "  bash step1d_submit.sh <dataset_name> <vcf_directory> [--beagle] [--dry-run]"
         exit 1
     fi
 
     local beagle_flag=false
     local dry_run_flag=false
-    local remove_rel_flag=false
-    local mode="qc"
-    local mode_set=false
     while (( "$#" )); do
         case "$1" in
             --beagle)
@@ -70,32 +69,9 @@ main() {
             --dry-run|-n)
                 dry_run_flag=true
                 ;;
-            --qc)
-                if ${mode_set}; then
-                    log_error "Multiple modes provided; choose one of --qc, --PCA, or --duplicate-check."
-                    exit 1
-                fi
-                mode="qc"
-                mode_set=true
-                ;;
-            --PCA|--pca)
-                if ${mode_set}; then
-                    log_error "Multiple modes provided; choose one of --qc, --PCA, or --duplicate-check."
-                    exit 1
-                fi
-                mode="pca"
-                mode_set=true
-                ;;
-            --duplicate-check)
-                if ${mode_set}; then
-                    log_error "Multiple modes provided; choose one of --qc, --PCA, or --duplicate-check."
-                    exit 1
-                fi
-                mode="duplicate-check"
-                mode_set=true
-                ;;
-            --remove-relatives)
-                remove_rel_flag=true
+            --qc|--PCA|--pca|--duplicate-check|--remove-relatives)
+                log_warn "Flag '${1}' is deprecated and ignored. Step1D now runs a combined report-data workflow."
+                log_warn "This flag will be removed in a future version."
                 ;;
             *)
                 log_warn "Unknown option ignored: $1"
@@ -104,14 +80,9 @@ main() {
         shift || true
     done
 
-    if ${remove_rel_flag} && [ "${mode}" != "pca" ]; then
-        log_error "--remove-relatives requires --PCA."
-        exit 1
-    fi
-
     if [ -z "${vcf_dir}" ] || [[ "${vcf_dir}" == --* ]]; then
-        log_error "Usage: step1d main <dataset_name> <vcf_directory> [--beagle] [--dry-run] [--qc|--PCA|--duplicate-check] [--remove-relatives]
-       or: step1d main <vcf_directory> [--beagle] [--dry-run] [--qc|--PCA|--duplicate-check] [--remove-relatives] (dataset defaults to directory name)"
+        log_error "Usage: step1d main <dataset_name> <vcf_directory> [--beagle] [--dry-run]
+       or: step1d main <vcf_directory> [--beagle] [--dry-run] (dataset defaults to directory name)"
         exit 1
     fi
 
@@ -129,6 +100,7 @@ main() {
     export VCF_DIR="${vcf_dir}"
     export WORK_DIR="${WORK_DIR_OVERRIDE:-${vcf_dir}}"
     export R_SCRIPTS_DIR="${R_SCRIPTS_DIR_OVERRIDE:-${MODULE_DIR}/Rscripts}"
+    export DATASET_NAME="${dataset_name}"
 
     local config
     config=$(get_step1d_config)
@@ -151,8 +123,6 @@ main() {
     local job_args=()
     $beagle_flag && job_args+=("--beagle")
     $dry_run_flag && job_args+=("--dry-run")
-    job_args+=("--${mode}")
-    $remove_rel_flag && job_args+=("--remove-relatives")
 
     local job_id
     job_id=$(submit_job "${slurm_script}" "${job_args[*]}" "${dataset_name}" "1D")
@@ -178,9 +148,6 @@ create_step1d_slurm_script() {
 
     mkdir -p "${PIPELINE_SLURM_SCRIPT_DIR}"
     local slurm_script="${PIPELINE_SLURM_SCRIPT_DIR}/Apple_GATK_1D_${dataset_name}_$(date +%Y%m%d_%H%M%S).sh"
-    # NOTE: Do not use SCRIPT_DIR here. It is also defined in config/pipeline_config.sh
-    # and can be overwritten when that file is sourced, causing the template path to
-    # resolve incorrectly (e.g. ${PIPELINE_ROOT}/templates instead of modules/step1d/templates).
     local template="${MODULE_DIR}/templates/master_vcf_analysis.sh"
 
     local config_string="job_name=Apple_GATK_1D_${dataset_name}

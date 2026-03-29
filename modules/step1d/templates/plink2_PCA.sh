@@ -1,67 +1,47 @@
 #!/bin/bash
 # =============================================================================
-# Step 1D - PCA Helper
+# Step 1D - PCA Helper (v2 -- compute everything, decide later)
 # -----------------------------------------------------------------------------
-# Converts combined VCF to PLINK2 format, applies light-weight QC, 
-# (optionally) removes close relatives, runs PCA, and generates 
-# publication-ready plots.
+# Converts combined VCF to PLINK2 format, applies light-weight QC, computes
+# all-pairwise KING kinship, LD-prunes, and runs PCA on ALL samples.
 #
-# NOTE: This script expects combined_for_pca.vcf.gz to already exist in the
-# VCF source directory. Use prepare_combined_for_pca.sh to create it, or
-# the master_vcf_analysis.sh --PCA workflow will auto-prepare it.
+# No duplicate filtering, no relative removal, no plotting.
+# The raw KING .kin0 file is preserved for downstream Parquet export.
 #
-# NOTE: DATA MANAGEMENT
-#   This script writes PCA outputs (eigenvec, eigenval, plots, KING tables)
-#   into the current working directory (cd'd into PCA_OUTPUT_DIR by the
-#   caller). Layout is ad-hoc; see master_vcf_analysis.sh header for the
-#   recommended future refactor to separate INPUT/OUTPUT/TEMP paths.
+# Positional arguments (5):
+#   1. vcf_dir        Directory containing combined_for_pca.vcf.gz
+#   2. rscripts_dir   Directory containing R scripts (unused here, kept for API)
+#   3. plink2_bin     Path to plink2 binary (default: plink2)
+#   4. bcftools_bin   Path to bcftools binary (default: bcftools)
+#   5. cache_pca_dir  Output directory for all PCA artefacts
 # =============================================================================
 set -Eeuo pipefail
 
 usage() {
     cat <<'EOF'
-Usage: plink2_PCA.sh <vcf_dir> <rscripts_dir> [plink2_bin] [bcftools_bin] \
-                     [remove_relatives] [show_labels] [label_size] [use_ggrepel] \
-                     [merged_vcf_pattern] [duplicate_mode] [duplicate_king_threshold] \
-                     [run_mode]
+Usage: plink2_PCA.sh <vcf_dir> <rscripts_dir> [plink2_bin] [bcftools_bin] [cache_pca_dir]
 
 Arguments:
-  vcf_dir              Directory containing combined_for_pca.vcf.gz
-  rscripts_dir         Directory containing PCA_plot.R
+  vcf_dir         Directory containing combined_for_pca.vcf.gz
+  rscripts_dir    Directory containing R scripts (kept for API compatibility)
+  plink2_bin      Path to plink2 binary (default: plink2)
+  bcftools_bin    Path to bcftools binary (default: bcftools)
+  cache_pca_dir   Output directory for PCA artefacts (default: current directory)
 
-Optional Arguments (with defaults):
-  plink2_bin           Path to plink2 binary (default: plink2)
-  bcftools_bin         Path to bcftools binary (default: bcftools)
-  remove_relatives     Remove close relatives before PCA (default: false)
-  show_labels          Show sample labels on plots (default: true)
-  label_size           Plot label size (default: 3)
-  use_ggrepel          Use ggrepel for non-overlapping labels (default: true)
-  merged_vcf_pattern   Pattern for merged VCF detection (default: *merged*.vcf.gz,*merge*.vcf.gz)
-  duplicate_mode       Duplicate handling: off|flag|remove (default: flag)
-  duplicate_king_threshold  KING threshold for duplicates (default: 0.485)
-  run_mode             Run mode: pca|duplicate (default: pca)
+Pipeline steps (each with stamp-based skip check):
+  1. Import VCF to PLINK (--snps-only just-acgt --max-alleles 2)
+  2. QC filter (--geno 0.05 --mind 0.10 --maf 0.01)
+  3. KING table (--make-king-table, preserves raw .kin0)
+  4. LD prune (--indep-pairwise 200 50 0.2)
+  5. PCA on all pruned samples (--pca 10 biallelic-var-wts)
 
 Outputs:
-  pca.eigenvec              Eigenvectors (sample coordinates)
-  pca.eigenval              Eigenvalues (variance explained)
-  pca_plot_PC1_PC2.png      PCA scatter plot
-  king_duplicate_pairs.tsv  Duplicate pairs (if detected)
-  king_duplicate_samples.tsv Flagged samples (if detected)
-
-Requirements:
-  - combined_for_pca.vcf.gz must exist in vcf_dir
-  - PLINK2 and bcftools available
-  - R with ggplot2, data.table, ragg, scales
-
-Examples:
-  # Basic PCA
-  plink2_PCA.sh /data/vcfs /path/to/Rscripts
-
-  # With relative removal
-  plink2_PCA.sh /data/vcfs /path/to/Rscripts plink2 bcftools true
-
-  # Duplicate detection only
-  plink2_PCA.sh /data/vcfs /path/to/Rscripts plink2 bcftools false true 3 true "" flag 0.485 duplicate
+  all_chromosomes.{pgen,pvar,psam}   Imported dataset
+  qc.{pgen,pvar,psam}                QC-filtered dataset
+  king_pairwise.kin0                  All pairwise KING kinship values
+  qc_pruned.{pgen,pvar,psam}         LD-pruned dataset
+  pca.eigenvec                        Eigenvectors (sample coordinates)
+  pca.eigenval                        Eigenvalues (variance explained)
 EOF
 }
 
@@ -70,7 +50,6 @@ if [ -n "${PIPELINE_ROOT:-}" ]; then
     if [ -d "${PIPELINE_ROOT}" ]; then
         PIPELINE_ROOT="$(cd "${PIPELINE_ROOT}" && pwd)"
     else
-        echo "[plink2_PCA] ⚠️  Provided PIPELINE_ROOT (${PIPELINE_ROOT}) does not exist; falling back to template-relative path." >&2
         PIPELINE_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
     fi
 else
@@ -81,16 +60,19 @@ if [ -f "${PIPELINE_ROOT}/lib/logging.sh" ]; then
     source "${PIPELINE_ROOT}/lib/logging.sh"
     init_logging "step1d_pca" "pipeline"
 fi
+if ! command -v log_success >/dev/null 2>&1; then
+    log_success() { log_info "$1"; }
+fi
+
 trap 'log_error "Unexpected failure in plink2_PCA.sh"; exit 1' ERR
 
-# Handle --help flag
 if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
     usage
     exit 0
 fi
 
 if [ "$#" -lt 2 ]; then
-    log_error "Usage: plink2_PCA.sh <vcf_dir> <rscripts_dir> [plink2_bin] [bcftools_bin] [remove_relatives] [show_labels] [label_size] [use_ggrepel] [merged_vcf_pattern] [duplicate_mode] [duplicate_king_threshold] [run_mode]"
+    log_error "Usage: plink2_PCA.sh <vcf_dir> <rscripts_dir> [plink2_bin] [bcftools_bin] [cache_pca_dir]"
     log_error "Run 'plink2_PCA.sh --help' for detailed usage information"
     exit 1
 fi
@@ -99,122 +81,15 @@ VCF_SOURCE_DIR="$1"
 RSCRIPTS_DIR="$2"
 PLINK2_BIN="${3:-plink2}"
 BCFTOOLS_BIN="${4:-bcftools}"
-REMOVE_RELATIVES_RAW="${5:-false}"
-SHOW_LABELS_RAW="${6:-true}"
-LABEL_SIZE_RAW="${7:-3}"
-USE_GGREPEL_RAW="${8:-true}"
-MERGED_PATTERN_RAW="${9:-${STEP1D_PCA_MERGED_PATTERN:-}}"
-FORCE_CONCAT_RAW="${STEP1D_PCA_FORCE_CONCAT:-false}"
-MERGED_EXCLUDE_CHR_RAW="${STEP1D_PCA_MERGED_EXCLUDE_CHR:-true}"
-REUSE_COMBINED_RAW="${STEP1D_PCA_REUSE_COMBINED:-true}"
-# PLINK QC thresholds (override via environment at submit time)
-PCA_GENO_RAW="${STEP1D_PCA_GENO:-0.05}"
-PCA_MIND_RAW="${STEP1D_PCA_MIND:-0.10}"
-PCA_MAF_RAW="${STEP1D_PCA_MAF:-0.01}"
-DUPLICATE_MODE_RAW="${10:-${STEP1D_DUPLICATE_MODE:-flag}}"
-DUPLICATE_THRESHOLD_RAW="${11:-${STEP1D_DUPLICATE_KING_THRESHOLD:-0.485}}"
-RUN_MODE_RAW="${12:-pca}"
+CACHE_PCA_DIR="${5:-${PWD}}"
 
-normalize_bool() {
-    local value="$1"
-    value="$(printf '%s' "${value}" | tr '[:upper:]' '[:lower:]')"
-    case "${value}" in
-        true|1|yes|y) echo "true" ;;
-        *) echo "false" ;;
-    esac
-}
-
-normalize_duplicate_mode() {
-    local value="$1"
-    value="$(printf '%s' "${value}" | tr '[:upper:]' '[:lower:]')"
-    case "${value}" in
-        ""|off|false|0|no|none) echo "off" ;;
-        remove|dedup|drop|exclude) echo "remove" ;;
-        flag|true|1|yes|on) echo "flag" ;;
-        *) echo "${value}" ;;
-    esac
-}
-
-trim_pattern() {
-    printf '%s' "$1" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
-}
-
-normalize_run_mode() {
-    local value="$1"
-    value="$(printf '%s' "${value}" | tr '[:upper:]' '[:lower:]')"
-    case "${value}" in
-        duplicate|dup|duplicates) echo "duplicate" ;;
-        pca|"") echo "pca" ;;
-        *) echo "${value}" ;;
-    esac
-}
-
-REMOVE_RELATIVES="$(normalize_bool "${REMOVE_RELATIVES_RAW}")"
-SHOW_LABELS="$(normalize_bool "${SHOW_LABELS_RAW}")"
-USE_GGREPEL="$(normalize_bool "${USE_GGREPEL_RAW}")"
-FORCE_CONCAT="$(normalize_bool "${FORCE_CONCAT_RAW}")"
-MERGED_EXCLUDE_CHR="$(normalize_bool "${MERGED_EXCLUDE_CHR_RAW}")"
-REUSE_COMBINED="$(normalize_bool "${REUSE_COMBINED_RAW}")"
-DUPLICATE_MODE="$(normalize_duplicate_mode "${DUPLICATE_MODE_RAW}")"
-RUN_MODE="$(normalize_run_mode "${RUN_MODE_RAW}")"
-
-normalize_num() {
-    local value="$1"
-    local fallback="$2"
-    if [[ "${value}" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
-        printf '%s' "${value}"
-    else
-        printf '%s' "${fallback}"
-    fi
-}
-
-PCA_GENO="$(normalize_num "${PCA_GENO_RAW}" "0.05")"
-PCA_MIND="$(normalize_num "${PCA_MIND_RAW}" "0.10")"
-PCA_MAF="$(normalize_num "${PCA_MAF_RAW}" "0.01")"
-
-if [[ "${DUPLICATE_THRESHOLD_RAW}" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
-    DUPLICATE_THRESHOLD="${DUPLICATE_THRESHOLD_RAW}"
-else
-    DUPLICATE_THRESHOLD="0.485"
-fi
-
-case "${DUPLICATE_MODE}" in
-    off|flag|remove)
-        ;;
-    *)
-        log_warn "Unknown duplicate mode '${DUPLICATE_MODE_RAW}'; defaulting to 'flag'."
-        DUPLICATE_MODE="flag"
-        ;;
-esac
-
-case "${RUN_MODE}" in
-    pca|duplicate)
-        ;;
-    *)
-        log_warn "Unknown run mode '${RUN_MODE_RAW}'; defaulting to 'pca'."
-        RUN_MODE="pca"
-        ;;
-esac
-
-if [ "${RUN_MODE}" = "duplicate" ] && [ "${DUPLICATE_MODE}" = "off" ]; then
-    log_info "Duplicate-check mode requested; enabling duplicate detection (flag mode)."
-    DUPLICATE_MODE="flag"
-fi
-
-# Validate numeric label size; default to 3 if invalid
-if [[ "${LABEL_SIZE_RAW}" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
-    LABEL_SIZE="${LABEL_SIZE_RAW}"
-else
-    LABEL_SIZE="3"
-fi
+# QC thresholds (overridable via environment)
+PCA_GENO="${STEP1D_PCA_GENO:-0.05}"
+PCA_MIND="${STEP1D_PCA_MIND:-0.10}"
+PCA_MAF="${STEP1D_PCA_MAF:-0.01}"
 
 if [ ! -d "${VCF_SOURCE_DIR}" ]; then
     log_error "VCF directory not found: ${VCF_SOURCE_DIR}"
-    exit 1
-fi
-
-if [ ! -d "${RSCRIPTS_DIR}" ] || [ ! -f "${RSCRIPTS_DIR}/PCA_plot.R" ]; then
-    log_error "PCA_plot.R not found in ${RSCRIPTS_DIR}"
     exit 1
 fi
 
@@ -228,32 +103,21 @@ if ! command -v "${BCFTOOLS_BIN}" >/dev/null 2>&1; then
     exit 1
 fi
 
-# Expect combined_for_pca.vcf.gz to already exist
-# (prepared by master_vcf_analysis.sh or prepare_combined_for_pca.sh)
 COMBINED_VCF="combined_for_pca.vcf.gz"
 
 if [ ! -f "${VCF_SOURCE_DIR}/${COMBINED_VCF}" ]; then
     log_error "Required combined VCF not found: ${VCF_SOURCE_DIR}/${COMBINED_VCF}"
-    log_error ""
-    log_error "This script expects combined_for_pca.vcf.gz to already exist."
-    log_error "Please prepare it first using one of these methods:"
-    log_error ""
-    log_error "  Option 1 (Recommended): Use the PCA workflow which auto-prepares it:"
-    log_error "    bash modules/step1d/bin/run_step1d.sh ${VCF_SOURCE_DIR} --PCA"
-    log_error ""
-    log_error "  Option 2: Manually prepare the combined VCF:"
-    log_error "    bash modules/step1d/bin/prepare_combined_for_pca.sh ${VCF_SOURCE_DIR}"
-    log_error "    # Then run this script again"
-    log_error ""
+    log_error "Please prepare it first using prepare_combined_for_pca.sh"
     exit 1
 fi
 
-# Work in PCA output directory, link combined VCF if needed
+mkdir -p "${CACHE_PCA_DIR}"
+cd "${CACHE_PCA_DIR}"
+
+# Link combined VCF if not already in our working directory
 if [ "${VCF_SOURCE_DIR}/${COMBINED_VCF}" != "${PWD}/${COMBINED_VCF}" ]; then
     log_info "Linking combined VCF from source directory"
     ln -sf "${VCF_SOURCE_DIR}/${COMBINED_VCF}" "${COMBINED_VCF}"
-    
-    # Link index files (try both CSI and TBI)
     if [ -f "${VCF_SOURCE_DIR}/${COMBINED_VCF}.csi" ]; then
         ln -sf "${VCF_SOURCE_DIR}/${COMBINED_VCF}.csi" "${COMBINED_VCF}.csi"
     fi
@@ -264,13 +128,11 @@ fi
 
 log_info "Using combined VCF for PCA: ${COMBINED_VCF}"
 
+# =============================================================================
+# STEP 1: Import VCF to PLINK2
+# =============================================================================
 IMPORT_PREFIX="all_chromosomes"
-QC_PREFIX="qc"
-
 import_stamp="${IMPORT_PREFIX}.import.params.txt"
-qc_stamp="${QC_PREFIX}.qc.params.txt"
-
-log_info "Converting VCF to PLINK2 pgen format"
 import_params="$(cat <<EOF
 vcf=${COMBINED_VCF}
 snps_only=just-acgt
@@ -284,11 +146,12 @@ needs_import="true"
 if [ -f "${IMPORT_PREFIX}.pgen" ] && [ -f "${IMPORT_PREFIX}.pvar" ] && [ -f "${IMPORT_PREFIX}.psam" ] && [ -f "${import_stamp}" ]; then
     if diff -q <(printf '%s' "${import_params}") "${import_stamp}" >/dev/null 2>&1 && [ "${IMPORT_PREFIX}.pgen" -nt "${COMBINED_VCF}" ]; then
         needs_import="false"
-        log_info "Reusing existing ${IMPORT_PREFIX}.{pgen,pvar,psam} (import params unchanged; newer than ${COMBINED_VCF})."
+        log_info "Reusing existing ${IMPORT_PREFIX}.{pgen,pvar,psam} (params unchanged; newer than ${COMBINED_VCF})."
     fi
 fi
 
 if [ "${needs_import}" = "true" ]; then
+    log_info "Converting VCF to PLINK2 pgen format"
     "${PLINK2_BIN}" \
         --vcf "${COMBINED_VCF}" \
         --double-id \
@@ -302,7 +165,11 @@ if [ "${needs_import}" = "true" ]; then
     printf '%s' "${import_params}" > "${import_stamp}"
 fi
 
-log_info "Basic QC (geno=${PCA_GENO}, mind=${PCA_MIND}, maf=${PCA_MAF})"
+# =============================================================================
+# STEP 2: QC filtering
+# =============================================================================
+QC_PREFIX="qc"
+qc_stamp="${QC_PREFIX}.qc.params.txt"
 qc_params="$(cat <<EOF
 pfile=${IMPORT_PREFIX}
 geno=${PCA_GENO}
@@ -314,14 +181,14 @@ EOF
 
 needs_qc="true"
 if [ -f "${QC_PREFIX}.pgen" ] && [ -f "${QC_PREFIX}.pvar" ] && [ -f "${QC_PREFIX}.psam" ] && [ -f "${qc_stamp}" ]; then
-    # Reuse only when params match and qc output is newer than import output
     if diff -q <(printf '%s' "${qc_params}") "${qc_stamp}" >/dev/null 2>&1 && [ "${QC_PREFIX}.pgen" -nt "${IMPORT_PREFIX}.pgen" ]; then
         needs_qc="false"
-        log_info "Reusing existing ${QC_PREFIX}.{pgen,pvar,psam} (QC params unchanged; newer than ${IMPORT_PREFIX})."
+        log_info "Reusing existing ${QC_PREFIX}.{pgen,pvar,psam} (QC params unchanged)."
     fi
 fi
 
 if [ "${needs_qc}" = "true" ]; then
+    log_info "QC filtering (geno=${PCA_GENO}, mind=${PCA_MIND}, maf=${PCA_MAF})"
     "${PLINK2_BIN}" \
         --pfile "${IMPORT_PREFIX}" \
         --geno "${PCA_GENO}" \
@@ -334,143 +201,58 @@ if [ "${needs_qc}" = "true" ]; then
 fi
 
 # =============================================================================
-# KING duplicate detection (skip if params unchanged & outputs present)
+# STEP 3: KING all-pairwise kinship (preserve raw .kin0)
 # =============================================================================
-DUPLICATE_SAMPLES_FILE=""
-DUPLICATE_PAIRS_FILE="king_duplicate_pairs.tsv"
-DUPLICATE_PAIR_COUNT=0
-DUPLICATE_SAMPLE_COUNT=0
-
-if [ "${DUPLICATE_MODE}" != "off" ]; then
-    KING_PREFIX="king_duplicates"
-    king_stamp="${KING_PREFIX}.king.params.txt"
-    king_params="$(cat <<EOF
+KING_PREFIX="king_pairwise"
+king_stamp="${KING_PREFIX}.king.params.txt"
+king_params="$(cat <<EOF
 pfile=${QC_PREFIX}
-duplicate_mode=${DUPLICATE_MODE}
-duplicate_threshold=${DUPLICATE_THRESHOLD}
 EOF
 )"
-    DUPLICATE_SAMPLES_FILE="king_duplicate_samples.tsv"
 
-    needs_king="true"
-    if [ -f "${king_stamp}" ]; then
-        if diff -q <(printf '%s' "${king_params}") "${king_stamp}" >/dev/null 2>&1 \
-           && [ "${king_stamp}" -nt "${QC_PREFIX}.pgen" ]; then
-            needs_king="false"
-            # Restore counts from existing files
-            if [ -s "${DUPLICATE_PAIRS_FILE}" ]; then
-                DUPLICATE_PAIR_COUNT=$(($(wc -l < "${DUPLICATE_PAIRS_FILE}") - 1))
-                [ -s "${DUPLICATE_SAMPLES_FILE}" ] && DUPLICATE_SAMPLE_COUNT=$(wc -l < "${DUPLICATE_SAMPLES_FILE}")
-                log_info "Reusing KING results (${DUPLICATE_PAIR_COUNT} pair(s), ${DUPLICATE_SAMPLE_COUNT} sample(s); params unchanged)."
-            else
-                log_info "Reusing KING results (no duplicates detected; params unchanged)."
-                DUPLICATE_SAMPLES_FILE=""
-            fi
-        fi
+needs_king="true"
+KING_FILE=""
+for candidate in "${KING_PREFIX}.kin0" "${KING_PREFIX}.king"; do
+    if [ -f "${candidate}" ]; then
+        KING_FILE="${candidate}"
+        break
     fi
+done
 
-    if [ "${needs_king}" = "true" ]; then
-        log_info "Estimating KING kinship for duplicate detection (threshold ${DUPLICATE_THRESHOLD})"
-        "${PLINK2_BIN}" \
-            --pfile qc \
-            --make-king-table \
-            --out "${KING_PREFIX}"
-
-        KING_FILE=""
-        for candidate in "${KING_PREFIX}.king" "${KING_PREFIX}.kin0"; do
-            if [ -f "${candidate}" ]; then
-                KING_FILE="${candidate}"
-                break
-            fi
-        done
-        if [ -z "${KING_FILE}" ]; then
-            log_error "KING output not found for prefix: ${KING_PREFIX}"
-            exit 1
-        fi
-
-        DUPLICATE_SAMPLES_TMP="${DUPLICATE_SAMPLES_FILE}.tmp"
-
-        awk -v thr="${DUPLICATE_THRESHOLD}" \
-            -v pairs="${DUPLICATE_PAIRS_FILE}" \
-            -v samples="${DUPLICATE_SAMPLES_TMP}" '
-            BEGIN {
-                FS = "[[:space:]]+";
-                OFS = "\t";
-            }
-            NR == 1 {
-                for (i = 1; i <= NF; i++) {
-                    col = tolower($i);
-                    sub(/^#/, "", col);
-                    if (col == "fid1") fid1 = i;
-                    else if (col == "iid1") iid1 = i;
-                    else if (col == "fid2") fid2 = i;
-                    else if (col == "iid2") iid2 = i;
-                    else if (col == "kinship" || col == "king" || col ~ /kinship/) kin = i;
-                }
-                if (!fid1) fid1 = 1;
-                if (!iid1) iid1 = 2;
-                if (!fid2) fid2 = 3;
-                if (!iid2) iid2 = 4;
-                if (!kin) kin = NF;
-                print "FID1", "IID1", "FID2", "IID2", "KINSHIP" > pairs;
-                next;
-            }
-            {
-                if ($kin == "" || $kin == "NA") {
-                    next;
-                }
-                if ($kin + 0 >= thr) {
-                    f1 = $fid1;
-                    i1 = $iid1;
-                    f2 = $fid2;
-                    i2 = $iid2;
-                    printf "%s\t%s\t%s\t%s\t%s\n", f1, i1, f2, i2, $kin >> pairs;
-                    printf "%s\t%s\n", f1, i1 >> samples;
-                    printf "%s\t%s\n", f2, i2 >> samples;
-                }
-            }
-        ' "${KING_FILE}"
-
-        if [ -s "${DUPLICATE_SAMPLES_TMP}" ]; then
-            LC_ALL=C sort -u "${DUPLICATE_SAMPLES_TMP}" > "${DUPLICATE_SAMPLES_FILE}"
-        else
-            rm -f "${DUPLICATE_SAMPLES_FILE}" 2>/dev/null || true
-        fi
-        rm -f "${DUPLICATE_SAMPLES_TMP}" 2>/dev/null || true
-
-        DUPLICATE_PAIR_COUNT=0
-        if [ -s "${DUPLICATE_PAIRS_FILE}" ]; then
-            DUPLICATE_PAIR_COUNT=$(($(wc -l < "${DUPLICATE_PAIRS_FILE}") - 1))
-        fi
-        DUPLICATE_SAMPLE_COUNT=0
-        if [ -s "${DUPLICATE_SAMPLES_FILE}" ]; then
-            DUPLICATE_SAMPLE_COUNT=$(wc -l < "${DUPLICATE_SAMPLES_FILE}")
-        fi
-
-        if [ "${DUPLICATE_PAIR_COUNT}" -eq 0 ]; then
-            log_info "No duplicate-level kinship pairs detected (threshold ${DUPLICATE_THRESHOLD})"
-            rm -f "${DUPLICATE_PAIRS_FILE}" "${DUPLICATE_SAMPLES_FILE}" 2>/dev/null || true
-            DUPLICATE_SAMPLES_FILE=""
-        else
-            log_info "Duplicate detection: ${DUPLICATE_PAIR_COUNT} pair(s), ${DUPLICATE_SAMPLE_COUNT} sample(s) flagged"
-        fi
-
-        rm -f "${KING_FILE}" "${KING_PREFIX}.log" 2>/dev/null || true
-        printf '%s' "${king_params}" > "${king_stamp}"
-    fi
-
-    if [ "${RUN_MODE}" = "duplicate" ]; then
-        if [ -n "${DUPLICATE_PAIRS_FILE:-}" ] && [ -f "${DUPLICATE_PAIRS_FILE}" ]; then
-            log_info "Duplicate-check complete. Pairs: ${DUPLICATE_PAIR_COUNT}; samples: ${DUPLICATE_SAMPLE_COUNT}"
-        else
-            log_info "Duplicate-check complete. No pairs above threshold ${DUPLICATE_THRESHOLD}."
-        fi
-        exit 0
+if [ -n "${KING_FILE}" ] && [ -f "${king_stamp}" ]; then
+    if diff -q <(printf '%s' "${king_params}") "${king_stamp}" >/dev/null 2>&1 \
+       && [ "${KING_FILE}" -nt "${QC_PREFIX}.pgen" ]; then
+        needs_king="false"
+        log_info "Reusing existing ${KING_FILE} (KING params unchanged)."
     fi
 fi
 
+if [ "${needs_king}" = "true" ]; then
+    log_info "Computing all-pairwise KING kinship"
+    "${PLINK2_BIN}" \
+        --pfile "${QC_PREFIX}" \
+        --make-king-table \
+        --out "${KING_PREFIX}"
+
+    KING_FILE=""
+    for candidate in "${KING_PREFIX}.kin0" "${KING_PREFIX}.king"; do
+        if [ -f "${candidate}" ]; then
+            KING_FILE="${candidate}"
+            break
+        fi
+    done
+    if [ -z "${KING_FILE}" ]; then
+        log_error "KING output not found for prefix: ${KING_PREFIX}"
+        exit 1
+    fi
+
+    KING_PAIRS=$(( $(wc -l < "${KING_FILE}") - 1 ))
+    log_info "KING computed: ${KING_PAIRS} sample pair(s)"
+    printf '%s' "${king_params}" > "${king_stamp}"
+fi
+
 # =============================================================================
-# LD pruning (skip if params unchanged & outputs present)
+# STEP 4: LD pruning
 # =============================================================================
 LD_PRUNED_PREFIX="qc_pruned"
 ld_stamp="${LD_PRUNED_PREFIX}.ld.params.txt"
@@ -487,19 +269,19 @@ if [ -f "${LD_PRUNED_PREFIX}.pgen" ] && [ -f "${LD_PRUNED_PREFIX}.pvar" ] && [ -
     if diff -q <(printf '%s' "${ld_params}") "${ld_stamp}" >/dev/null 2>&1 \
        && [ "${LD_PRUNED_PREFIX}.pgen" -nt "${QC_PREFIX}.pgen" ]; then
         needs_ld="false"
-        log_info "Reusing existing ${LD_PRUNED_PREFIX}.{pgen,pvar,psam} (LD params unchanged; newer than ${QC_PREFIX})."
+        log_info "Reusing existing ${LD_PRUNED_PREFIX}.{pgen,pvar,psam} (LD params unchanged)."
     fi
 fi
 
 if [ "${needs_ld}" = "true" ]; then
-    log_info "LD pruning (200 kb window, step 50, r² 0.2)"
+    log_info "LD pruning (200 kb window, step 50, r2 0.2)"
     "${PLINK2_BIN}" \
-        --pfile qc \
+        --pfile "${QC_PREFIX}" \
         --indep-pairwise 200 50 0.2 \
         --out pruned
 
     "${PLINK2_BIN}" \
-        --pfile qc \
+        --pfile "${QC_PREFIX}" \
         --extract pruned.prune.in \
         --make-pgen \
         --out "${LD_PRUNED_PREFIX}"
@@ -507,93 +289,15 @@ if [ "${needs_ld}" = "true" ]; then
 fi
 
 # =============================================================================
-# Duplicate removal (skip if params unchanged & outputs present)
+# STEP 5: PCA on all pruned samples
 # =============================================================================
 PCA_INPUT="${LD_PRUNED_PREFIX}"
-if [ "${DUPLICATE_MODE}" = "remove" ] && [ -n "${DUPLICATE_SAMPLES_FILE}" ] && [ -s "${DUPLICATE_SAMPLES_FILE}" ]; then
-    DEDUP_PREFIX="qc_pruned_dedup"
-    dedup_stamp="${DEDUP_PREFIX}.dedup.params.txt"
-    # Include a hash of the duplicate samples list so a changed list triggers re-run
-    dup_samples_hash="$(LC_ALL=C sort "${DUPLICATE_SAMPLES_FILE}" | cksum | awk '{print $1}')"
-    dedup_params="$(cat <<EOF
-pfile=${LD_PRUNED_PREFIX}
-duplicate_samples_hash=${dup_samples_hash}
-EOF
-)"
-
-    needs_dedup="true"
-    if [ -f "${DEDUP_PREFIX}.pgen" ] && [ -f "${DEDUP_PREFIX}.pvar" ] && [ -f "${DEDUP_PREFIX}.psam" ] && [ -f "${dedup_stamp}" ]; then
-        if diff -q <(printf '%s' "${dedup_params}") "${dedup_stamp}" >/dev/null 2>&1 \
-           && [ "${DEDUP_PREFIX}.pgen" -nt "${LD_PRUNED_PREFIX}.pgen" ]; then
-            needs_dedup="false"
-            log_info "Reusing existing ${DEDUP_PREFIX}.{pgen,pvar,psam} (dedup params unchanged)."
-        fi
-    fi
-
-    if [ "${needs_dedup}" = "true" ]; then
-        log_info "Removing duplicate samples for PCA"
-        "${PLINK2_BIN}" \
-            --pfile "${PCA_INPUT}" \
-            --remove "${DUPLICATE_SAMPLES_FILE}" \
-            --make-pgen \
-            --out "${DEDUP_PREFIX}"
-        printf '%s' "${dedup_params}" > "${dedup_stamp}"
-    fi
-    PCA_INPUT="${DEDUP_PREFIX}"
-fi
-
-# =============================================================================
-# Relative removal (skip if params unchanged & outputs present)
-# =============================================================================
-if [ "${REMOVE_RELATIVES}" = "true" ]; then
-    NOREL_OUT="${PCA_INPUT}_norel"
-    rel_stamp="${NOREL_OUT}.rel.params.txt"
-    rel_params="$(cat <<EOF
-pfile=${PCA_INPUT}
-king_cutoff=0.125
-EOF
-)"
-
-    needs_rel="true"
-    if [ -f "${NOREL_OUT}.pgen" ] && [ -f "${NOREL_OUT}.pvar" ] && [ -f "${NOREL_OUT}.psam" ] && [ -f "${rel_stamp}" ]; then
-        if diff -q <(printf '%s' "${rel_params}") "${rel_stamp}" >/dev/null 2>&1 \
-           && [ "${NOREL_OUT}.pgen" -nt "${PCA_INPUT}.pgen" ]; then
-            needs_rel="false"
-            log_info "Reusing existing ${NOREL_OUT}.{pgen,pvar,psam} (relative-removal params unchanged)."
-        fi
-    fi
-
-    if [ "${needs_rel}" = "true" ]; then
-        log_info "Removing close relatives (KING cutoff 0.125)"
-        "${PLINK2_BIN}" \
-            --pfile "${PCA_INPUT}" \
-            --king-cutoff 0.125 \
-            --out kin
-
-        if [ ! -s "kin.king.cutoff.in.id" ]; then
-            log_warn "No individuals passed the KING cutoff; continuing with all samples."
-        else
-            "${PLINK2_BIN}" \
-                --pfile "${PCA_INPUT}" \
-                --keep kin.king.cutoff.in.id \
-                --make-pgen \
-                --out "${NOREL_OUT}"
-            PCA_INPUT="${NOREL_OUT}"
-            printf '%s' "${rel_params}" > "${rel_stamp}"
-        fi
-    else
-        PCA_INPUT="${NOREL_OUT}"
-    fi
-fi
 
 if [ ! -f "${PCA_INPUT}.pgen" ]; then
     log_error "PCA input dataset not found (${PCA_INPUT}.pgen)"
     exit 1
 fi
 
-# =============================================================================
-# PCA computation (skip if params unchanged & outputs present)
-# =============================================================================
 pca_stamp="pca.pca.params.txt"
 pca_params="$(cat <<EOF
 pfile=${PCA_INPUT}
@@ -607,12 +311,12 @@ if [ -f "pca.eigenvec" ] && [ -f "pca.eigenval" ] && [ -f "${pca_stamp}" ]; then
     if diff -q <(printf '%s' "${pca_params}") "${pca_stamp}" >/dev/null 2>&1 \
        && [ "pca.eigenvec" -nt "${PCA_INPUT}.pgen" ]; then
         needs_pca="false"
-        log_info "Reusing existing pca.eigenvec/eigenval (PCA params unchanged; newer than ${PCA_INPUT})."
+        log_info "Reusing existing pca.eigenvec/eigenval (PCA params unchanged)."
     fi
 fi
 
 if [ "${needs_pca}" = "true" ]; then
-    log_info "Running PCA (10 components with variant weights)"
+    log_info "Running PCA (10 components with variant weights) on all samples"
     "${PLINK2_BIN}" \
         --pfile "${PCA_INPUT}" \
         --pca 10 biallelic-var-wts \
@@ -621,38 +325,14 @@ if [ "${needs_pca}" = "true" ]; then
 fi
 
 # =============================================================================
-# PCA plots (skip if PNGs exist & newer than eigenvec + duplicate list)
-# =============================================================================
-PCA_DUPLICATE_FILE=""
-if [ -n "${DUPLICATE_SAMPLES_FILE}" ] && [ -s "${DUPLICATE_SAMPLES_FILE}" ]; then
-    PCA_DUPLICATE_FILE="${DUPLICATE_SAMPLES_FILE}"
-fi
-
-needs_plots="true"
-if [ -f "pca_PC1_PC2.png" ] && [ -f "pca_scree.png" ]; then
-    if [ "pca_PC1_PC2.png" -nt "pca.eigenvec" ]; then
-        # Also check if duplicate list changed since the plot was generated
-        if [ -z "${PCA_DUPLICATE_FILE}" ] || [ "pca_PC1_PC2.png" -nt "${PCA_DUPLICATE_FILE}" ]; then
-            needs_plots="false"
-            log_info "Reusing existing PCA plots (newer than pca.eigenvec)."
-        fi
-    fi
-fi
-
-if [ "${needs_plots}" = "true" ]; then
-    log_info "Rendering PCA plots"
-    Rscript "${RSCRIPTS_DIR}/PCA_plot.R" "${PWD}/pca.eigenvec" "${PWD}/pca.eigenval" "${PWD}" "${SHOW_LABELS}" "${LABEL_SIZE}" "${USE_GGREPEL}" "${PCA_DUPLICATE_FILE}"
-fi
-
-# =============================================================================
 # Cleanup: remove only log/temp files; keep data files for skip checks
 # =============================================================================
 log_info "Cleaning up temporary files (preserving data for future skip checks)"
 rm -f "${IMPORT_PREFIX}".log 2>/dev/null || true
 rm -f "${QC_PREFIX}".log "${QC_PREFIX}".nosex 2>/dev/null || true
-rm -f pruned.log 2>/dev/null || true
-rm -f qc_pruned.log qc_pruned_dedup.log 2>/dev/null || true
-rm -f kin.log kin.king.cutoff.in.id kin.king.cutoff.out.id 2>/dev/null || true
+rm -f "${KING_PREFIX}".log 2>/dev/null || true
+rm -f pruned.log pruned.prune.in pruned.prune.out 2>/dev/null || true
+rm -f "${LD_PRUNED_PREFIX}".log 2>/dev/null || true
 rm -f pca.log 2>/dev/null || true
 
 log_info "PCA workflow completed."

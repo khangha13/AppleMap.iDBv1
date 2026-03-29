@@ -95,20 +95,14 @@ STEP1D_ACCOUNT=""          # Optional: override default account (leave empty to 
 STEP1D_PARTITION=""       # Optional: override default partition (leave empty to use PIPELINE_SLURM_PARTITION)
 STEP1D_NODES=""           # Optional: override default nodes (leave empty to use PIPELINE_SLURM_NODES)
 STEP1D_NTASKS=""          # Optional: override default ntasks (leave empty to use PIPELINE_SLURM_NTASKS)
-# Step 1D behavior toggles
-STEP1D_PCA_ONLY="false"            # true => run PCA only
-STEP1D_REMOVE_RELATIVES="false"    # true => drop relatives before PCA/QC
-STEP1D_PCA_SHOW_LABELS="true"      # show sample labels on PCA plots
-STEP1D_PCA_USE_GGREPEL="true"      # use ggrepel to avoid label overlap
-STEP1D_PCA_LABEL_SIZE="1.5"        # PCA label size
+# Step 1D behavior toggles (v2 report-data mode)
 STEP1D_PCA_DIR="pca_analysis"      # output directory name for PCA assets
 STEP1D_PCA_MERGED_PATTERN="*merged*.vcf.gz,*merge*.vcf.gz"  # comma-separated glob(s) to locate merged VCFs for PCA
 STEP1D_PCA_FORCE_CONCAT="false"    # true => always concatenate per-chrom VCFs (ignore merged detection)
 STEP1D_PCA_MERGED_EXCLUDE_CHR="true"  # true => ignore merged candidates containing "Chr" in filename
-STEP1D_DUPLICATE_MODE="flag"       # off|flag|remove; KING-based duplicate detection for PCA
-STEP1D_DUPLICATE_KING_THRESHOLD="0.45"  # kinship threshold for duplicate detection (e.g. 0.45)
-STEP1D_AF_PLOTS_DIR="af_distribution_plots"  # output directory name for allele frequency plots
-STEP1D_AF_HIST_BINS="50"            # histogram bins for allele frequency plots
+STEP1D_CACHE_DIR=""                # intermediate outputs (default: ${WORK_DIR}/${DATASET}_step1d_cache)
+STEP1D_PACKAGE_DIR=""              # final Parquet report package (default: ${WORK_DIR}/${DATASET}_step1d_report_package)
+STEP1D_PARQUET_COMPRESSION="snappy"  # Parquet compression codec
 
 # -----------------------------------------------------------------------------
 # ADVANCED / OPTIONAL SETTINGS

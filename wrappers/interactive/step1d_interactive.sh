@@ -1,10 +1,13 @@
 #!/bin/bash
 # =============================================================================
-# STEP 1D INTERACTIVE WRAPPER
+# STEP 1D INTERACTIVE WRAPPER (v2 -- report-data)
 # =============================================================================
-# Prompts the user for a working directory (containing Chr00–Chr17 VCFs),
-# confirms the selection, and launches master_vcf_analysis.sh with the
-# appropriate environment variables set.
+# Prompts the user for a working directory (containing Chr00-Chr17 VCFs),
+# confirms the selection, and launches master_vcf_analysis.sh.
+#
+# Old mode flags (--qc, --PCA, --duplicate-check, --remove-relatives) are
+# accepted with a deprecation warning and mapped to the default report-data
+# workflow.
 # =============================================================================
 
 set -euo pipefail
@@ -14,7 +17,7 @@ if [ -n "${PIPELINE_ROOT:-}" ]; then
     if [ -d "${PIPELINE_ROOT}" ]; then
         PIPELINE_ROOT="$(cd "${PIPELINE_ROOT}" && pwd)"
     else
-        echo "[step1d_interactive] ⚠️  Provided PIPELINE_ROOT (${PIPELINE_ROOT}) does not exist; falling back to wrapper-relative path." >&2
+        echo "[step1d_interactive] Warning: Provided PIPELINE_ROOT (${PIPELINE_ROOT}) does not exist; falling back to wrapper-relative path." >&2
         PIPELINE_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
     fi
 else
@@ -28,21 +31,17 @@ fi
 
 usage() {
     cat <<'EOF'
-Usage: step1d_interactive.sh [--dir=PATH] [--vcf=NAME[,NAME...]] [--beagle] [--PCA] [--remove-relatives] [--dry-run] [--help]
+Usage: step1d_interactive.sh [--dir=PATH] [--vcf=NAME[,NAME...]] [--beagle] [--dry-run] [--help]
 
 Options:
   --dir=PATH      Full path to directory containing VCF files (skips prompt).
   --vcf=LIST      Comma-separated list of VCF prefixes (e.g. Chr00,chr01).
-                  Matching is case-insensitive; extensions default to .vcf.gz.
-  --beagle        Pass --beagle to master_vcf_analysis.sh (Beagle-imputed VCFs).
-  --qc            Run QC-only mode (metrics/plots, default).
-  --PCA, --pca    Run PCA-only mode (expects merged or per-chrom VCFs).
-  --duplicate-check
-                  Run KING duplicate detection only (writes tables).
-  --remove-relatives
-                  (Requires --PCA) Remove close relatives before PCA using KING 0.125.
-  --dry-run       Pass --dry-run to master_vcf_analysis.sh (preview without creating files).
+  --beagle        Treat VCFs as Beagle-imputed.
+  --dry-run       Preview without creating files.
   --help          Show this message and exit.
+
+Deprecated flags (accepted with warning, ignored):
+  --qc, --PCA, --pca, --duplicate-check, --remove-relatives
 EOF
 }
 
@@ -55,10 +54,7 @@ if [ -n "${STEP1D_EXPECTED_CHROMS:-}" ]; then
 else
     EXPECTED_CHROM_COUNT=18
 fi
-EXPECTED_CHROM_DESC="Chr00–Chr17"
-MODE="qc"
-MODE_SET=false
-REMOVE_REL_FLAG=false
+EXPECTED_CHROM_DESC="Chr00-Chr17"
 
 declare -a AVAILABLE_PRIMARY_VCFS=()
 declare -a AVAILABLE_OTHER_VCFS=()
@@ -72,7 +68,7 @@ USING_FILTERED_VCFS=false
 INFERRED_VCF_PATTERN=""
 
 for arg in "$@"; do
-case "${arg}" in
+    case "${arg}" in
         --dir=*)
             DIR_OVERRIDE="${arg#--dir=}"
             ;;
@@ -82,32 +78,9 @@ case "${arg}" in
         --beagle)
             BEAGLE_FLAG=true
             ;;
-        --qc)
-            if ${MODE_SET}; then
-                echo "❌ Multiple modes provided; choose one of --qc, --PCA, or --duplicate-check." >&2
-                exit 1
-            fi
-            MODE="qc"
-            MODE_SET=true
-            ;;
-        --PCA|--pca)
-            if ${MODE_SET}; then
-                echo "❌ Multiple modes provided; choose one of --qc, --PCA, or --duplicate-check." >&2
-                exit 1
-            fi
-            MODE="pca"
-            MODE_SET=true
-            ;;
-        --duplicate-check)
-            if ${MODE_SET}; then
-                echo "❌ Multiple modes provided; choose one of --qc, --PCA, or --duplicate-check." >&2
-                exit 1
-            fi
-            MODE="duplicate-check"
-            MODE_SET=true
-            ;;
-        --remove-relatives)
-            REMOVE_REL_FLAG=true
+        --qc|--PCA|--pca|--duplicate-check|--remove-relatives)
+            echo "[step1d_interactive] Warning: Flag '${arg}' is deprecated and ignored. Step1D now runs a combined report-data workflow." >&2
+            echo "[step1d_interactive] This flag will be removed in a future version." >&2
             ;;
         --dry-run|-n)
             DRY_RUN_FLAG=true
@@ -117,7 +90,7 @@ case "${arg}" in
             exit 0
             ;;
         *)
-            echo "❌ Unknown option: ${arg}" >&2
+            echo "Unknown option: ${arg}" >&2
             usage
             exit 1
             ;;
@@ -128,21 +101,15 @@ if [ "${BEAGLE_FLAG}" = true ] && [ -z "${STEP1D_EXPECTED_CHROMS:-}" ]; then
     EXPECTED_CHROM_COUNT=17
 fi
 if [ "${BEAGLE_FLAG}" = true ] && [ "${EXPECTED_CHROM_COUNT}" -eq 17 ]; then
-    EXPECTED_CHROM_DESC="Chr01–Chr17 (Beagle mode)"
+    EXPECTED_CHROM_DESC="Chr01-Chr17 (Beagle mode)"
 elif [ -n "${STEP1D_EXPECTED_CHROMS:-}" ]; then
     EXPECTED_CHROM_DESC="custom configuration"
 fi
 
-if [ "${REMOVE_REL_FLAG}" = true ] && [ "${MODE}" != "pca" ]; then
-    echo "❌ --remove-relatives requires --PCA." >&2
-    exit 1
-fi
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MASTER_SCRIPT="${MODULE_DIR}/templates/master_vcf_analysis.sh"
 
 if [ ! -f "${MASTER_SCRIPT}" ]; then
-    echo "❌ Cannot locate master_vcf_analysis.sh at ${MASTER_SCRIPT}" >&2
+    echo "Cannot locate master_vcf_analysis.sh at ${MASTER_SCRIPT}" >&2
     exit 1
 fi
 
@@ -151,11 +118,11 @@ prompt_for_directory() {
     while true; do
         read -r -p "Enter the full path to the working directory: " input_path
         if [ -z "${input_path}" ]; then
-            echo "⚠️  Path cannot be empty. Please try again."
+            echo "Path cannot be empty. Please try again."
             continue
         fi
         if [ ! -d "${input_path}" ]; then
-            echo "❌ Directory does not exist: ${input_path}"
+            echo "Directory does not exist: ${input_path}"
             continue
         fi
         break
@@ -179,7 +146,7 @@ confirm_selection() {
 summarise_directory() {
     local dir_path="$1"
     echo ""
-    echo "📂 Selected working directory: ${dir_path}"
+    echo "Selected working directory: ${dir_path}"
     AVAILABLE_PRIMARY_VCFS=()
     AVAILABLE_OTHER_VCFS=()
     FILTERED_VCF_CANDIDATES=()
@@ -223,33 +190,22 @@ summarise_directory() {
 
     if [ "${primary_count}" -gt 0 ]; then
         if [ "${USING_FILTERED_VCFS}" = true ]; then
-            echo "✅ Found ${primary_count} filtered per-chromosome VCF(s) ending with *_snps.vcf.gz."
+            echo "Found ${primary_count} filtered per-chromosome VCF(s) ending with *_snps.vcf.gz."
         else
-            echo "✅ Found ${primary_count} per-chromosome VCF(s) matching Chr??.vcf.gz."
+            echo "Found ${primary_count} per-chromosome VCF(s) matching Chr??.vcf.gz."
         fi
     else
-        echo "⚠️  No files matching Chr??.vcf.gz were found (excluding *_snps.vcf.gz)."
+        echo "No files matching Chr??.vcf.gz were found (excluding *_snps.vcf.gz)."
     fi
 
     if [ "${other_count}" -gt 0 ]; then
-        echo "ℹ️  Additional VCF candidates detected:"
+        echo "Additional VCF candidates detected:"
         for base in "${AVAILABLE_OTHER_VCFS[@]}"; do
-            echo "    • ${base}"
+            echo "    - ${base}"
         done
-    else
-        echo "ℹ️  No other VCF files detected."
     fi
 
-    if [ "${filtered_count}" -gt 0 ] && [ "${USING_FILTERED_VCFS}" = false ]; then
-        echo "ℹ️  Filtered *_snps VCF files detected (${filtered_count}); they will be used automatically if raw Chr?? files are absent."
-    elif [ "${USING_FILTERED_VCFS}" = true ]; then
-        echo "ℹ️  Using filtered *_snps VCF files (${primary_count}) because no raw Chr??.vcf(.gz) files were found."
-    fi
-
-    echo "ℹ️  This pipeline expects ${EXPECTED_CHROM_COUNT} per-chromosome VCFs (${EXPECTED_CHROM_DESC}). Detected ${primary_count}."
-    if [ "${primary_count}" -ne "${EXPECTED_CHROM_COUNT}" ]; then
-        echo "   Tip: export VCF_PATTERN to match your naming scheme if needed."
-    fi
+    echo "This pipeline expects ${EXPECTED_CHROM_COUNT} per-chromosome VCFs (${EXPECTED_CHROM_DESC}). Detected ${primary_count}."
 }
 
 trim() {
@@ -305,10 +261,7 @@ infer_vcf_pattern() {
         return 1
     fi
 
-    local base
-    local prefix=""
-    local chr_literal=""
-    local suffix=""
+    local base prefix="" chr_literal="" suffix=""
 
     for base in "${filenames[@]}"; do
         if [[ "${base}" =~ ^(.*?)([Cc]hr)([0-9]{2})(.*)$ ]]; then
@@ -336,28 +289,25 @@ infer_vcf_pattern() {
     printf '%s%s%%02d%s\n' "${prefix}" "${chr_literal}" "${suffix}"
 }
 
-echo "🧬 STEP 1D INTERACTIVE LAUNCHER"
-echo "==============================="
+echo "STEP 1D INTERACTIVE LAUNCHER (report-data mode)"
+echo "================================================"
 echo ""
 echo "This helper will collect the required path information and run:"
 echo "  ${MASTER_SCRIPT##*/}"
 echo ""
 
 if [ -n "${DIR_OVERRIDE}" ]; then
-    # Use provided directory
     WORK_DIR_INPUT="${DIR_OVERRIDE}"
     if [ ! -d "${WORK_DIR_INPUT}" ]; then
-        echo "❌ Directory does not exist: ${WORK_DIR_INPUT}" >&2
+        echo "Directory does not exist: ${WORK_DIR_INPUT}" >&2
         exit 1
     fi
 else
-    # Prompt for directory
     WORK_DIR_INPUT="$(prompt_for_directory)"
 fi
 
-# Resolve to absolute path without relying on GNU readlink -f
 if ! WORK_DIR_ABS="$(cd "${WORK_DIR_INPUT}" && pwd)"; then
-    echo "❌ Unable to resolve absolute path for ${WORK_DIR_INPUT}" >&2
+    echo "Unable to resolve absolute path for ${WORK_DIR_INPUT}" >&2
     exit 1
 fi
 
@@ -373,21 +323,21 @@ else
 fi
 
 if [ -n "${VCF_OVERRIDE}" ]; then
-    echo "🔍 Validating requested VCF subset..."
+    echo "Validating requested VCF subset..."
     validate_requested_vcfs "${VCF_OVERRIDE}"
     echo ""
-    echo "🎯 Requested VCF files:"
+    echo "Requested VCF files:"
     for base in "${SELECTED_VCF_BASENAMES[@]}"; do
-        echo "   ✅ ${base}"
+        echo "   OK ${base}"
     done
     if [ ${#MISSING_VCF_REQUESTS[@]} -gt 0 ]; then
         for missing in "${MISSING_VCF_REQUESTS[@]}"; do
-            echo "   ❌ ${missing} (not found)"
+            echo "   MISSING ${missing} (not found)"
         done
-        echo "⚠️  Missing entries will be skipped."
+        echo "Missing entries will be skipped."
     fi
     if [ ${#SELECTED_VCF_BASENAMES[@]} -eq 0 ]; then
-        echo "❌ None of the requested VCF files were found in ${WORK_DIR_ABS}. Aborting."
+        echo "None of the requested VCF files were found in ${WORK_DIR_ABS}. Aborting."
         exit 1
     fi
 fi
@@ -399,9 +349,9 @@ if [ ${#SELECTED_VCF_BASENAMES[@]} -gt 0 ]; then
     confirm_message="Proceed with Step 1D for ${#EFFECTIVE_VCF_BASENAMES[@]} requested VCF file(s)?"
 elif [ "${FALLBACK_MODE}" = "true" ]; then
     EFFECTIVE_VCF_BASENAMES=("${AUTO_VCF_BASENAMES[@]}")
-    echo "⚠️  No Chr00–Chr17 matches were found. The following VCF files will be used if you continue:"
+    echo "No Chr00-Chr17 matches were found. The following VCF files will be used if you continue:"
     for base in "${EFFECTIVE_VCF_BASENAMES[@]}"; do
-        echo "   • ${base}"
+        echo "   - ${base}"
     done
     confirm_message="Proceed with Step 1D using these ${#EFFECTIVE_VCF_BASENAMES[@]} VCF file(s)?"
 else
@@ -438,39 +388,21 @@ if [ -n "${VCF_PATTERN:-}" ]; then
         PATTERN_NOTE="    Pattern:  ${VCF_PATTERN} (pre-set)"
     fi
 else
-    PATTERN_NOTE="    Pattern:  (default Chr%02d.vcf.gz; set VCF_PATTERN manually to override)"
+    PATTERN_NOTE="    Pattern:  (default Chr%02d.vcf.gz)"
 fi
 
 echo ""
-echo "🚀 Launching master_vcf_analysis.sh..."
+echo "Launching master_vcf_analysis.sh (report-data mode)..."
 echo "    VCF_DIR=${WORK_DIR_ABS}"
 echo "    WORK_DIR=${WORK_DIR_ABS}"
 echo "${PATTERN_NOTE}"
 if [ "${BEAGLE_FLAG}" = "true" ]; then
-    echo "    Mode:    --beagle (Beagle-imputed inputs)"
+    echo "    Beagle mode enabled"
 fi
 if [ "${DRY_RUN_FLAG}" = "true" ]; then
-    echo "    Mode:    --dry-run (preview mode, no files created)"
+    echo "    Dry-run mode (no files created)"
 fi
-case "${MODE}" in
-    qc)
-        echo "    Mode:    QC (metrics + plots + AF distributions)"
-        ;;
-    pca)
-        echo "    Mode:    PCA-only (merged VCF preferred)"
-        if [ "${REMOVE_REL_FLAG}" = "true" ]; then
-            echo "             └─ Removing close relatives (KING cutoff 0.125)"
-        fi
-        ;;
-    duplicate-check)
-        echo "    Mode:    Duplicate-check only (KING duplicates table)"
-        ;;
-esac
 echo ""
-
-if [ -z "${VCF_PATTERN:-}" ] && [ -z "${INFERRED_VCF_PATTERN}" ]; then
-    echo "⚠️  Could not infer a VCF filename pattern automatically. If your files are not named like Chr%02d.vcf.gz, export VCF_PATTERN before rerunning."
-fi
 
 export VCF_DIR="${WORK_DIR_ABS}"
 export WORK_DIR="${WORK_DIR_ABS}"
@@ -494,19 +426,11 @@ fi
 if [ "${DRY_RUN_FLAG}" = "true" ]; then
     MASTER_ARGS+=("--dry-run")
 fi
-case "${MODE}" in
-    qc) MASTER_ARGS+=("--qc") ;;
-    pca) MASTER_ARGS+=("--PCA") ;;
-    duplicate-check) MASTER_ARGS+=("--duplicate-check") ;;
-esac
-if [ "${REMOVE_REL_FLAG}" = "true" ]; then
-    MASTER_ARGS+=("--remove-relatives")
-fi
 
 if ! bash "${MASTER_SCRIPT}" "${MASTER_ARGS[@]}"; then
-    echo "❌ master_vcf_analysis.sh exited with an error." >&2
+    echo "master_vcf_analysis.sh exited with an error." >&2
     exit 1
 fi
 
 echo ""
-echo "🎉 Interactive Step 1D complete."
+echo "Interactive Step 1D complete."

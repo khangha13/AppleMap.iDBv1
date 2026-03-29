@@ -1,130 +1,164 @@
-# VCF QC + PCA (Step 1d) — Single README
+# VCF QC + PCA (Step 1d) -- Report-Data Mode
 
-This file now consolidates the old Quick Reference, How to Run PCA, and Direct Call guides into one place. For cluster onboarding and storage tips, keep `HPC_SETUP_GUIDE.md` handy.
+Step1D runs a single "compute everything, decide later" workflow. The cluster
+extracts all QC metrics, computes all-pairwise KING kinship, and runs PCA on
+all samples. Results are exported as a self-contained Parquet report package
+for local Quarto rendering. No plots, no threshold filtering, no sample
+removal on the cluster.
 
 ## What It Does
-- QC pipeline: extract mean depth, make per-chromosome depth and missingness plots, and combine results (18 chromosomes by default).
-- PCA/duplicate workflows: merge or concat VCFs, run light QC and LD pruning, optional KING duplicate detection and relative removal, then plink2 PCA + R plots.
+
+1. Extract per-chromosome site metrics (biallelic SNPs only)
+2. Prepare a combined VCF for PCA (`combined_for_pca.vcf.gz`)
+3. PLINK2 pipeline: import, QC, KING (all pairwise), LD prune, PCA
+4. Export Parquet report package + `manifest.json`
+5. Tar the package for transfer
 
 ## Requirements
-- `bcftools`, `plink2`, `Rscript` with `ggplot2`, `data.table`, `ragg`, `scales`, `ggrepel` (optional).
-- On HPC the wrappers load `miniforge/25.3.0-3`, `bcftools`, `plink/2.00a3.6-gcc-11.3.0`; adjust module names as needed.
+
+- `bcftools`, `plink2`, `Rscript` with `data.table`, `arrow`, `jsonlite`
+- On HPC the wrappers load `miniforge/25.3.0-3`, `bcftools`, `plink/2.00a3.6-gcc-11.3.0`
 
 ## Fast Start
-### QC (default)
-```bash
-cd /path/to/GATK_Pipeline_KH_v1
-bash wrappers/interactive/step1d_interactive.sh               # prompts for VCF dir
-# or SLURM array (recommended)
-bash wrappers/sbatch/step1d_submit.sh [<dataset>] <vcf_dir>
-```
 
-### PCA-only or duplicate-check
 ```bash
 cd /path/to/GATK_Pipeline_KH_v1
-bash wrappers/interactive/step1d_interactive.sh --PCA [--remove-relatives]
-bash wrappers/interactive/step1d_interactive.sh --duplicate-check          # KING only
+
+# Interactive (prompts for VCF dir)
+bash wrappers/interactive/step1d_interactive.sh
 
 # SLURM
-bash wrappers/sbatch/step1d_submit.sh [<dataset>] <vcf_dir> --PCA [--remove-relatives]
-bash wrappers/sbatch/step1d_submit.sh [<dataset>] <vcf_dir> --duplicate-check
+bash wrappers/sbatch/step1d_submit.sh [<dataset>] <vcf_dir>
+
+# Beagle-imputed VCFs
+bash wrappers/sbatch/step1d_submit.sh [<dataset>] <vcf_dir> --beagle
+
+# Dry-run (preview)
+bash wrappers/sbatch/step1d_submit.sh [<dataset>] <vcf_dir> --dry-run
 ```
+
+### Deprecated Flags
+
+The following flags are accepted with a deprecation warning but are ignored.
+Step1D now runs a single combined workflow by default:
+
+- `--qc`, `--PCA`, `--pca`, `--duplicate-check`, `--remove-relatives`
 
 ### Prepare Combined VCF (utility)
-If your VCFs need cleaning (removing Chr00, standardizing contig names to ChrNN), use the prep utility **before** running PCA:
+
+If your VCFs need cleaning (removing Chr00, standardizing contig names to
+ChrNN), the prep utility runs automatically. You can also invoke it manually:
+
 ```bash
-cd /path/to/GATK_Pipeline_KH_v1
-# Dry-run to preview what would be done
 bash modules/step1d/bin/prepare_combined_for_pca.sh /path/to/vcf/directory --dry-run
-
-# Create cleaned combined_for_pca.vcf.gz (removes Chr00, standardizes to Chr01..Chr17)
 bash modules/step1d/bin/prepare_combined_for_pca.sh /path/to/vcf/directory
-
-# Then run PCA on the cleaned output
-bash modules/step1d/templates/master_vcf_analysis.sh --PCA
 ```
-**What it does:** Detects merged VCF or concatenates per-chromosome VCFs, removes Chr00 records, standardizes contigs to ChrNN format, sorts and indexes. See `--help` for details.
 
-## Run Modes (details)
-**Interactive wrapper** (`wrappers/interactive/step1d_interactive.sh`)  
-Flags: `--dir=/path/to/vcfs`, `--vcf=Chr00,Chr01`, `--beagle`, `--qc` (default), `--PCA`, `--duplicate-check`, `--remove-relatives`, `--dry-run`.
+## Run Options
 
-**SLURM wrapper** (`wrappers/sbatch/step1d_submit.sh`)  
-`bash wrappers/sbatch/step1d_submit.sh [<dataset>] <vcf_dir> [--PCA|--duplicate-check|--qc] [--beagle] [--remove-relatives]`
+**Interactive wrapper** (`wrappers/interactive/step1d_interactive.sh`)
+Flags: `--dir=/path/to/vcfs`, `--vcf=Chr00,Chr01`, `--beagle`, `--dry-run`.
 
-**Direct script call** (maximum control)  
+**SLURM wrapper** (`wrappers/sbatch/step1d_submit.sh`)
+`bash wrappers/sbatch/step1d_submit.sh [<dataset>] <vcf_dir> [--beagle] [--dry-run]`
+
+**Direct script call** (maximum control):
 ```bash
-cd /path/to/GATK_Pipeline_KH_v1
 export VCF_DIR="/absolute/path/to/vcfs"
 export WORK_DIR="${VCF_DIR}"
-# choose one:
-# export VCF_INCLUDE_FILENAMES="Chr00.vcf.gz Chr01.vcf.gz"   # explicit list
-# export VCF_PATTERN="chr%02d.vcf.gz"                        # formatted pattern
-# optional PCA tweaks:
-export STEP1D_REMOVE_RELATIVES=true      # KING cutoff 0.125
-export STEP1D_PCA_FORCE_CONCAT=true      # always concat per-chrom VCFs
-bash modules/step1d/templates/master_vcf_analysis.sh --PCA   # or --qc / --duplicate-check
+bash modules/step1d/templates/master_vcf_analysis.sh [--beagle] [--dry-run]
 ```
-One-liner example:  
-`export VCF_DIR="/data/vcfs" && export VCF_INCLUDE_FILENAMES="my.vcf.gz" && export WORK_DIR="${VCF_DIR}" && bash modules/step1d/templates/master_vcf_analysis.sh --PCA`
 
-## Inputs & Patterns
-- Default expectation: 18 files `Chr00.vcf.gz` … `Chr17.vcf.gz` (`VCF_PATTERN="Chr%02d.vcf.gz"`). Beagle mode expects 17 files (`Chr01`–`Chr17`).
-- Custom names: pass `--vcf=Chr00,Chr01` to the wrapper or set `VCF_INCLUDE_FILENAMES="file1.vcf.gz file2.vcf.gz"`.
+## Inputs and Patterns
+
+- Default: 18 files `Chr00.vcf.gz` ... `Chr17.vcf.gz`. Beagle mode expects 17.
+- Custom names: pass `--vcf=Chr00,Chr01` to the wrapper or set
+  `VCF_INCLUDE_FILENAMES="file1.vcf.gz file2.vcf.gz"`.
 - Custom pattern: set `VCF_PATTERN="chr%02d.filtered.vcf.gz"`.
-- Merged vs per-chrom VCFs (PCA): the script auto-detects merged files matching `*merged*.vcf.gz,*merge*.vcf.gz` (ignores names containing “Chr” unless `STEP1D_PCA_MERGED_EXCLUDE_CHR=false`). Set `STEP1D_PCA_FORCE_CONCAT=true` to always `bcftools concat` per-chrom VCFs.
-- Output location defaults to `WORK_DIR`; PCA results land in `${WORK_DIR}/${STEP1D_PCA_DIR:-pca_analysis}`.
 
-## PCA & Kinship Toggles
-- `STEP1D_DUPLICATE_MODE=flag|remove|off` (default `flag`), `STEP1D_DUPLICATE_KING_THRESHOLD=0.485`
-- `STEP1D_REMOVE_RELATIVES=true` to drop KING >0.125 before PCA (requires `--PCA`)
-- `STEP1D_PCA_SHOW_LABELS=true|false`, `STEP1D_PCA_LABEL_SIZE=1.5`, `STEP1D_PCA_USE_GGREPEL=true|false`
-- `STEP1D_PCA_FORCE_CONCAT=true` and `STEP1D_PCA_MERGED_EXCLUDE_CHR=true|false` control merge/concat behavior
-- `STEP1D_PCA_DIR` sets the PCA output folder name
+## Configuration Variables
 
-## Outputs
-**QC:**  
-`SNP_site_meanDP.tsv`, `depth_pdfs/Chr*.pdf`, `Chr*_missingness_vs_depth.png`, `all_chromosomes_missingness_vs_depth.png` (plus heterozygosity/QD/call rate plots when enabled).
+### Cache and Package Directories
 
-**PCA / duplicate-check:**  
-`pca_analysis/` (or `${STEP1D_PCA_DIR}/`): `pca.eigenvec`, `pca.eigenval`, `pca.eigenvec.var`, `pca_PC1_PC2.png`, `pca_PC1_PC3.png`, `pca_PC2_PC3.png`, `pca_scree.png`, and optional `king_duplicate_pairs.tsv`, `king_duplicate_samples.tsv`.
+```bash
+STEP1D_CACHE_DIR   # Intermediate outputs (default: ${WORK_DIR}/${DATASET}_step1d_cache)
+STEP1D_PACKAGE_DIR # Final Parquet package (default: ${WORK_DIR}/${DATASET}_step1d_report_package)
+STEP1D_PARQUET_COMPRESSION  # Parquet compression (default: snappy)
+```
 
-## Time & Resources (rough)
-| Step | Small (<50 samples) | Medium (50–100) | Large (>100) |
+### PCA Settings
+
+```bash
+STEP1D_PCA_DIR                  # PCA subdir name (default: pca_analysis)
+STEP1D_PCA_MERGED_PATTERN       # Merged VCF detection (default: *merged*.vcf.gz,*merge*.vcf.gz)
+STEP1D_PCA_FORCE_CONCAT         # Always concat per-chrom VCFs (default: false)
+STEP1D_PCA_MERGED_EXCLUDE_CHR   # Exclude names with 'Chr' from merge detection (default: true)
+```
+
+## Output Layout
+
+### Cache Directory (intermediate, HPC scratch)
+
+```
+${DATASET}_step1d_cache/
+  Chr01_snps.vcf.gz ... Chr17_snps.vcf.gz     # Filtered SNP VCFs
+  site_metrics_per_chromosome/                 # Per-chrom metric TSVs
+  variant_site_metrics.tsv                     # Combined metrics
+  SNP_site_meanDP.tsv                          # Mean depth (non-Beagle)
+  combined_for_pca.vcf.gz                      # Combined VCF
+  combined_for_pca.stats.txt                   # bcftools stats
+  pca_analysis/                                # PLINK2 intermediates
+    all_chromosomes.{pgen,pvar,psam}
+    qc.{pgen,pvar,psam}
+    king_pairwise.kin0                         # ALL pairwise KING values
+    qc_pruned.{pgen,pvar,psam}
+    pca.eigenvec
+    pca.eigenval
+```
+
+### Report Package (final output, transfer to local)
+
+```
+${DATASET}_step1d_report_package/
+  manifest.json
+  qc/
+    site_metrics/
+      chrom=Chr01/part-000.parquet
+      chrom=Chr02/part-000.parquet
+      ... chrom=Chr17/
+  pca/
+    scores.parquet              # All samples, PC1-PC10
+    variance.parquet            # 10 rows, eigenvalue + % explained
+    sample_annotations.parquet  # All imported samples, passed_qc flag
+    king_pairwise.parquet       # ALL N*(N-1)/2 pairs, no threshold
+```
+
+The package is also available as `${DATASET}_step1d_report_package.tar.gz`.
+
+## Time and Resources (rough)
+
+| Step | Small (<50 samples) | Medium (50-100) | Large (>100) |
 |------|---------------------|-----------------|--------------|
-| TSV extraction | 1–4 h | 4–10 h | 12–24 h |
-| Depth plots | 5–30 m | 30–90 m | 1–4 h |
-| Missingness per chr | 1–3 h | 3–6 h | 6–12 h |
-| Combine plots | minutes | minutes | minutes |
-| PCA | 1–3 h | 3–6 h | 6–12+ h |
+| TSV extraction | 1-4 h | 4-10 h | 12-24 h |
+| Combined VCF prep | minutes | minutes | 10-30 m |
+| PLINK2 PCA pipeline | 1-3 h | 3-6 h | 6-12+ h |
+| Parquet export | seconds | seconds | minutes |
 
-## Troubleshooting (quick fixes)
+## Troubleshooting
+
 | Problem | Fix |
 |---------|-----|
-| “No VCF files specified / VCF not found” | Check `VCF_DIR`, naming pattern, or `VCF_INCLUDE_FILENAMES`; `ls -lh "${VCF_DIR}"` |
-| `plink2` or `bcftools` not found | `module load plink/2.00a3.6-gcc-11.3.0` / `module load bcftools` or set `PLINK2_BIN`/`BCFTOOLS_BIN` |
-| Missing R packages | `conda activate rplot` (or your env) then install: `Rscript -e "install.packages(c('ggplot2','data.table','ragg','scales','ggrepel'), repos='https://cloud.r-project.org')"` |
-| Permissions | `chmod +x *.sh` |
-| Need to rerun specific chromosomes | Use array ranges: `sbatch --array=3,7,15 job_missingness_array.sh` |
+| "No VCF files specified" | Check `VCF_DIR`, naming pattern, or `VCF_INCLUDE_FILENAMES` |
+| `plink2` or `bcftools` not found | `module load plink/2.00a3.6` / `module load bcftools` |
+| Missing R packages | `conda activate rplot && Rscript -e "install.packages(c('data.table','arrow','jsonlite'))"` |
 
-## Handy CLI Snippets
-```bash
-# Edit / inspect config
-nano vcf_analysis_config.sh
-source vcf_analysis_config.sh && show_config
-source vcf_analysis_config.sh && validate_config
+## File Map
 
-# Monitor jobs
-squeue -u $USER
-seff JOB_ID
-```
+- `modules/step1d/templates/master_vcf_analysis.sh` -- main orchestrator
+- `modules/step1d/templates/plink2_PCA.sh` -- PCA helper (5 params: vcf_dir, rscripts_dir, plink2_bin, bcftools_bin, cache_pca_dir)
+- `modules/step1d/Rscripts/export_parquet_package.R` -- Parquet exporter
+- `modules/step1d/bin/prepare_combined_for_pca.sh` -- VCF preparation utility
+- `wrappers/interactive/step1d_interactive.sh` -- interactive launcher
+- `wrappers/sbatch/step1d_submit.sh` -- SLURM submission wrapper
 
-## File Map (most-used)
-- `modules/step1d/templates/master_vcf_analysis_array.sh` — SLURM array driver (QC)
-- `modules/step1d/templates/master_vcf_analysis.sh` — single-job driver (QC/PCA/duplicate)
-- `modules/step1d/templates/plink2_PCA.sh` — PCA + kinship helper
-- `wrappers/interactive/step1d_interactive.sh` — prompts and launches locally/HPC
-- `wrappers/sbatch/step1d_submit.sh` — SLURM submission wrapper
-- `modules/step1d/Rscripts/*.R` — plotting helpers
-
-**Pro tip:** dry-run before long jobs: `bash modules/step1d/templates/master_vcf_analysis.sh --dry-run --PCA` (or `--qc`). Test with `CHR_START=0 CHR_END=1` to validate settings quickly.
+**Pro tip:** dry-run before long jobs: `bash master_vcf_analysis.sh --dry-run`
