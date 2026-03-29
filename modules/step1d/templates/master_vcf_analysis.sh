@@ -307,8 +307,6 @@ else
 fi
 
 log_info "Checking required commands..."
-check_command bcftools || exit 1
-check_command plink2 || exit 1
 check_command Rscript || exit 1
 ensure_r_packages data.table arrow jsonlite
 log_success "Required commands and packages available"
