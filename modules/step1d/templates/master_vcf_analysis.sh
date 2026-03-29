@@ -293,6 +293,9 @@ fi
 log_info "plink2: ${PLINK2_BIN_PATH}"
 log_info "bcftools: ${BCFTOOLS_BIN_PATH}"
 
+# Add binary directories to PATH so child scripts (e.g. prepare_combined_for_pca.sh) find them
+export PATH="$(dirname "${PLINK2_BIN_PATH}"):$(dirname "${BCFTOOLS_BIN_PATH}"):${PATH}"
+
 # Activate conda for R
 if [ -f "$ROOTMINIFORGE/etc/profile.d/conda.sh" ]; then
     source "$ROOTMINIFORGE/etc/profile.d/conda.sh"
@@ -416,12 +419,12 @@ else
             fi
 
             log_info "${chr_name}: filtering to biallelic SNPs"
-            if ! bcftools view -m2 -M2 -v snps -Oz -o "${filtered_temp}" "${vcf_file}"; then
+            if ! "${BCFTOOLS_BIN_PATH}" view -m2 -M2 -v snps -Oz -o "${filtered_temp}" "${vcf_file}"; then
                 log_error "${chr_name}: failed to filter biallelic SNPs"
                 rm -rf "${TEMP_DIR}"
                 exit 1
             fi
-            if ! bcftools index -t "${filtered_temp}"; then
+            if ! "${BCFTOOLS_BIN_PATH}" index -t "${filtered_temp}"; then
                 log_error "${chr_name}: failed to index filtered SNP VCF"
                 rm -rf "${TEMP_DIR}"
                 exit 1
@@ -434,7 +437,7 @@ else
 
             if [ "${BEAGLE_MODE}" = "true" ]; then
                 query_format='%CHROM\t%POS\t%QUAL\t%INFO/AF\t%INFO/DR2\t%INFO/IMP\t[%GT\t]\n'
-                if ! bcftools query -f "${query_format}" "${filtered_output}" | \
+                if ! "${BCFTOOLS_BIN_PATH}" query -f "${query_format}" "${filtered_output}" | \
                     awk -v OFS='\t' -v header="${SITE_METRICS_HEADER}" '
                         BEGIN { print header; }
                         {
@@ -473,7 +476,7 @@ else
                     exit 1
                 fi
             else
-                if ! bcftools query \
+                if ! "${BCFTOOLS_BIN_PATH}" query \
                     -f '%CHROM\t%POS\t%QUAL\t%INFO/QD\t%INFO/AC\t%INFO/AF\t%INFO/InbreedingCoeff\t%INFO/ExcessHet\t%INFO/MQ\t[%GT:%DP\t]\n' \
                     "${filtered_output}" | \
                     awk -v OFS='\t' -v header="${SITE_METRICS_HEADER}" '
@@ -649,7 +652,7 @@ else
         log_info "Combined VCF already exists and is up-to-date: ${COMBINED_FOR_PCA}"
         if [ ! -f "${COMBINED_STATS}" ]; then
             log_info "Stats file missing; generating bcftools stats..."
-            if bcftools stats "${COMBINED_FOR_PCA}" > "${COMBINED_STATS}"; then
+            if "${BCFTOOLS_BIN_PATH}" stats "${COMBINED_FOR_PCA}" > "${COMBINED_STATS}"; then
                 log_success "Stats generated for existing combined VCF"
             else
                 log_warn "Failed to generate stats; continuing without stats summary"
@@ -678,15 +681,6 @@ fi
 if [ "${DRY_RUN}" = "true" ]; then
     log_info "[dry-run] Would run PCA pipeline in ${PCA_OUTPUT_DIR}"
 else
-    if ! command -v "${PLINK2_BIN_PATH}" >/dev/null 2>&1; then
-        log_error "plink2 binary '${PLINK2_BIN_PATH}' not found in PATH"
-        exit 1
-    fi
-    if ! command -v "${BCFTOOLS_BIN_PATH}" >/dev/null 2>&1; then
-        log_error "bcftools binary '${BCFTOOLS_BIN_PATH}' not found in PATH"
-        exit 1
-    fi
-
     mkdir -p "${PCA_OUTPUT_DIR}"
     if (cd "${PCA_OUTPUT_DIR}" && bash "${PCA_SCRIPT}" "${STEP1D_CACHE_DIR}" "${R_SCRIPTS_DIR}" "${PLINK2_BIN_PATH}" "${BCFTOOLS_BIN_PATH}" "${PCA_OUTPUT_DIR}"); then
         log_success "PCA pipeline completed"
