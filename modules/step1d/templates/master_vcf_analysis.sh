@@ -275,10 +275,12 @@ else
     exit 1
 fi
 
-if module load plink/2.00a3.6-gcc-11.3.0 >/dev/null 2>&1; then
-    log_success "Loaded plink/2.00a3.6-gcc-11.3.0 module"
+PLINK_MODULE="${PLINK_MODULE:-plink/2.00a3.6-gcc-11.3.0}"
+if module load "${PLINK_MODULE}" 2>&1; then
+    log_success "Loaded ${PLINK_MODULE} module"
 else
-    log_error "Failed to load plink/2.00a3.6-gcc-11.3.0 module"
+    log_error "Failed to load ${PLINK_MODULE} module"
+    log_error "Available plink modules: $(module avail plink 2>&1 | head -5)"
     exit 1
 fi
 
