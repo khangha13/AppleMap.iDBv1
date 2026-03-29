@@ -682,7 +682,7 @@ if [ "${DRY_RUN}" = "true" ]; then
     log_info "[dry-run] Would run PCA pipeline in ${PCA_OUTPUT_DIR}"
 else
     mkdir -p "${PCA_OUTPUT_DIR}"
-    if (cd "${PCA_OUTPUT_DIR}" && bash "${PCA_SCRIPT}" "${STEP1D_CACHE_DIR}" "${R_SCRIPTS_DIR}" "${PLINK2_BIN_PATH}" "${BCFTOOLS_BIN_PATH}" "${PCA_OUTPUT_DIR}"); then
+    if (cd "${PCA_OUTPUT_DIR}" && bash "${PCA_SCRIPT}" "${STEP1D_CACHE_DIR}" "${R_SCRIPTS_DIR}" "${PLINK2_BIN_PATH}" "${PCA_OUTPUT_DIR}"); then
         log_success "PCA pipeline completed"
         log_info "PCA outputs: ${PCA_OUTPUT_DIR}/"
     else

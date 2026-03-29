@@ -8,24 +8,22 @@
 # No duplicate filtering, no relative removal, no plotting.
 # The raw KING .kin0 file is preserved for downstream Parquet export.
 #
-# Positional arguments (5):
+# Positional arguments (4):
 #   1. vcf_dir        Directory containing combined_for_pca.vcf.gz
 #   2. rscripts_dir   Directory containing R scripts (unused here, kept for API)
 #   3. plink2_bin     Path to plink2 binary (default: plink2)
-#   4. bcftools_bin   Path to bcftools binary (default: bcftools)
-#   5. cache_pca_dir  Output directory for all PCA artefacts
+#   4. cache_pca_dir  Output directory for all PCA artefacts
 # =============================================================================
 set -Eeuo pipefail
 
 usage() {
     cat <<'EOF'
-Usage: plink2_PCA.sh <vcf_dir> <rscripts_dir> [plink2_bin] [bcftools_bin] [cache_pca_dir]
+Usage: plink2_PCA.sh <vcf_dir> <rscripts_dir> [plink2_bin] [cache_pca_dir]
 
 Arguments:
   vcf_dir         Directory containing combined_for_pca.vcf.gz
   rscripts_dir    Directory containing R scripts (kept for API compatibility)
   plink2_bin      Path to plink2 binary (default: plink2)
-  bcftools_bin    Path to bcftools binary (default: bcftools)
   cache_pca_dir   Output directory for PCA artefacts (default: current directory)
 
 Pipeline steps (each with stamp-based skip check):
@@ -72,7 +70,7 @@ if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
 fi
 
 if [ "$#" -lt 2 ]; then
-    log_error "Usage: plink2_PCA.sh <vcf_dir> <rscripts_dir> [plink2_bin] [bcftools_bin] [cache_pca_dir]"
+    log_error "Usage: plink2_PCA.sh <vcf_dir> <rscripts_dir> [plink2_bin] [cache_pca_dir]"
     log_error "Run 'plink2_PCA.sh --help' for detailed usage information"
     exit 1
 fi
@@ -80,8 +78,7 @@ fi
 VCF_SOURCE_DIR="$1"
 RSCRIPTS_DIR="$2"
 PLINK2_BIN="${3:-plink2}"
-BCFTOOLS_BIN="${4:-bcftools}"
-CACHE_PCA_DIR="${5:-${PWD}}"
+CACHE_PCA_DIR="${4:-${PWD}}"
 
 # QC thresholds (overridable via environment)
 PCA_GENO="${STEP1D_PCA_GENO:-0.05}"
@@ -95,11 +92,6 @@ fi
 
 if ! [ -x "${PLINK2_BIN}" ] && ! command -v "${PLINK2_BIN}" >/dev/null 2>&1; then
     log_error "plink2 binary not found: ${PLINK2_BIN}"
-    exit 1
-fi
-
-if ! [ -x "${BCFTOOLS_BIN}" ] && ! command -v "${BCFTOOLS_BIN}" >/dev/null 2>&1; then
-    log_error "bcftools binary not found: ${BCFTOOLS_BIN}"
     exit 1
 fi
 
