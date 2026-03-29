@@ -267,20 +267,22 @@ else
     exit 1
 fi
 
-BCFTOOLS_MODULE="${BCFTOOLS_MODULE:-bcftools/1.18-gcc-12.3.0}"
-if module load "${BCFTOOLS_MODULE}" >/dev/null 2>&1; then
-    log_success "Loaded ${BCFTOOLS_MODULE} module"
-else
-    log_error "Failed to load ${BCFTOOLS_MODULE} module"
-    exit 1
-fi
-
+# Load plink before bcftools to avoid GCC toolchain conflict
+# (plink needs gcc-11, bcftools needs gcc-12; loading bcftools second lets Lmod auto-swap)
 PLINK_MODULE="${PLINK_MODULE:-plink/2.00a3.6-gcc-11.3.0}"
 if module load "${PLINK_MODULE}" 2>&1; then
     log_success "Loaded ${PLINK_MODULE} module"
 else
     log_error "Failed to load ${PLINK_MODULE} module"
     log_error "Available plink modules: $(module avail plink 2>&1 | head -5)"
+    exit 1
+fi
+
+BCFTOOLS_MODULE="${BCFTOOLS_MODULE:-bcftools/1.18-gcc-12.3.0}"
+if module load "${BCFTOOLS_MODULE}" >/dev/null 2>&1; then
+    log_success "Loaded ${BCFTOOLS_MODULE} module"
+else
+    log_error "Failed to load ${BCFTOOLS_MODULE} module"
     exit 1
 fi
 
