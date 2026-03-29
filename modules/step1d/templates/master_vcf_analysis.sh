@@ -254,41 +254,44 @@ cd "${WORK_DIR}" || {
 
 mkdir -p "${STEP1D_CACHE_DIR}"
 
-# Load HPC modules (skip module purge to avoid GCC toolchain conflicts)
+# Load HPC modules one at a time, capturing absolute binary paths to avoid
+# GCC toolchain conflicts between plink (gcc-11) and bcftools (gcc-12).
 log_info "Loading required modules..."
 
 if command -v module >/dev/null 2>&1; then
+    module purge 2>/dev/null
+
     module load miniforge/25.3.0-3 2>/dev/null && log_success "Loaded miniforge module" \
         || log_warn "miniforge module not loaded (may already be available)"
 
     PLINK_MODULE="${PLINK_MODULE:-plink/2.00a3.6-gcc-11.3.0}"
-    BCFTOOLS_MODULE="${BCFTOOLS_MODULE:-bcftools/1.18-gcc-12.3.0}"
+    if module load "${PLINK_MODULE}" 2>/dev/null; then
+        PLINK2_BIN_PATH="$(command -v plink2)"
+        log_success "Loaded ${PLINK_MODULE} -> ${PLINK2_BIN_PATH}"
+        module unload "${PLINK_MODULE}" 2>/dev/null
+    fi
 
-    # Load both in one call to let Lmod resolve GCC dependencies together
-    if module load "${PLINK_MODULE}" "${BCFTOOLS_MODULE}" 2>/dev/null; then
-        log_success "Loaded ${PLINK_MODULE} and ${BCFTOOLS_MODULE} modules"
-    else
-        # Fallback: load individually, ignoring GCC conflicts
-        module load "${PLINK_MODULE}" 2>/dev/null && log_success "Loaded ${PLINK_MODULE}" \
-            || log_warn "Could not load ${PLINK_MODULE} module"
-        module load "${BCFTOOLS_MODULE}" 2>/dev/null && log_success "Loaded ${BCFTOOLS_MODULE}" \
-            || log_warn "Could not load ${BCFTOOLS_MODULE} module"
+    BCFTOOLS_MODULE="${BCFTOOLS_MODULE:-bcftools/1.18-gcc-12.3.0}"
+    if module load "${BCFTOOLS_MODULE}" 2>/dev/null; then
+        BCFTOOLS_BIN_PATH="$(command -v bcftools)"
+        log_success "Loaded ${BCFTOOLS_MODULE} -> ${BCFTOOLS_BIN_PATH}"
+        module unload "${BCFTOOLS_MODULE}" 2>/dev/null
     fi
 else
     log_warn "module command not available; assuming tools are already on PATH"
 fi
 
-# Verify required binaries are available regardless of how they were loaded
-if ! command -v "${PLINK2_BIN_PATH}" >/dev/null 2>&1; then
-    log_error "plink2 binary not found on PATH (tried: ${PLINK2_BIN_PATH})"
+# Verify required binaries are available
+if ! [ -x "${PLINK2_BIN_PATH}" ] && ! command -v "${PLINK2_BIN_PATH}" >/dev/null 2>&1; then
+    log_error "plink2 binary not found (tried: ${PLINK2_BIN_PATH})"
     exit 1
 fi
-if ! command -v "${BCFTOOLS_BIN_PATH}" >/dev/null 2>&1; then
-    log_error "bcftools binary not found on PATH (tried: ${BCFTOOLS_BIN_PATH})"
+if ! [ -x "${BCFTOOLS_BIN_PATH}" ] && ! command -v "${BCFTOOLS_BIN_PATH}" >/dev/null 2>&1; then
+    log_error "bcftools binary not found (tried: ${BCFTOOLS_BIN_PATH})"
     exit 1
 fi
-log_info "plink2: $(command -v "${PLINK2_BIN_PATH}")"
-log_info "bcftools: $(command -v "${BCFTOOLS_BIN_PATH}")"
+log_info "plink2: ${PLINK2_BIN_PATH}"
+log_info "bcftools: ${BCFTOOLS_BIN_PATH}"
 
 # Activate conda for R
 if [ -f "$ROOTMINIFORGE/etc/profile.d/conda.sh" ]; then

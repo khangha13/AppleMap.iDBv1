@@ -93,12 +93,12 @@ if [ ! -d "${VCF_SOURCE_DIR}" ]; then
     exit 1
 fi
 
-if ! command -v "${PLINK2_BIN}" >/dev/null 2>&1; then
+if ! [ -x "${PLINK2_BIN}" ] && ! command -v "${PLINK2_BIN}" >/dev/null 2>&1; then
     log_error "plink2 binary not found: ${PLINK2_BIN}"
     exit 1
 fi
 
-if ! command -v "${BCFTOOLS_BIN}" >/dev/null 2>&1; then
+if ! [ -x "${BCFTOOLS_BIN}" ] && ! command -v "${BCFTOOLS_BIN}" >/dev/null 2>&1; then
     log_error "bcftools binary not found: ${BCFTOOLS_BIN}"
     exit 1
 fi
