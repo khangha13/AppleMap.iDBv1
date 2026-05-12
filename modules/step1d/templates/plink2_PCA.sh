@@ -81,8 +81,9 @@ PLINK2_BIN="${3:-plink2}"
 CACHE_PCA_DIR="${4:-${PWD}}"
 
 # QC thresholds (overridable via environment)
-PCA_GENO="${STEP1D_PCA_GENO:-0.05}"
-PCA_MIND="${STEP1D_PCA_MIND:-0.10}"
+# Defaults are permissive (compute everything, decide later); tighten via env vars if needed
+PCA_GENO="${STEP1D_PCA_GENO:-1}"
+PCA_MIND="${STEP1D_PCA_MIND:-1}"
 PCA_MAF="${STEP1D_PCA_MAF:-0.01}"
 
 if [ ! -d "${VCF_SOURCE_DIR}" ]; then
