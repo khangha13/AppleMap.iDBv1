@@ -32,6 +32,7 @@ Options:
                          miniforge/26.1.0-0
   --bcftools-module MOD  Optional bcftools module. Default:
                          bcftools/1.18-gcc-12.3.0
+  --keep-tmp             Keep the per-run working directory for debugging.
   --help                 Show this help.
 
 Outputs per input:
@@ -41,6 +42,8 @@ Outputs per input:
   <outdir>/<prefix>.poplddecay.log             Command log
 
 Notes:
+  - Heavy calculation runs in $TMPDIR when available, then final outputs are
+    copied back to --outdir.
   - Default filtering keeps biallelic SNPs only:
       bcftools view -m2 -M2 -v snps
   - If bcftools is unavailable, use --no-filter and provide a SNP-only VCF.
@@ -57,6 +60,7 @@ USE_CONDA=true
 CONDA_ENV="${POPLDDECAY_CONDA_ENV:-poplddecay}"
 MINIFORGE_MODULE="${MINIFORGE_MODULE:-miniforge/26.1.0-0}"
 BCFTOOLS_MODULE="${BCFTOOLS_MODULE:-bcftools/1.18-gcc-12.3.0}"
+KEEP_TMP=false
 VCFS=()
 
 while [[ $# -gt 0 ]]; do
@@ -104,6 +108,10 @@ while [[ $# -gt 0 ]]; do
     --bcftools-module)
       BCFTOOLS_MODULE="$2"
       shift 2
+      ;;
+    --keep-tmp)
+      KEEP_TMP=true
+      shift
       ;;
     --help|-h)
       usage
@@ -177,7 +185,26 @@ if [[ "${FILTER_SNPS}" == "true" ]] && ! command -v bcftools >/dev/null 2>&1; th
   exit 1
 fi
 
+if ! command -v rsync >/dev/null 2>&1; then
+  echo "[poplddecay] ERROR: rsync not found on PATH." >&2
+  exit 1
+fi
+
 mkdir -p "${OUTDIR}"
+FINAL_OUTDIR="$(cd "${OUTDIR}" && pwd)"
+
+WORK_PARENT="${TMPDIR:-${FINAL_OUTDIR}}"
+mkdir -p "${WORK_PARENT}"
+WORK_DIR="$(mktemp -d "${WORK_PARENT%/}/poplddecay.${SLURM_JOB_ID:-$$}.XXXXXX")"
+
+cleanup() {
+  if [[ "${KEEP_TMP}" != "true" ]]; then
+    rm -rf "${WORK_DIR}"
+  else
+    echo "[poplddecay] Keeping temporary directory: ${WORK_DIR}" >&2
+  fi
+}
+trap cleanup EXIT
 
 for vcf in "${VCFS[@]}"; do
   if [[ -n "${PREFIX}" ]]; then
@@ -189,16 +216,18 @@ for vcf in "${VCFS[@]}"; do
     sample_prefix="${sample_prefix%.vcf}"
   fi
 
-  log_file="${OUTDIR%/}/${sample_prefix}.poplddecay.log"
-  stat_file="${OUTDIR%/}/${sample_prefix}.poplddecay.stat.gz"
-  plot_prefix="${OUTDIR%/}/${sample_prefix}.ld_decay"
+  work_prefix="${WORK_DIR%/}/${sample_prefix}"
+  log_file="${FINAL_OUTDIR%/}/${sample_prefix}.poplddecay.log"
+  stat_file="${work_prefix}.poplddecay.stat.gz"
+  plot_prefix="${work_prefix}.ld_decay"
 
   echo "[poplddecay] Input: ${vcf}" | tee "${log_file}"
-  echo "[poplddecay] Output prefix: ${OUTDIR%/}/${sample_prefix}" | tee -a "${log_file}"
+  echo "[poplddecay] Work directory: ${WORK_DIR}" | tee -a "${log_file}"
+  echo "[poplddecay] Final output prefix: ${FINAL_OUTDIR%/}/${sample_prefix}" | tee -a "${log_file}"
 
   run_vcf="${vcf}"
   if [[ "${FILTER_SNPS}" == "true" ]]; then
-    filtered_vcf="${OUTDIR%/}/${sample_prefix}.filtered_snps.vcf.gz"
+    filtered_vcf="${work_prefix}.filtered_snps.vcf.gz"
     echo "[poplddecay] Filtering to biallelic SNPs: ${filtered_vcf}" | tee -a "${log_file}"
     bcftools view -m2 -M2 -v snps -Oz -o "${filtered_vcf}" "${vcf}" 2>&1 | tee -a "${log_file}"
     bcftools index --tbi --force "${filtered_vcf}" 2>&1 | tee -a "${log_file}"
@@ -219,5 +248,16 @@ for vcf in "${VCFS[@]}"; do
   echo "[poplddecay] Plotting: Plot_OnePop.pl -inFile ${stat_file} -output ${plot_prefix}" | tee -a "${log_file}"
   Plot_OnePop.pl -inFile "${stat_file}" -output "${plot_prefix}" 2>&1 | tee -a "${log_file}"
 
-  echo "[poplddecay] Done: ${stat_file}" | tee -a "${log_file}"
+  echo "[poplddecay] Copying outputs back to ${FINAL_OUTDIR}" | tee -a "${log_file}"
+  for output in \
+    "${work_prefix}.filtered_snps.vcf.gz" \
+    "${work_prefix}.filtered_snps.vcf.gz.tbi" \
+    "${work_prefix}.poplddecay.stat.gz" \
+    "${work_prefix}.ld_decay"*; do
+    if [[ -e "${output}" ]]; then
+      rsync -rhivPt "${output}" "${FINAL_OUTDIR}/" 2>&1 | tee -a "${log_file}"
+    fi
+  done
+
+  echo "[poplddecay] Done: ${FINAL_OUTDIR%/}/${sample_prefix}.poplddecay.stat.gz" | tee -a "${log_file}"
 done
