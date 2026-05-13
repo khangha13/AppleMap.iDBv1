@@ -42,6 +42,7 @@ Outputs per input:
   <outdir>/<prefix>.poplddecay.stat.gz         PopLDdecay statistics
   <outdir>/<prefix>.ld_decay.*                 Plot_OnePop.pl outputs
   <outdir>/<prefix>.poplddecay.log             Command log
+  <outdir>/<prefix>.poplddecay.steps.tsv       Per-step audit report
 
 Notes:
   - Heavy calculation runs in $TMPDIR when available, then final outputs are
@@ -50,6 +51,34 @@ Notes:
       bcftools view -m2 -M2 -v snps
   - If bcftools is unavailable, use --no-filter and provide a SNP-only VCF.
 EOF
+}
+
+timestamp() {
+  date '+%Y-%m-%dT%H:%M:%S%z'
+}
+
+report_step() {
+  local step="$1"
+  local status="$2"
+  local started_at="${3:-0}"
+  local detail="${4:-}"
+  local ended_at
+  local duration=""
+  local safe_detail
+
+  ended_at="$(date +%s)"
+  if [[ "${started_at}" =~ ^[0-9]+$ && "${started_at}" -gt 0 ]]; then
+    duration="$((ended_at - started_at))"
+  fi
+
+  safe_detail="$(printf '%s' "${detail}" | tr '\t\n' '  ')"
+  printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
+    "$(timestamp)" \
+    "${sample_prefix:-global}" \
+    "${step}" \
+    "${status}" \
+    "${duration}" \
+    "${safe_detail}" >> "${STEP_REPORT}"
 }
 
 OUTDIR="ld_decay"
@@ -262,8 +291,12 @@ for vcf in "${VCFS[@]}"; do
 
   work_prefix="${WORK_DIR%/}/${sample_prefix}"
   log_file="${FINAL_OUTDIR%/}/${sample_prefix}.poplddecay.log"
+  STEP_REPORT="${FINAL_OUTDIR%/}/${sample_prefix}.poplddecay.steps.tsv"
   stat_file="${work_prefix}.poplddecay.stat.gz"
   plot_prefix="${work_prefix}.ld_decay"
+
+  printf 'timestamp\tsample_prefix\tstep\tstatus\tduration_seconds\tdetail\n' > "${STEP_REPORT}"
+  report_step "initialise" "DONE" 0 "input=${vcf}; work_dir=${WORK_DIR}; outdir=${FINAL_OUTDIR}; filter_snps=${FILTER_SNPS}; run_plot=${RUN_PLOT}"
 
   echo "[poplddecay] Input: ${vcf}" | tee "${log_file}"
   echo "[poplddecay] Work directory: ${WORK_DIR}" | tee -a "${log_file}"
@@ -271,11 +304,16 @@ for vcf in "${VCFS[@]}"; do
 
   run_vcf="${vcf}"
   if [[ "${FILTER_SNPS}" == "true" ]]; then
+    step_start="$(date +%s)"
+    report_step "filter_biallelic_snps" "START" 0 "input=${vcf}"
     filtered_vcf="${work_prefix}.filtered_snps.vcf.gz"
     echo "[poplddecay] Filtering to biallelic SNPs: ${filtered_vcf}" | tee -a "${log_file}"
     bcftools view -m2 -M2 -v snps -Oz -o "${filtered_vcf}" "${vcf}" 2>&1 | tee -a "${log_file}"
     bcftools index --tbi --force "${filtered_vcf}" 2>&1 | tee -a "${log_file}"
     run_vcf="${filtered_vcf}"
+    report_step "filter_biallelic_snps" "DONE" "${step_start}" "output=${filtered_vcf}"
+  else
+    report_step "filter_biallelic_snps" "SKIP" 0 "--no-filter set; using input VCF directly"
   fi
 
   cmd=(PopLDdecay -InVCF "${run_vcf}" -OutStat "${stat_file}" -MaxDist "${MAX_DIST}")
@@ -286,17 +324,27 @@ for vcf in "${VCFS[@]}"; do
     cmd+=(-Miss "${MISS}")
   fi
 
+  step_start="$(date +%s)"
+  report_step "run_poplddecay" "START" 0 "input=${run_vcf}; stat=${stat_file}; max_dist=${MAX_DIST}; maf=${MAF:-NA}; miss=${MISS:-NA}"
   echo "[poplddecay] Running: ${cmd[*]}" | tee -a "${log_file}"
   "${cmd[@]}" 2>&1 | tee -a "${log_file}"
+  report_step "run_poplddecay" "DONE" "${step_start}" "output=${stat_file}"
 
   if [[ "${RUN_PLOT}" == "true" ]]; then
+    step_start="$(date +%s)"
+    report_step "plot_ld_decay" "START" 0 "script=${PLOT_ONEPOP}; input=${stat_file}; prefix=${plot_prefix}"
     echo "[poplddecay] Plotting: perl ${PLOT_ONEPOP} -inFile ${stat_file} -output ${plot_prefix}" | tee -a "${log_file}"
     perl "${PLOT_ONEPOP}" -inFile "${stat_file}" -output "${plot_prefix}" 2>&1 | tee -a "${log_file}"
+    report_step "plot_ld_decay" "DONE" "${step_start}" "prefix=${plot_prefix}"
   else
     echo "[poplddecay] Skipping plot generation because --no-plot was set." | tee -a "${log_file}"
+    report_step "plot_ld_decay" "SKIP" 0 "--no-plot set"
   fi
 
+  step_start="$(date +%s)"
+  report_step "copy_outputs" "START" 0 "destination=${FINAL_OUTDIR}"
   echo "[poplddecay] Copying outputs back to ${FINAL_OUTDIR}" | tee -a "${log_file}"
+  copied_count=0
   for output in \
     "${work_prefix}.filtered_snps.vcf.gz" \
     "${work_prefix}.filtered_snps.vcf.gz.tbi" \
@@ -304,8 +352,11 @@ for vcf in "${VCFS[@]}"; do
     "${work_prefix}.ld_decay"*; do
     if [[ -e "${output}" ]]; then
       rsync -rhivPt "${output}" "${FINAL_OUTDIR}/" 2>&1 | tee -a "${log_file}"
+      copied_count=$((copied_count + 1))
     fi
   done
+  report_step "copy_outputs" "DONE" "${step_start}" "copied_files=${copied_count}; destination=${FINAL_OUTDIR}"
 
+  report_step "complete" "DONE" 0 "stat=${FINAL_OUTDIR%/}/${sample_prefix}.poplddecay.stat.gz; log=${log_file}; step_report=${STEP_REPORT}"
   echo "[poplddecay] Done: ${FINAL_OUTDIR%/}/${sample_prefix}.poplddecay.stat.gz" | tee -a "${log_file}"
 done
