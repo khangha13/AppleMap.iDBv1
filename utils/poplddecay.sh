@@ -32,6 +32,8 @@ Options:
                          miniforge/26.1.0-0
   --bcftools-module MOD  Optional bcftools module. Default:
                          bcftools/1.18-gcc-12.3.0
+  --plot-script PATH     Path to Plot_OnePop.pl if it is not on PATH.
+  --no-plot              Run PopLDdecay only and skip Plot_OnePop.pl.
   --keep-tmp             Keep the per-run working directory for debugging.
   --help                 Show this help.
 
@@ -60,6 +62,8 @@ USE_CONDA=true
 CONDA_ENV="${POPLDDECAY_CONDA_ENV:-poplddecay}"
 MINIFORGE_MODULE="${MINIFORGE_MODULE:-miniforge/26.1.0-0}"
 BCFTOOLS_MODULE="${BCFTOOLS_MODULE:-bcftools/1.18-gcc-12.3.0}"
+PLOT_SCRIPT=""
+RUN_PLOT=true
 KEEP_TMP=false
 VCFS=()
 
@@ -108,6 +112,14 @@ while [[ $# -gt 0 ]]; do
     --bcftools-module)
       BCFTOOLS_MODULE="$2"
       shift 2
+      ;;
+    --plot-script)
+      PLOT_SCRIPT="$2"
+      shift 2
+      ;;
+    --no-plot)
+      RUN_PLOT=false
+      shift
       ;;
     --keep-tmp)
       KEEP_TMP=true
@@ -175,34 +187,41 @@ if ! command -v PopLDdecay >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! command -v perl >/dev/null 2>&1; then
-  echo "[poplddecay] ERROR: perl not found on PATH; it is required for Plot_OnePop.pl." >&2
-  exit 1
-fi
-
 PLOT_ONEPOP=""
-if command -v Plot_OnePop.pl >/dev/null 2>&1; then
-  PLOT_ONEPOP="$(command -v Plot_OnePop.pl)"
-else
-  POPLDDECAY_BIN_DIR="$(dirname "$(command -v PopLDdecay)")"
-  for candidate in \
-    "${POPLDDECAY_BIN_DIR}/Plot_OnePop.pl" \
-    "${POPLDDECAY_BIN_DIR}/../share/poplddecay/bin/Plot_OnePop.pl" \
-    "${POPLDDECAY_BIN_DIR}/../share/poplddecay/Plot_OnePop.pl" \
-    "${CONDA_PREFIX:-}/share/poplddecay/bin/Plot_OnePop.pl" \
-    "${CONDA_PREFIX:-}/share/poplddecay/Plot_OnePop.pl"; do
-    if [[ -f "${candidate}" ]]; then
-      PLOT_ONEPOP="${candidate}"
-      break
-    fi
-  done
-fi
+if [[ "${RUN_PLOT}" == "true" ]]; then
+  if ! command -v perl >/dev/null 2>&1; then
+    echo "[poplddecay] ERROR: perl not found on PATH; it is required for Plot_OnePop.pl." >&2
+    exit 1
+  fi
 
-if [[ -z "${PLOT_ONEPOP}" ]]; then
-  echo "[poplddecay] ERROR: Plot_OnePop.pl not found." >&2
-  echo "[poplddecay] PopLDdecay is installed, but the plotting helper is not on PATH or in the expected Conda package locations." >&2
-  echo "[poplddecay] On Bunya, check with: ls \"\${CONDA_PREFIX}\"/share/poplddecay*/bin/Plot_OnePop.pl" >&2
-  exit 1
+  if [[ -n "${PLOT_SCRIPT}" ]]; then
+    if [[ ! -f "${PLOT_SCRIPT}" ]]; then
+      echo "[poplddecay] ERROR: --plot-script not found: ${PLOT_SCRIPT}" >&2
+      exit 1
+    fi
+    PLOT_ONEPOP="${PLOT_SCRIPT}"
+  elif command -v Plot_OnePop.pl >/dev/null 2>&1; then
+    PLOT_ONEPOP="$(command -v Plot_OnePop.pl)"
+  else
+    POPLDDECAY_BIN_DIR="$(dirname "$(command -v PopLDdecay)")"
+    for candidate in \
+      "${POPLDDECAY_BIN_DIR}/Plot_OnePop.pl" \
+      "${POPLDDECAY_BIN_DIR}/../share/poplddecay/bin/Plot_OnePop.pl" \
+      "${POPLDDECAY_BIN_DIR}/../share/poplddecay/Plot_OnePop.pl" \
+      "${CONDA_PREFIX:-}/share/poplddecay/bin/Plot_OnePop.pl" \
+      "${CONDA_PREFIX:-}/share/poplddecay/Plot_OnePop.pl"; do
+      if [[ -f "${candidate}" ]]; then
+        PLOT_ONEPOP="${candidate}"
+        break
+      fi
+    done
+  fi
+
+  if [[ -z "${PLOT_ONEPOP}" ]]; then
+    echo "[poplddecay] ERROR: Plot_OnePop.pl not found." >&2
+    echo "[poplddecay] Use --no-plot to produce the .stat.gz file only, or pass --plot-script /path/to/Plot_OnePop.pl." >&2
+    exit 1
+  fi
 fi
 
 if [[ "${FILTER_SNPS}" == "true" ]] && ! command -v bcftools >/dev/null 2>&1; then
@@ -270,8 +289,12 @@ for vcf in "${VCFS[@]}"; do
   echo "[poplddecay] Running: ${cmd[*]}" | tee -a "${log_file}"
   "${cmd[@]}" 2>&1 | tee -a "${log_file}"
 
-  echo "[poplddecay] Plotting: perl ${PLOT_ONEPOP} -inFile ${stat_file} -output ${plot_prefix}" | tee -a "${log_file}"
-  perl "${PLOT_ONEPOP}" -inFile "${stat_file}" -output "${plot_prefix}" 2>&1 | tee -a "${log_file}"
+  if [[ "${RUN_PLOT}" == "true" ]]; then
+    echo "[poplddecay] Plotting: perl ${PLOT_ONEPOP} -inFile ${stat_file} -output ${plot_prefix}" | tee -a "${log_file}"
+    perl "${PLOT_ONEPOP}" -inFile "${stat_file}" -output "${plot_prefix}" 2>&1 | tee -a "${log_file}"
+  else
+    echo "[poplddecay] Skipping plot generation because --no-plot was set." | tee -a "${log_file}"
+  fi
 
   echo "[poplddecay] Copying outputs back to ${FINAL_OUTDIR}" | tee -a "${log_file}"
   for output in \
