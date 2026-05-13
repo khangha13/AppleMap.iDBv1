@@ -2,11 +2,11 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=16G
+#SBATCH --mem=24G
 #SBATCH --job-name=poplddecay
 #SBATCH --time=1-00:00:00
 #SBATCH --partition=general
-#SBATCH --account=a_qaafi_chs
+#SBATCH --account=a_qaafi_cas
 #SBATCH -o slurm.poplddecay.%j.out
 #SBATCH -e slurm.poplddecay.%j.err
 
