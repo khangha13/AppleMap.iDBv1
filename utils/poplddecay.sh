@@ -29,7 +29,7 @@ Options:
   --conda-env NAME       Conda env containing PopLDdecay. Default: poplddecay
   --no-conda             Do not activate Conda; use commands already on PATH.
   --miniforge-module MOD Module to load before conda activate. Default:
-                         miniforge/25.3.0-3
+                         miniforge/26.1.0-0
   --bcftools-module MOD  Optional bcftools module. Default:
                          bcftools/1.18-gcc-12.3.0
   --help                 Show this help.
@@ -55,7 +55,7 @@ MISS=""
 FILTER_SNPS=true
 USE_CONDA=true
 CONDA_ENV="${POPLDDECAY_CONDA_ENV:-poplddecay}"
-MINIFORGE_MODULE="${MINIFORGE_MODULE:-miniforge/25.3.0-3}"
+MINIFORGE_MODULE="${MINIFORGE_MODULE:-miniforge/26.1.0-0}"
 BCFTOOLS_MODULE="${BCFTOOLS_MODULE:-bcftools/1.18-gcc-12.3.0}"
 VCFS=()
 
@@ -150,7 +150,10 @@ if command -v module >/dev/null 2>&1; then
 fi
 
 if [[ "${USE_CONDA}" == "true" ]]; then
-  if command -v conda >/dev/null 2>&1; then
+  if [[ -n "${ROOTMINIFORGE:-}" && -f "${ROOTMINIFORGE}/etc/profile.d/conda.sh" ]]; then
+    source "${ROOTMINIFORGE}/etc/profile.d/conda.sh"
+    conda activate "${CONDA_ENV}"
+  elif command -v conda >/dev/null 2>&1; then
     eval "$(conda shell.bash hook)"
     conda activate "${CONDA_ENV}"
   else
