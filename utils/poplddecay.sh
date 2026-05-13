@@ -175,8 +175,33 @@ if ! command -v PopLDdecay >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! command -v Plot_OnePop.pl >/dev/null 2>&1; then
-  echo "[poplddecay] ERROR: Plot_OnePop.pl not found on PATH." >&2
+if ! command -v perl >/dev/null 2>&1; then
+  echo "[poplddecay] ERROR: perl not found on PATH; it is required for Plot_OnePop.pl." >&2
+  exit 1
+fi
+
+PLOT_ONEPOP=""
+if command -v Plot_OnePop.pl >/dev/null 2>&1; then
+  PLOT_ONEPOP="$(command -v Plot_OnePop.pl)"
+else
+  POPLDDECAY_BIN_DIR="$(dirname "$(command -v PopLDdecay)")"
+  for candidate in \
+    "${POPLDDECAY_BIN_DIR}/Plot_OnePop.pl" \
+    "${POPLDDECAY_BIN_DIR}/../share/poplddecay/bin/Plot_OnePop.pl" \
+    "${POPLDDECAY_BIN_DIR}/../share/poplddecay/Plot_OnePop.pl" \
+    "${CONDA_PREFIX:-}/share/poplddecay/bin/Plot_OnePop.pl" \
+    "${CONDA_PREFIX:-}/share/poplddecay/Plot_OnePop.pl"; do
+    if [[ -f "${candidate}" ]]; then
+      PLOT_ONEPOP="${candidate}"
+      break
+    fi
+  done
+fi
+
+if [[ -z "${PLOT_ONEPOP}" ]]; then
+  echo "[poplddecay] ERROR: Plot_OnePop.pl not found." >&2
+  echo "[poplddecay] PopLDdecay is installed, but the plotting helper is not on PATH or in the expected Conda package locations." >&2
+  echo "[poplddecay] On Bunya, check with: ls \"\${CONDA_PREFIX}\"/share/poplddecay*/bin/Plot_OnePop.pl" >&2
   exit 1
 fi
 
@@ -245,8 +270,8 @@ for vcf in "${VCFS[@]}"; do
   echo "[poplddecay] Running: ${cmd[*]}" | tee -a "${log_file}"
   "${cmd[@]}" 2>&1 | tee -a "${log_file}"
 
-  echo "[poplddecay] Plotting: Plot_OnePop.pl -inFile ${stat_file} -output ${plot_prefix}" | tee -a "${log_file}"
-  Plot_OnePop.pl -inFile "${stat_file}" -output "${plot_prefix}" 2>&1 | tee -a "${log_file}"
+  echo "[poplddecay] Plotting: perl ${PLOT_ONEPOP} -inFile ${stat_file} -output ${plot_prefix}" | tee -a "${log_file}"
+  perl "${PLOT_ONEPOP}" -inFile "${stat_file}" -output "${plot_prefix}" 2>&1 | tee -a "${log_file}"
 
   echo "[poplddecay] Copying outputs back to ${FINAL_OUTDIR}" | tee -a "${log_file}"
   for output in \
