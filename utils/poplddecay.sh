@@ -46,15 +46,17 @@ Output and reporting:
   --prefix NAME          Output prefix. Only valid with one chromosome.
   --combined-prefix NAME Output prefix for --combined-vcf.
                          Default: plink2_ld_decay_combined
+  --keep-vcor            Also retain the compressed raw PLINK2 .vcor.zst file.
   --keep-tmp             Keep the per-run working directory for debugging.
 
 PLINK2 LD parameters:
   --ld-window-kb INT     Maximum LD distance in kb. Default: 300
+  --bin-bp INT           Width of LD-decay summary bins in bp. Default: 100
   --maf FLOAT            PLINK2 --maf threshold. Default: 0.05
   --geno FLOAT           PLINK2 --geno variant missingness threshold. Default: 1
   --mind FLOAT           PLINK2 --mind sample missingness threshold. Default: 1
   --ld-window-r2 FLOAT   Minimum r2 included in pairwise report. Default: 0
-  --thin FLOAT           Randomly keep this fraction of variants. Default: 0.1
+  --thin FLOAT           Randomly keep this fraction of variants. Default: 0.2
   --threads INT          PLINK2 threads. Default: SLURM_CPUS_PER_TASK or 8
 
 Environment:
@@ -63,10 +65,11 @@ Environment:
   --no-conda             Do not activate Conda; use plink2 already on PATH.
 
 Outputs:
-  <outdir>/<combined-prefix>.plink2_ld.vcor[.zst]  Raw LD from --combined-vcf
-  <outdir>/Chr01.plink2_ld.vcor[.zst]              Raw LD from a chromosome run
+  <outdir>/<combined-prefix>.plink2_ld_decay.tsv  100 bp binned table from --combined-vcf
+  <outdir>/Chr01.plink2_ld_decay.tsv              100 bp binned per-chrom table
+  <outdir>/<prefix>.plink2_ld.vcor.zst            Raw LD only with --keep-vcor
 
-  A multi-chromosome --vcf-dir run writes one raw .vcor file per chromosome.
+  A multi-chromosome --vcf-dir run writes one summary table per chromosome.
   Use --combined-vcf when one graphing input file is required.
   Under sbatch, progress and PLINK2 console output are captured in the Slurm
   .out file configured at the top of this script.
@@ -120,15 +123,17 @@ OUTDIR="plink2_ld_decay"
 PREFIX=""
 COMBINED_PREFIX="plink2_ld_decay_combined"
 LD_WINDOW_KB=300
+BIN_BP=100
 MAF=0.05
 GENO=1
 MIND=1
 LD_WINDOW_R2=0
-THIN=0.1
+THIN=0.2
 THREADS="${SLURM_CPUS_PER_TASK:-8}"
 CONDA_ENV="${PLINK2_LD_CONDA_ENV:-plink2_ld}"
 MINIFORGE_MODULE="${MINIFORGE_MODULE:-miniforge/26.1.0-0}"
 USE_CONDA=true
+KEEP_VCOR=false
 KEEP_TMP=false
 
 while [[ $# -gt 0 ]]; do
@@ -144,6 +149,7 @@ while [[ $# -gt 0 ]]; do
     --prefix) PREFIX="$2"; shift 2 ;;
     --combined-prefix) COMBINED_PREFIX="$2"; shift 2 ;;
     --ld-window-kb) LD_WINDOW_KB="$2"; shift 2 ;;
+    --bin-bp) BIN_BP="$2"; shift 2 ;;
     --maf) MAF="$2"; shift 2 ;;
     --geno) GENO="$2"; shift 2 ;;
     --mind) MIND="$2"; shift 2 ;;
@@ -153,11 +159,17 @@ while [[ $# -gt 0 ]]; do
     --conda-env) CONDA_ENV="$2"; shift 2 ;;
     --miniforge-module) MINIFORGE_MODULE="$2"; shift 2 ;;
     --no-conda) USE_CONDA=false; shift ;;
+    --keep-vcor) KEEP_VCOR=true; shift ;;
     --keep-tmp) KEEP_TMP=true; shift ;;
     --help|-h) usage; exit 0 ;;
     *) echo "[plink2_ld_decay] ERROR: unknown argument: $1" >&2; usage >&2; exit 1 ;;
   esac
 done
+
+if [[ ! "${BIN_BP}" =~ ^[1-9][0-9]*$ ]]; then
+  echo "[plink2_ld_decay] ERROR: --bin-bp must be a positive integer number of base pairs." >&2
+  exit 1
+fi
 
 if [[ -n "${COMBINED_VCF}" && ( -n "${VCF}" || -n "${VCF_DIR}" || -n "${CHR_ARG}" ) ]]; then
   echo "[plink2_ld_decay] ERROR: --combined-vcf cannot be combined with --vcf, --vcf-dir, or --chr." >&2
@@ -190,6 +202,7 @@ ensure_conda_tools
 VCF_PATHS=()
 CHR_LABELS=()
 PREFIXES=()
+INPUT_MODES=()
 
 if [[ -n "${COMBINED_VCF}" ]]; then
   if [[ ! -f "${COMBINED_VCF}" ]]; then
@@ -199,6 +212,7 @@ if [[ -n "${COMBINED_VCF}" ]]; then
   VCF_PATHS+=("${COMBINED_VCF}")
   CHR_LABELS+=("ALL")
   PREFIXES+=("${COMBINED_PREFIX}")
+  INPUT_MODES+=("combined")
 elif [[ -n "${VCF}" ]]; then
   if [[ ! -f "${VCF}" ]]; then
     echo "[plink2_ld_decay] ERROR: input VCF not found: ${VCF}" >&2
@@ -221,6 +235,7 @@ elif [[ -n "${VCF}" ]]; then
   VCF_PATHS+=("${VCF}")
   CHR_LABELS+=("${chr_label}")
   PREFIXES+=("${PREFIX:-${chr_label}}")
+  INPUT_MODES+=("chromosome")
 elif [[ -n "${CHR_ARG}" ]]; then
   if [[ -z "${VCF_DIR}" ]]; then
     echo "[plink2_ld_decay] ERROR: --vcf-dir is required with --chr." >&2
@@ -233,6 +248,7 @@ elif [[ -n "${CHR_ARG}" ]]; then
   VCF_PATHS+=("${vcf_path}")
   CHR_LABELS+=("${chr_label}")
   PREFIXES+=("${PREFIX:-${chr_label}}")
+  INPUT_MODES+=("chromosome")
 else
   if [[ -z "${VCF_DIR}" ]]; then
     echo "[plink2_ld_decay] ERROR: provide --combined-vcf, --vcf, or --vcf-dir." >&2
@@ -246,6 +262,7 @@ else
     VCF_PATHS+=("${vcf_path}")
     CHR_LABELS+=("${chr_label}")
     PREFIXES+=("${chr_label}")
+    INPUT_MODES+=("chromosome")
   done
 fi
 
@@ -253,6 +270,7 @@ for i in "${!VCF_PATHS[@]}"; do
   chr_label="${CHR_LABELS[$i]}"
   vcf_path="${VCF_PATHS[$i]}"
   sample_prefix="${PREFIXES[$i]}"
+  input_mode="${INPUT_MODES[$i]}"
 
   if [[ ! -f "${vcf_path}" ]]; then
     echo "[plink2_ld_decay] ERROR: input VCF not found for ${chr_label}: ${vcf_path}" >&2
@@ -260,11 +278,14 @@ for i in "${!VCF_PATHS[@]}"; do
   fi
 
   work_prefix="${WORK_DIR%/}/${sample_prefix}.plink2_ld"
+  summary_unsorted="${WORK_DIR%/}/${sample_prefix}.plink2_ld_decay.unsorted.tsv"
+  summary_tsv="${WORK_DIR%/}/${sample_prefix}.plink2_ld_decay.tsv"
+  final_summary="${FINAL_OUTDIR%/}/${sample_prefix}.plink2_ld_decay.tsv"
 
   echo "[plink2_ld_decay] Input: ${vcf_path}"
   echo "[plink2_ld_decay] Chromosome scope: ${chr_label}"
   echo "[plink2_ld_decay] Work directory: ${WORK_DIR}"
-  echo "[plink2_ld_decay] Final output prefix: ${FINAL_OUTDIR%/}/${sample_prefix}.plink2_ld"
+  echo "[plink2_ld_decay] Summary output: ${final_summary}"
   echo "[plink2_ld_decay] PLINK2: $(command -v plink2)"
 
   plink2 \
@@ -278,7 +299,7 @@ for i in "${!VCF_PATHS[@]}"; do
     --geno "${GENO}" \
     --mind "${MIND}" \
     --thin "${THIN}" \
-    --r2-unphased \
+    --r2-unphased zs \
     --ld-window-kb "${LD_WINDOW_KB}" \
     --ld-window-r2 "${LD_WINDOW_R2}" \
     --threads "${THREADS}" \
@@ -296,9 +317,76 @@ for i in "${!VCF_PATHS[@]}"; do
     exit 1
   fi
 
-  final_pairwise="${FINAL_OUTDIR%/}/$(basename "${pairwise_ld}")"
-  mv -f "${pairwise_ld}" "${final_pairwise}"
-  echo "[plink2_ld_decay] Completed ${chr_label}: ${final_pairwise}"
+  if [[ "${pairwise_ld}" == *.zst ]]; then
+    reader=(plink2 --zst-decompress "${pairwise_ld}")
+  else
+    reader=(cat "${pairwise_ld}")
+  fi
+
+  "${reader[@]}" |
+    awk -v bin_bp="${BIN_BP}" -v fixed_chr="${chr_label}" -v input_mode="${input_mode}" '
+      BEGIN {
+        OFS = "\t";
+        print "chromosome", "bin_start_bp", "bin_end_bp", "bin_mid_kb", "n_pairs", "mean_r2";
+      }
+      NR == 1 {
+        for (i = 1; i <= NF; i++) {
+          name = $i;
+          sub(/^#/, "", name);
+          col[name] = i;
+        }
+        pos_a = col["POS_A"];
+        pos_b = col["POS_B"];
+        r2_col = col["UNPHASED_R2"];
+        if (pos_a == "" || pos_b == "" || r2_col == "") {
+          print "Missing POS_A, POS_B, or UNPHASED_R2 columns in PLINK2 output" > "/dev/stderr";
+          exit 2;
+        }
+        chrom_a = col["CHROM_A"];
+        chrom_b = col["CHROM_B"];
+        if (input_mode == "combined" && (chrom_a == "" || chrom_b == "")) {
+          print "Missing CHROM_A or CHROM_B columns in multi-chromosome PLINK2 output" > "/dev/stderr";
+          exit 2;
+        }
+        next;
+      }
+      {
+        r2 = $r2_col;
+        if (r2 == "nan" || r2 == "NA" || r2 == ".") next;
+        out_chr = fixed_chr;
+        if (input_mode == "combined") {
+          if ($chrom_a != $chrom_b) next;
+          out_chr = $chrom_a;
+        }
+        dist = $pos_b - $pos_a;
+        if (dist < 0) dist = -dist;
+        bin = int(dist / bin_bp) * bin_bp;
+        key = out_chr SUBSEP bin;
+        sum[key] += r2;
+        n[key] += 1;
+      }
+      END {
+        for (key in n) {
+          split(key, parts, SUBSEP);
+          bin = parts[2];
+          print parts[1], bin, bin + bin_bp - 1, (bin + bin_bp / 2) / 1000, n[key], sum[key] / n[key];
+        }
+      }
+    ' > "${summary_unsorted}"
+
+  {
+    head -n 1 "${summary_unsorted}"
+    tail -n +2 "${summary_unsorted}" | sort -k1,1 -k2,2n
+  } > "${summary_tsv}"
+  mv -f "${summary_tsv}" "${final_summary}"
+
+  if [[ "${KEEP_VCOR}" == "true" ]]; then
+    final_pairwise="${FINAL_OUTDIR%/}/$(basename "${pairwise_ld}")"
+    mv -f "${pairwise_ld}" "${final_pairwise}"
+    echo "[plink2_ld_decay] Retained raw LD: ${final_pairwise}"
+  fi
+
+  echo "[plink2_ld_decay] Completed ${chr_label}: ${final_summary}"
 done
 
 echo "[plink2_ld_decay] All done. Results: ${FINAL_OUTDIR}"
