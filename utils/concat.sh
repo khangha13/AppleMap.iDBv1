@@ -1,6 +1,6 @@
 #!/bin/bash --login
 # =============================================================================
-# Concatenate the Chr01-Chr17 noCommon consolidated VCFs on node-local storage.
+# Concatenate chromosome 1-17 VCFs on node-local storage.
 #
 # Usage:
 #   sbatch utils/concat_chr01_chr17_noCommon_vcf.sh <vcf_dir> [output.vcf.gz]
@@ -10,8 +10,8 @@
 #     /scratch/project/bigdata_apple/<dataset>/7.Consolidated_VCF \
 #     /scratch/project/bigdata_apple/<dataset>/7.Consolidated_VCF/Chr01-Chr17_consolidated_noCommon.vcf.gz
 #
-# Input names are fixed to match the consolidated noCommon outputs:
-#   Chr01_consolidated_noCommon.vcf.gz ... Chr17_consolidated_noCommon.vcf.gz
+# Input files are detected from non-recursive *.vcf.gz files whose basenames
+# contain Chr1/Chr01 through Chr17 chromosome tokens.
 #
 # The output is created and indexed under $TMPDIR, then copied to the requested
 # durable path only after bcftools completes successfully. $TMPDIR must have
@@ -33,10 +33,10 @@ set -euo pipefail
 
 usage() {
     cat >&2 <<'EOF_USAGE'
-Usage: concat_chr01_chr17_noCommon_vcf.sh <vcf_dir> [output.vcf.gz]
+Usage: concat.sh <vcf_dir> [output.vcf.gz]
 
 Arguments:
-  vcf_dir        Directory containing Chr01-Chr17_consolidated_noCommon.vcf.gz.
+  vcf_dir        Directory containing chromosome 1-17 *.vcf.gz files.
   output.vcf.gz  Final compressed output VCF path.
                  Default: <vcf_dir>/Chr01-Chr17_consolidated_noCommon.vcf.gz
 
@@ -54,6 +54,40 @@ log_info() {
 
 log_error() {
     printf '[ERROR] %s\n' "$*" >&2
+}
+
+find_chromosome_vcf() {
+    local chr_num="$1"
+    local matches=()
+    local candidate basename match_count
+
+    shopt -s nullglob
+    for candidate in "${VCF_DIR}"/*.vcf.gz; do
+        [ -f "${candidate}" ] || continue
+        [ "${candidate}" != "${OUTPUT_VCF:-}" ] || continue
+        basename="$(basename "${candidate}")"
+        # Skip range-named merged outputs from earlier concat runs.
+        if [[ "${basename}" =~ [Cc][Hh][Rr]0*1[^[:digit:]][Cc][Hh][Rr]0*17([^[:digit:]]|$) ]]; then
+            continue
+        fi
+        if [[ "${basename}" =~ (^|[^[:alnum:]])[Cc][Hh][Rr]0*${chr_num}([^[:digit:]]|$) ]]; then
+            matches+=("${candidate}")
+        fi
+    done
+    shopt -u nullglob
+
+    match_count="${#matches[@]}"
+    if [ "${match_count}" -eq 0 ]; then
+        log_error "Required chromosome ${chr_num} VCF is missing in ${VCF_DIR}"
+        exit 1
+    fi
+    if [ "${match_count}" -gt 1 ]; then
+        log_error "Multiple VCFs matched chromosome ${chr_num}; expected exactly one:"
+        printf '  %s\n' "${matches[@]}" >&2
+        exit 1
+    fi
+
+    printf '%s\n' "${matches[0]}"
 }
 
 if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
@@ -104,14 +138,10 @@ trap cleanup EXIT
 INPUT_LIST="${WORK_DIR}/inputs.list"
 : > "${INPUT_LIST}"
 
-log_info "Staging Chr01-Chr17 inputs to ${WORK_DIR}"
+log_info "Detecting and staging chromosome 1-17 *.vcf.gz inputs to ${WORK_DIR}"
 for chr_num in {1..17}; do
-    filename="$(printf 'Chr%02d_consolidated_noCommon.vcf.gz' "${chr_num}")"
-    source_vcf="${VCF_DIR}/${filename}"
-    if [ ! -f "${source_vcf}" ]; then
-        log_error "Required input VCF is missing: ${source_vcf}"
-        exit 1
-    fi
+    source_vcf="$(find_chromosome_vcf "${chr_num}")"
+    filename="$(basename "${source_vcf}")"
     if [ "${source_vcf}" = "${OUTPUT_VCF}" ]; then
         log_error "Output path would overwrite an input VCF: ${OUTPUT_VCF}"
         exit 1
