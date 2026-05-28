@@ -50,13 +50,13 @@ Output and reporting:
   --keep-tmp             Keep the per-run working directory for debugging.
 
 PLINK2 LD parameters:
-  --ld-window-kb INT     Maximum LD distance in kb. Default: 300
+  --ld-window-kb INT     Maximum LD distance in kb. Default: 1000
   --bin-bp INT           Width of LD-decay summary bins in bp. Default: 100
   --maf FLOAT            PLINK2 --maf threshold. Default: 0.05
   --geno FLOAT           PLINK2 --geno variant missingness threshold. Default: 1
   --mind FLOAT           PLINK2 --mind sample missingness threshold. Default: 1
   --ld-window-r2 FLOAT   Minimum r2 included in pairwise report. Default: 0
-  --thin FLOAT           Randomly keep this fraction of variants. Default: 0.2
+  --thin FLOAT           Randomly keep this fraction of variants. Default: 0.1
   --threads INT          PLINK2 threads. Default: SLURM_CPUS_PER_TASK or 8
 
 Environment:
@@ -122,13 +122,13 @@ CHROM_END=17
 OUTDIR="plink2_ld_decay"
 PREFIX=""
 COMBINED_PREFIX="plink2_ld_decay_combined"
-LD_WINDOW_KB=300
+LD_WINDOW_KB=1000
 BIN_BP=100
 MAF=0.05
 GENO=1
 MIND=1
 LD_WINDOW_R2=0
-THIN=0.2
+THIN=0.1
 THREADS="${SLURM_CPUS_PER_TASK:-8}"
 CONDA_ENV="${PLINK2_LD_CONDA_ENV:-plink2_ld}"
 MINIFORGE_MODULE="${MINIFORGE_MODULE:-miniforge/26.1.0-0}"
