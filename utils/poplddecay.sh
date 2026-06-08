@@ -1,8 +1,8 @@
 #!/bin/bash --login
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=8
-#SBATCH --mem=96G
+#SBATCH --cpus-per-task=6
+#SBATCH --mem=256G
 #SBATCH --job-name=plink2_ld_decay
 #SBATCH --time=1-00:00:00
 #SBATCH --partition=general
@@ -51,7 +51,11 @@ Output and reporting:
   --keep-tmp             Keep the per-run working directory for debugging.
 
 PLINK2 LD parameters:
-  --ld-window-kb INT     Maximum LD distance in kb. Default: 1000
+  --ld-window-kb INT     Full-distance PLINK2 maximum LD distance in kb.
+                         Default: 1000
+  --fine-ld-window-kb INT
+                         Fine-profile PLINK2 maximum LD distance in kb.
+                         Default: 5
   --bin-bp INT           Width of the full-distance profile bins in bp.
                          Default: 100. Fine profiles are always 50 bp,
                          10 bp, and 5 bp over 0-5 kb.
@@ -59,7 +63,10 @@ PLINK2 LD parameters:
   --geno FLOAT           PLINK2 --geno variant missingness threshold. Default: 1
   --mind FLOAT           PLINK2 --mind sample missingness threshold. Default: 1
   --ld-window-r2 FLOAT   Minimum r2 included in pairwise report. Default: 0
-  --thin FLOAT           Randomly keep this fraction of variants. Default: 0.5
+  --thin FLOAT           Full-distance run: randomly keep this fraction of
+                         variants. Default: 0.2
+  --fine-thin FLOAT      Fine-profile run: randomly keep this fraction of
+                         variants. Default: 1
   --threads INT          PLINK2 threads. Default: SLURM_CPUS_PER_TASK or 8
 
 Environment:
@@ -73,9 +80,9 @@ Outputs:
                          bin_start_bp, bin_end_bp, bin_mid_kb, n_pairs, mean_r2.
                          Profiles:
                            full_<bin-bp>bp_<ld-window-kb>kb
-                           fine_50bp_5kb
-                           fine_10bp_5kb
-                           fine_5bp_5kb
+                           fine_50bp_<fine-ld-window-kb>kb
+                           fine_10bp_<fine-ld-window-kb>kb
+                           fine_5bp_<fine-ld-window-kb>kb
   <outdir>/<prefix>.plink2_ld.vcor.zst            Raw PLINK2 LD copied by default
 
   A multi-chromosome --vcf-dir run writes one long-format summary table per chromosome.
@@ -132,12 +139,14 @@ OUTDIR="plink2_ld_decay"
 PREFIX=""
 COMBINED_PREFIX="plink2_ld_decay_combined"
 LD_WINDOW_KB=1000
+FINE_LD_WINDOW_KB=5
 BIN_BP=100
 MAF=0.05
 GENO=1
 MIND=1
 LD_WINDOW_R2=0
-THIN=0.5
+THIN=0.2
+FINE_THIN=1
 THREADS="${SLURM_CPUS_PER_TASK:-8}"
 CONDA_ENV="${PLINK2_LD_CONDA_ENV:-plink2_ld}"
 MINIFORGE_MODULE="${MINIFORGE_MODULE:-miniforge/26.1.0-0}"
@@ -158,12 +167,14 @@ while [[ $# -gt 0 ]]; do
     --prefix) PREFIX="$2"; shift 2 ;;
     --combined-prefix) COMBINED_PREFIX="$2"; shift 2 ;;
     --ld-window-kb) LD_WINDOW_KB="$2"; shift 2 ;;
+    --fine-ld-window-kb) FINE_LD_WINDOW_KB="$2"; shift 2 ;;
     --bin-bp) BIN_BP="$2"; shift 2 ;;
     --maf) MAF="$2"; shift 2 ;;
     --geno) GENO="$2"; shift 2 ;;
     --mind) MIND="$2"; shift 2 ;;
     --ld-window-r2) LD_WINDOW_R2="$2"; shift 2 ;;
     --thin) THIN="$2"; shift 2 ;;
+    --fine-thin) FINE_THIN="$2"; shift 2 ;;
     --threads) THREADS="$2"; shift 2 ;;
     --conda-env) CONDA_ENV="$2"; shift 2 ;;
     --miniforge-module) MINIFORGE_MODULE="$2"; shift 2 ;;
@@ -177,6 +188,14 @@ done
 
 if [[ ! "${BIN_BP}" =~ ^[1-9][0-9]*$ ]]; then
   echo "[plink2_ld_decay] ERROR: --bin-bp must be a positive integer number of base pairs." >&2
+  exit 1
+fi
+if [[ ! "${LD_WINDOW_KB}" =~ ^[1-9][0-9]*$ ]]; then
+  echo "[plink2_ld_decay] ERROR: --ld-window-kb must be a positive integer number of kilobases." >&2
+  exit 1
+fi
+if [[ ! "${FINE_LD_WINDOW_KB}" =~ ^[1-9][0-9]*$ ]]; then
+  echo "[plink2_ld_decay] ERROR: --fine-ld-window-kb must be a positive integer number of kilobases." >&2
   exit 1
 fi
 
@@ -216,6 +235,102 @@ sort_ld_summary() {
     tail -n +2 "${unsorted}" | sort -k1,1 -k4,4 -k5,5n
   } > "${sorted}"
   mv -f "${sorted}" "${final}"
+}
+
+find_pairwise_ld() {
+  local work_prefix="$1"
+  local candidate
+
+  for candidate in "${work_prefix}.vcor" "${work_prefix}"*.vcor "${work_prefix}.vcor.zst" "${work_prefix}"*.vcor.zst; do
+    if [[ -f "${candidate}" ]]; then
+      printf '%s\n' "${candidate}"
+      return 0
+    fi
+  done
+  return 1
+}
+
+append_ld_summary() {
+  local pairwise_ld="$1"
+  local fixed_chr="$2"
+  local input_mode="$3"
+  local summary_out="$4"
+  local profile_mode="$5"
+  local bin_bp="$6"
+  local max_distance_bp="$7"
+  local -a reader
+
+  if [[ "${pairwise_ld}" == *.zst ]]; then
+    reader=(plink2 --zst-decompress "${pairwise_ld}")
+  else
+    reader=(cat "${pairwise_ld}")
+  fi
+
+  "${reader[@]}" |
+    awk \
+      -v profile_mode="${profile_mode}" \
+      -v bin_bp="${bin_bp}" \
+      -v max_distance_bp="${max_distance_bp}" \
+      -v fixed_chr="${fixed_chr}" \
+      -v input_mode="${input_mode}" \
+      -v main_out="${summary_out}" '
+      function record_bin(profile, out_chr, bin_width, profile_max_distance_bp, dist, r2) {
+        bin = int(dist / bin_width) * bin_width;
+        key = profile SUBSEP bin_width SUBSEP profile_max_distance_bp SUBSEP out_chr SUBSEP bin;
+        sum[key] += r2;
+        n[key] += 1;
+      }
+      NR == 1 {
+        for (i = 1; i <= NF; i++) {
+          name = $i;
+          sub(/^#/, "", name);
+          col[name] = i;
+        }
+        pos_a = col["POS_A"];
+        pos_b = col["POS_B"];
+        r2_col = col["UNPHASED_R2"];
+        if (pos_a == "" || pos_b == "" || r2_col == "") {
+          print "Missing POS_A, POS_B, or UNPHASED_R2 columns in PLINK2 output" > "/dev/stderr";
+          exit 2;
+        }
+        chrom_a = col["CHROM_A"];
+        chrom_b = col["CHROM_B"];
+        if (input_mode == "combined" && (chrom_a == "" || chrom_b == "")) {
+          print "Missing CHROM_A or CHROM_B columns in multi-chromosome PLINK2 output" > "/dev/stderr";
+          exit 2;
+        }
+        next;
+      }
+      {
+        r2 = $r2_col;
+        if (r2 == "nan" || r2 == "NA" || r2 == ".") next;
+        out_chr = fixed_chr;
+        if (input_mode == "combined") {
+          if ($chrom_a != $chrom_b) next;
+          out_chr = $chrom_a;
+        }
+        dist = $pos_b - $pos_a;
+        if (dist < 0) dist = -dist;
+        if (profile_mode == "full") {
+          record_bin("full_" bin_bp "bp_" (max_distance_bp / 1000) "kb", out_chr, bin_bp, max_distance_bp, dist, r2);
+        } else if (profile_mode == "fine" && dist < max_distance_bp) {
+          record_bin("fine_50bp_" (max_distance_bp / 1000) "kb", out_chr, 50, max_distance_bp, dist, r2);
+          record_bin("fine_10bp_" (max_distance_bp / 1000) "kb", out_chr, 10, max_distance_bp, dist, r2);
+          record_bin("fine_5bp_" (max_distance_bp / 1000) "kb", out_chr, 5, max_distance_bp, dist, r2);
+        }
+      }
+      END {
+        for (key in n) {
+          split(key, parts, SUBSEP);
+          profile = parts[1];
+          bin_width = parts[2] + 0;
+          profile_max_distance_bp = parts[3] + 0;
+          out_chr = parts[4];
+          bin = parts[5] + 0;
+          print profile, bin_width, profile_max_distance_bp, out_chr, bin, bin + bin_width - 1, (bin + bin_width / 2) / 1000, n[key], sum[key] / n[key] >> main_out;
+        }
+      }
+    '
 }
 
 ensure_conda_tools
@@ -298,10 +413,13 @@ for i in "${!VCF_PATHS[@]}"; do
     exit 1
   fi
 
-  work_prefix="${WORK_DIR%/}/${sample_prefix}.plink2_ld"
+  full_work_prefix="${WORK_DIR%/}/${sample_prefix}.plink2_ld.full"
+  fine_work_prefix="${WORK_DIR%/}/${sample_prefix}.plink2_ld.fine"
   summary_unsorted="${WORK_DIR%/}/${sample_prefix}.plink2_ld_decay.unsorted.tsv"
   summary_tsv="${WORK_DIR%/}/${sample_prefix}.plink2_ld_decay.tsv"
   final_summary="${FINAL_OUTDIR%/}/${sample_prefix}.plink2_ld_decay.tsv"
+  full_max_distance_bp=$((LD_WINDOW_KB * 1000))
+  fine_max_distance_bp=$((FINE_LD_WINDOW_KB * 1000))
 
   echo "[plink2_ld_decay] Input: ${vcf_path}"
   echo "[plink2_ld_decay] Chromosome scope: ${chr_label}"
@@ -309,6 +427,17 @@ for i in "${!VCF_PATHS[@]}"; do
   echo "[plink2_ld_decay] Long-format summary output: ${final_summary}"
   echo "[plink2_ld_decay] PLINK2: $(command -v plink2)"
 
+  printf 'profile\tbin_bp\tmax_distance_bp\tchromosome\tbin_start_bp\tbin_end_bp\tbin_mid_kb\tn_pairs\tmean_r2\n' > "${summary_unsorted}"
+  full_thin_args=()
+  fine_thin_args=()
+  if [[ "${THIN}" != "1" && "${THIN}" != "1.0" ]]; then
+    full_thin_args=(--thin "${THIN}")
+  fi
+  if [[ "${FINE_THIN}" != "1" && "${FINE_THIN}" != "1.0" ]]; then
+    fine_thin_args=(--thin "${FINE_THIN}")
+  fi
+
+  echo "[plink2_ld_decay] Full-distance run: thin=${THIN}, window=${LD_WINDOW_KB}kb, bin=${BIN_BP}bp"
   plink2 \
     --vcf "${vcf_path}" \
     --double-id \
@@ -319,106 +448,51 @@ for i in "${!VCF_PATHS[@]}"; do
     --maf "${MAF}" \
     --geno "${GENO}" \
     --mind "${MIND}" \
-    --thin "${THIN}" \
+    "${full_thin_args[@]}" \
     --r2-unphased zs \
     --ld-window-kb "${LD_WINDOW_KB}" \
     --ld-window-r2 "${LD_WINDOW_R2}" \
     --threads "${THREADS}" \
-    --out "${work_prefix}"
+    --out "${full_work_prefix}"
 
-  pairwise_ld=""
-  for candidate in "${work_prefix}.vcor" "${work_prefix}"*.vcor "${work_prefix}.vcor.zst" "${work_prefix}"*.vcor.zst; do
-    if [[ -f "${candidate}" ]]; then
-      pairwise_ld="${candidate}"
-      break
-    fi
-  done
-  if [[ -z "${pairwise_ld}" ]]; then
-    echo "[plink2_ld_decay] ERROR: Could not find PLINK2 .vcor output for ${work_prefix}" >&2
+  if ! full_pairwise_ld="$(find_pairwise_ld "${full_work_prefix}")"; then
+    echo "[plink2_ld_decay] ERROR: Could not find full-distance PLINK2 .vcor output for ${full_work_prefix}" >&2
     exit 1
   fi
+  append_ld_summary "${full_pairwise_ld}" "${chr_label}" "${input_mode}" "${summary_unsorted}" "full" "${BIN_BP}" "${full_max_distance_bp}"
 
-  if [[ "${pairwise_ld}" == *.zst ]]; then
-    reader=(plink2 --zst-decompress "${pairwise_ld}")
-  else
-    reader=(cat "${pairwise_ld}")
+  echo "[plink2_ld_decay] Fine-profile run: thin=${FINE_THIN}, window=${FINE_LD_WINDOW_KB}kb, bins=50/10/5bp"
+  plink2 \
+    --vcf "${vcf_path}" \
+    --double-id \
+    --allow-extra-chr \
+    --set-all-var-ids '@:#:$r:$a' \
+    --snps-only just-acgt \
+    --max-alleles 2 \
+    --maf "${MAF}" \
+    --geno "${GENO}" \
+    --mind "${MIND}" \
+    "${fine_thin_args[@]}" \
+    --r2-unphased zs \
+    --ld-window-kb "${FINE_LD_WINDOW_KB}" \
+    --ld-window-r2 "${LD_WINDOW_R2}" \
+    --threads "${THREADS}" \
+    --out "${fine_work_prefix}"
+
+  if ! fine_pairwise_ld="$(find_pairwise_ld "${fine_work_prefix}")"; then
+    echo "[plink2_ld_decay] ERROR: Could not find fine-profile PLINK2 .vcor output for ${fine_work_prefix}" >&2
+    exit 1
   fi
-
-  "${reader[@]}" |
-    awk \
-      -v bin_bp="${BIN_BP}" \
-      -v max_distance_bp="$((LD_WINDOW_KB * 1000))" \
-      -v fixed_chr="${chr_label}" \
-      -v input_mode="${input_mode}" \
-      -v main_out="${summary_unsorted}" '
-      function record_bin(profile, out_chr, bin_width, profile_max_distance_bp, dist, r2) {
-        bin = int(dist / bin_width) * bin_width;
-        key = profile SUBSEP bin_width SUBSEP profile_max_distance_bp SUBSEP out_chr SUBSEP bin;
-        sum[key] += r2;
-        n[key] += 1;
-      }
-      BEGIN {
-        OFS = "\t";
-        header = "profile\tbin_bp\tmax_distance_bp\tchromosome\tbin_start_bp\tbin_end_bp\tbin_mid_kb\tn_pairs\tmean_r2";
-        print header > main_out;
-      }
-      NR == 1 {
-        for (i = 1; i <= NF; i++) {
-          name = $i;
-          sub(/^#/, "", name);
-          col[name] = i;
-        }
-        pos_a = col["POS_A"];
-        pos_b = col["POS_B"];
-        r2_col = col["UNPHASED_R2"];
-        if (pos_a == "" || pos_b == "" || r2_col == "") {
-          print "Missing POS_A, POS_B, or UNPHASED_R2 columns in PLINK2 output" > "/dev/stderr";
-          exit 2;
-        }
-        chrom_a = col["CHROM_A"];
-        chrom_b = col["CHROM_B"];
-        if (input_mode == "combined" && (chrom_a == "" || chrom_b == "")) {
-          print "Missing CHROM_A or CHROM_B columns in multi-chromosome PLINK2 output" > "/dev/stderr";
-          exit 2;
-        }
-        next;
-      }
-      {
-        r2 = $r2_col;
-        if (r2 == "nan" || r2 == "NA" || r2 == ".") next;
-        out_chr = fixed_chr;
-        if (input_mode == "combined") {
-          if ($chrom_a != $chrom_b) next;
-          out_chr = $chrom_a;
-        }
-        dist = $pos_b - $pos_a;
-        if (dist < 0) dist = -dist;
-        record_bin("full_" bin_bp "bp_" (max_distance_bp / 1000) "kb", out_chr, bin_bp, max_distance_bp, dist, r2);
-        if (dist < 5000) {
-          record_bin("fine_50bp_5kb", out_chr, 50, 5000, dist, r2);
-          record_bin("fine_10bp_5kb", out_chr, 10, 5000, dist, r2);
-          record_bin("fine_5bp_5kb", out_chr, 5, 5000, dist, r2);
-        }
-      }
-      END {
-        for (key in n) {
-          split(key, parts, SUBSEP);
-          profile = parts[1];
-          bin_width = parts[2] + 0;
-          profile_max_distance_bp = parts[3] + 0;
-          out_chr = parts[4];
-          bin = parts[5] + 0;
-          print profile, bin_width, profile_max_distance_bp, out_chr, bin, bin + bin_width - 1, (bin + bin_width / 2) / 1000, n[key], sum[key] / n[key] >> main_out;
-        }
-      }
-    '
+  append_ld_summary "${fine_pairwise_ld}" "${chr_label}" "${input_mode}" "${summary_unsorted}" "fine" "${BIN_BP}" "${fine_max_distance_bp}"
 
   sort_ld_summary "${summary_unsorted}" "${summary_tsv}" "${final_summary}"
 
   if [[ "${KEEP_VCOR}" == "true" ]]; then
-    final_pairwise="${FINAL_OUTDIR%/}/$(basename "${pairwise_ld}")"
-    cp -f "${pairwise_ld}" "${final_pairwise}"
-    echo "[plink2_ld_decay] Copied raw LD: ${final_pairwise}"
+    for pairwise_ld in "${full_pairwise_ld}" "${fine_pairwise_ld}"; do
+      final_pairwise="${FINAL_OUTDIR%/}/$(basename "${pairwise_ld}")"
+      cp -f "${pairwise_ld}" "${final_pairwise}"
+      echo "[plink2_ld_decay] Copied raw LD: ${final_pairwise}"
+    done
   fi
 
   echo "[plink2_ld_decay] Completed ${chr_label}: ${final_summary}"
