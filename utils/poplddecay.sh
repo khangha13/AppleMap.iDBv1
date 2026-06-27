@@ -274,6 +274,9 @@ append_ld_summary() {
       -v fixed_chr="${fixed_chr}" \
       -v input_mode="${input_mode}" \
       -v main_out="${summary_out}" '
+      BEGIN {
+        OFS = "\t";
+      }
       function record_bin(profile, out_chr, bin_width, profile_max_distance_bp, dist, r2) {
         bin = int(dist / bin_width) * bin_width;
         key = profile SUBSEP bin_width SUBSEP profile_max_distance_bp SUBSEP out_chr SUBSEP bin;
