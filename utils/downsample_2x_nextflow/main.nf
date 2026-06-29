@@ -63,7 +63,11 @@ process DOWNSAMPLE_BAM {
     tuple val(accession), path(bam)
 
     output:
-    tuple val(accession), path("${accession}_2x.bam"), path("${accession}_2x.bam.bai")
+    tuple val(accession),
+        path("${accession}_2x.bam"),
+        path("${accession}_2x.bam.bai"),
+        path("${accession}_remainder_*x.bam"),
+        path("${accession}_remainder_*x.bam.bai")
 
     script:
     """
@@ -73,11 +77,30 @@ process DOWNSAMPLE_BAM {
     SEED="${params.seed}"
     CHROM_REGEX='${params.chrom_regex}'
     OUTPUT_BAM="${accession}_2x.bam"
+    REMAINDER_TMP_BAM="${accession}_remainder.tmp.bam"
+
+    calculate_depth() {
+        local depth_bam="\$1"
+        samtools coverage "\${depth_bam}" | awk -v chr_re="\${CHROM_REGEX}" '
+            \$1 ~ chr_re {
+                len = \$3 - \$2 + 1
+                depth_sum += \$7 * len
+                length_sum += len
+            }
+            END {
+                if (length_sum > 0) {
+                    printf "%.6f", depth_sum / length_sum
+                } else {
+                    print "NA"
+                }
+            }'
+    }
 
     echo "=========================================="
     echo "Processing accession: ${accession}"
     echo "Input BAM: ${bam}"
     echo "Output BAM: \${OUTPUT_BAM}"
+    echo "Remainder temporary BAM: \${REMAINDER_TMP_BAM}"
     echo "Target depth: \${TARGET_DEPTH}x"
     echo "Threads: ${task.cpus}"
     echo "=========================================="
@@ -93,21 +116,7 @@ process DOWNSAMPLE_BAM {
     fi
 
     echo "Estimating length-weighted mean depth over Chr01-Chr17..."
-    depth=\$(
-        samtools coverage "${bam}" | awk -v chr_re="\${CHROM_REGEX}" '
-            \$1 ~ chr_re {
-                len = \$3 - \$2 + 1
-                depth_sum += \$7 * len
-                length_sum += len
-            }
-            END {
-                if (length_sum > 0) {
-                    printf "%.6f", depth_sum / length_sum
-                } else {
-                    print "NA"
-                }
-            }'
-    )
+    depth=\$(calculate_depth "${bam}")
 
     if [[ ! "\${depth}" =~ ^[0-9]+([.][0-9]+)?\$ ]]; then
         echo "ERROR: Could not calculate depth over Chr01-Chr17 for ${accession} (depth=\${depth})"
@@ -127,11 +136,26 @@ process DOWNSAMPLE_BAM {
     echo "Downsampling keep fraction: \${keep_fraction}"
     echo "samtools view -s argument: \${fraction_arg}"
 
-    samtools view -@ ${task.cpus} -b -s "\${fraction_arg}" "${bam}" -o "\${OUTPUT_BAM}"
+    samtools view -@ ${task.cpus} -b -s "\${fraction_arg}" -U "\${REMAINDER_TMP_BAM}" -o "\${OUTPUT_BAM}" "${bam}"
     samtools index -@ ${task.cpus} "\${OUTPUT_BAM}"
+
+    echo "Estimating actual coverage of remainder BAM over Chr01-Chr17..."
+    remainder_depth=\$(calculate_depth "\${REMAINDER_TMP_BAM}")
+
+    if [[ ! "\${remainder_depth}" =~ ^[0-9]+([.][0-9]+)?\$ ]]; then
+        echo "ERROR: Could not calculate remainder depth for ${accession} (depth=\${remainder_depth})"
+        exit 1
+    fi
+
+    REMAINDER_BAM="${accession}_remainder_\${remainder_depth}x.bam"
+    mv "\${REMAINDER_TMP_BAM}" "\${REMAINDER_BAM}"
+    samtools index -@ ${task.cpus} "\${REMAINDER_BAM}"
 
     echo "Downsampling complete for ${accession}"
     echo "Output BAM: \${OUTPUT_BAM}"
     echo "Output index: \${OUTPUT_BAM}.bai"
+    echo "Remainder observed depth: \${remainder_depth}x"
+    echo "Remainder BAM: \${REMAINDER_BAM}"
+    echo "Remainder index: \${REMAINDER_BAM}.bai"
     """
 }
