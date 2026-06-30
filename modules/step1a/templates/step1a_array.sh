@@ -4,11 +4,17 @@ set -euo pipefail
 
 DATASET_PATH="$1"
 SAMPLE_LIST_FILE="$2"
+INPUT_MODE="${3:-fastq}"
+BAM_TAG="${4:-}"
+OUTPUT_TAG="${5:-}"
 
 if [ -z "${DATASET_PATH:-}" ] || [ -z "${SAMPLE_LIST_FILE:-}" ]; then
-    echo "Usage: ${BASH_SOURCE[0]} <dataset_path> <sample_list_file>" >&2
+    echo "Usage: ${BASH_SOURCE[0]} <dataset_path> <sample_list_file> [fastq|bam] [bam_tag] [output_tag]" >&2
     exit 1
 fi
+
+# Extract dataset name from DATASET_PATH for logging and shared reference setup
+DATASET_NAME="$(basename "${DATASET_PATH}")"
 
 # =============================================================================
 # MODULE LOADING SECTION
@@ -66,9 +72,7 @@ if [ -z "${SAMPLE:-}" ]; then
 fi
 
 log_info "Step 1A array task ${SLURM_ARRAY_TASK_ID} processing sample ${SAMPLE}"
-
-# Extract dataset name from DATASET_PATH for shared reference setup
-DATASET_NAME="$(basename "${DATASET_PATH}")"
+log_info "Step 1A input mode: ${INPUT_MODE}"
 
 ref_genome="$(get_reference_fasta)"
 known_sites="$(get_known_sites_vcf)"
@@ -84,4 +88,4 @@ if [ "${SLURM_ARRAY_TASK_ID}" -eq 0 ]; then
     log_info "Backup directories initialized"
 fi
 
-execute_step1a_pipeline "${SAMPLE}" "${DATASET_PATH}" "${DATASET_NAME}"
+execute_step1a_pipeline "${SAMPLE}" "${DATASET_PATH}" "${DATASET_NAME}" "${INPUT_MODE}" "${BAM_TAG}" "${OUTPUT_TAG}"

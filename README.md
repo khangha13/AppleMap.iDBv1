@@ -51,9 +51,11 @@ bash bin/gatk_pipeline.sh -d <dataset> -s 1b      # 1a/1b/1c/1d/full/auto
 ## Pipeline Steps
 ### Step 1A – Per-sample calling
 - FastQC → Trimmomatic → FastQC → BWA → MarkDuplicates → BQSR → HaplotypeCaller → GenotypeGVCFs.
+- BAM-entry mode is available for already analysis-ready BAMs, such as downsampled BAMs derived from recalibrated BAMs. It skips FastQC, trimming, BWA, MarkDuplicates, and BQSR, then runs HaplotypeCaller → GenotypeGVCFs.
 - Creates backups after key stages (default steps 3/4/5/6) in `${PIPELINE_WORK_DIR}/step1a/<dataset>` to support resume.
 - Detects complete/partial samples; can restrict to incomplete samples.
-- Submit: `bash wrappers/sbatch/step1a_submit.sh <dataset> <rdm_base> [--sample <id> | --sample-list <file>]`.
+- Submit FASTQ mode: `bash wrappers/sbatch/step1a_submit.sh <dataset> <rdm_base> [--sample <id> | --sample-list <file>]`.
+- Submit BAM-entry mode: `bash wrappers/sbatch/step1a_submit.sh <dataset> <rdm_base> --from-bam --bam-tag <tag> --output-tag <tag> [--sample <id> | --sample-list <file>]`.
 - Defaults (configurable): 10 CPUs, 32G, 200h, array limit 100.
 - Outputs: per-sample GVCF (`*_raw.g.vcf.gz`) and genotyped VCF (`*_genotyped.vcf.gz` + index) in `5.Individual_VCF/`; FastQC HTML/ZIP in `2.*` and `3.*`; BAMs and indexes in `4.BAM/`.
 
@@ -92,6 +94,20 @@ Use these when you want to drive a single module yourself rather than letting th
   - `--sample <id>`: run only one sample (expects `<id>_1.fastq.gz` / `<id>_2.fastq.gz`).
   - `--sample-list <file>`: one basename per line; runs only those samples.
   - No flags: builds a sample list from `1.FASTQ/`, detects complete samples, and can restrict to incomplete ones.
+- BAM-entry mode for downsampled or otherwise analysis-ready BAMs:
+  ```bash
+  bash wrappers/sbatch/step1a_submit.sh <dataset> <rdm_base> \
+    --from-bam \
+    --bam-tag 2x \
+    --output-tag 2x \
+    [--sample <id> | --sample-list <file>]
+  ```
+  - Required BAM layout: `<rdm_base>/4.BAM/<sample>/<sample>_<bam-tag>.bam`.
+  - The `.bai` index is optional; it is created if missing.
+  - Tags may contain only letters, numbers, dot, underscore, and hyphen.
+  - If the BAM header is not `SO:coordinate`, Step 1A sorts a local copy before HaplotypeCaller.
+  - Tagged outputs are written to `5.Individual_VCF/`, for example `<sample>_2x_raw.g.vcf.gz` and `<sample>_2x_genotyped.vcf.gz`.
+  - Step 1B will treat `<sample>_2x` as the sample name because it derives names from `*_raw.g.vcf.gz`.
 - Interactive helper: `bash wrappers/interactive/step1a_interactive.sh`
   - Prompts for dataset and sample selection; respects the same optional `--sample` / `--sample-list` flags.
 

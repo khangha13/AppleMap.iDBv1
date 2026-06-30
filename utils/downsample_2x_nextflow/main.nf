@@ -10,30 +10,30 @@ params.target_depth = params.target_depth ?: 2
 params.seed = params.seed ?: 67
 params.chrom_regex = params.chrom_regex ?: '^Chr(0[1-9]|1[0-7])$'
 
-if (!params.accessions) {
-    error 'Missing required parameter: --accessions'
-}
-
-if (!params.bam_dir) {
-    error 'Missing required parameter: --bam_dir'
-}
-
-if (!params.outdir) {
-    error 'Missing required parameter: --outdir'
-}
-
-def accessions_file = file(params.accessions)
-def bam_dir = file(params.bam_dir)
-
-if (!accessions_file.exists()) {
-    error "Accession list not found: ${params.accessions}"
-}
-
-if (!bam_dir.exists()) {
-    error "BAM directory not found: ${params.bam_dir}"
-}
-
 workflow {
+    if (!params.accessions) {
+        error 'Missing required parameter: --accessions'
+    }
+
+    if (!params.bam_dir) {
+        error 'Missing required parameter: --bam_dir'
+    }
+
+    if (!params.outdir) {
+        error 'Missing required parameter: --outdir'
+    }
+
+    def accessions_file = file(params.accessions)
+    def bam_dir = file(params.bam_dir)
+
+    if (!accessions_file.exists()) {
+        error "Accession list not found: ${params.accessions}"
+    }
+
+    if (!bam_dir.exists()) {
+        error "BAM directory not found: ${params.bam_dir}"
+    }
+
     Channel
         .fromPath(accessions_file)
         .splitText()

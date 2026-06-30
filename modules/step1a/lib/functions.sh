@@ -499,6 +499,159 @@ run_apply_bqsr() {
     log_message "GATK ApplyBQSR completed successfully"
 }
 
+# Resolve a tagged BAM input from the standard RDM layout.
+resolve_bam_entry_input() {
+    local rdm_base_path="$1"
+    local sample="$2"
+    local bam_tag="$3"
+
+    printf '%s\n' "${rdm_base_path}/4.BAM/${sample}/${sample}_${bam_tag}.bam"
+}
+
+validate_bam_entry_sample() {
+    local rdm_base_path="$1"
+    local sample="$2"
+    local bam_tag="$3"
+    local bam_path
+    bam_path="$(resolve_bam_entry_input "$rdm_base_path" "$sample" "$bam_tag")"
+
+    if [ ! -f "$bam_path" ]; then
+        error_exit "BAM-mode input not found for sample '${sample}': ${bam_path}"
+    fi
+}
+
+validate_bam_entry_sample_list() {
+    local rdm_base_path="$1"
+    local sample_list_file="$2"
+    local bam_tag="$3"
+    local sample
+
+    while IFS= read -r sample; do
+        [ -n "$sample" ] || continue
+        validate_bam_entry_sample "$rdm_base_path" "$sample" "$bam_tag"
+    done < "$sample_list_file"
+}
+
+create_bam_entry_sample_list() {
+    local rdm_base_path="$1"
+    local sample_list_file="$2"
+    local bam_tag="$3"
+    local bam_root="${rdm_base_path}/4.BAM"
+    local sample
+    local bam_file
+    local samples=()
+
+    if [ ! -d "$bam_root" ]; then
+        error_exit "BAM directory not found: ${bam_root}"
+    fi
+
+    shopt -s nullglob
+    for bam_file in "${bam_root}"/*/*_"${bam_tag}".bam; do
+        sample="$(basename "$(dirname "$bam_file")")"
+        if [ "$bam_file" = "$(resolve_bam_entry_input "$rdm_base_path" "$sample" "$bam_tag")" ]; then
+            samples+=("$sample")
+        else
+            log_warn "Skipping BAM that does not match expected RDM naming for sample '${sample}': ${bam_file}"
+        fi
+    done
+    shopt -u nullglob
+
+    if [ ${#samples[@]} -eq 0 ]; then
+        error_exit "No BAM-mode inputs found matching ${bam_root}/*/*_${bam_tag}.bam"
+    fi
+
+    printf "%s\n" "${samples[@]}" | sort > "$sample_list_file"
+    log_info "Created BAM-mode sample list with ${#samples[@]} samples: ${sample_list_file}"
+}
+
+ensure_bam_index() {
+    local bam_path="$1"
+    local num_threads="$2"
+
+    if [ ! -f "${bam_path}.bai" ]; then
+        log_info "BAM index not found; creating ${bam_path}.bai"
+        if ! "${SAMTOOLS_PATH}" index -@ "$num_threads" "$bam_path"; then
+            error_exit "Failed to index BAM: ${bam_path}"
+        fi
+    fi
+}
+
+ensure_coordinate_sorted_bam() {
+    local input_bam="$1"
+    local output_bam="$2"
+    local num_threads="$3"
+    local sort_order=""
+
+    sort_order=$("${SAMTOOLS_PATH}" view -H "$input_bam" | awk -F'\t' '$1 == "@HD" { for (i=1; i<=NF; i++) if ($i ~ /^SO:/) { sub(/^SO:/, "", $i); print $i; exit } }')
+
+    if [ "$sort_order" = "coordinate" ]; then
+        log_info "BAM is coordinate-sorted: ${input_bam}"
+        printf '%s\n' "$input_bam"
+        return 0
+    fi
+
+    log_info "BAM sort order is '${sort_order:-unknown}'; sorting to ${output_bam}"
+    if ! "${SAMTOOLS_PATH}" sort -@ "$num_threads" -o "$output_bam" "$input_bam"; then
+        error_exit "Failed to coordinate-sort BAM: ${input_bam}"
+    fi
+    ensure_bam_index "$output_bam" "$num_threads"
+    printf '%s\n' "$output_bam"
+}
+
+run_haplotype_caller_on_bam() {
+    local sample="$1"
+    local input_bam="$2"
+    local memory="$3"
+    local reference_genome="$4"
+    local num_threads="$5"
+    local output_prefix="$6"
+
+    log_info "Running GATK HaplotypeCaller for sample: $sample using BAM: $input_bam"
+
+    if ! "${GATK_COMMAND}" --java-options "-Xmx${memory}" HaplotypeCaller \
+        -R "$reference_genome" \
+        -I "$input_bam" \
+        -O "${output_prefix}_raw.g.vcf.gz" \
+        -ERC GVCF \
+        --native-pair-hmm-threads "$num_threads"; then
+        error_exit "GATK HaplotypeCaller failed"
+    fi
+
+    log_info "GATK HaplotypeCaller completed successfully"
+}
+
+run_genotype_gvcfs_tagged() {
+    local output_prefix="$1"
+    local memory="$2"
+    local reference_genome="$3"
+
+    log_info "Running GATK GenotypeGVCFs for output prefix: $output_prefix"
+
+    if ! "${GATK_COMMAND}" --java-options "-Xmx${memory}" GenotypeGVCFs \
+        -R "$reference_genome" \
+        -V "${output_prefix}_raw.g.vcf.gz" \
+        -O "${output_prefix}_genotyped.vcf.gz"; then
+        error_exit "GATK GenotypeGVCFs failed"
+    fi
+
+    log_info "GATK GenotypeGVCFs completed successfully"
+}
+
+copy_tagged_vcf_results_to_rdm() {
+    local output_prefix="$1"
+    local rdm_base_path="$2"
+
+    log_info "Copying tagged VCF results to RDM for prefix: $output_prefix"
+    mkdir -p "${rdm_base_path}/5.Individual_VCF"
+
+    rsync -rhivPt "${output_prefix}_raw.g.vcf.gz" "${rdm_base_path}/5.Individual_VCF/" || error_exit "Failed to copy tagged GVCF file to RDM"
+    rsync -rhivPt "${output_prefix}_raw.g.vcf.gz.tbi" "${rdm_base_path}/5.Individual_VCF/" || error_exit "Failed to copy tagged GVCF index to RDM"
+    rsync -rhivPt "${output_prefix}_genotyped.vcf.gz" "${rdm_base_path}/5.Individual_VCF/" || error_exit "Failed to copy tagged VCF file to RDM"
+    rsync -rhivPt "${output_prefix}_genotyped.vcf.gz.tbi" "${rdm_base_path}/5.Individual_VCF/" || error_exit "Failed to copy tagged VCF index to RDM"
+
+    log_info "Tagged VCF results copied to RDM successfully"
+}
+
 # Function to run GATK HaplotypeCaller
 run_haplotype_caller() {
     local sample="$1"

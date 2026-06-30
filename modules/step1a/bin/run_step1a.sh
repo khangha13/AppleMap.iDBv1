@@ -54,31 +54,63 @@ main() {
         log_error "First argument '${dataset_name}' looks like a flag, not a dataset name."
         log_error ""
         log_error "Expected usage:"
-        log_error "  step1a_submit.sh <dataset_name> <rdm_base_path> [--sample NAME] [--sample-list PATH]"
+        log_error "  step1a_submit.sh <dataset_name> <rdm_base_path> [--sample NAME] [--sample-list PATH] [--from-bam --bam-tag TAG --output-tag TAG]"
         exit 1
     fi
     if [[ "${rdm_base_path}" == -* ]]; then
         log_error "Second argument '${rdm_base_path}' looks like a flag, not an RDM path."
         log_error ""
         log_error "Expected usage:"
-        log_error "  step1a_submit.sh <dataset_name> <rdm_base_path> [--sample NAME] [--sample-list PATH]"
+        log_error "  step1a_submit.sh <dataset_name> <rdm_base_path> [--sample NAME] [--sample-list PATH] [--from-bam --bam-tag TAG --output-tag TAG]"
         exit 1
     fi
 
     # Optional overrides
     local custom_sample_name=""
     local custom_sample_list=""
+    local input_mode="fastq"
+    local bam_tag=""
+    local output_tag=""
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --sample)
                 custom_sample_name="$2"; shift 2;;
             --sample-list)
                 custom_sample_list="$2"; shift 2;;
+            --from-bam)
+                input_mode="bam"; shift;;
+            --bam-tag)
+                bam_tag="$2"; shift 2;;
+            --output-tag)
+                output_tag="$2"; shift 2;;
             *)
                 log_warn "Unknown option ignored: $1"
                 shift;;
         esac
     done
+
+    if [ -n "${bam_tag}" ] && [ "${input_mode}" != "bam" ]; then
+        log_error "--bam-tag can only be used with --from-bam"
+        exit 1
+    fi
+    if [ -n "${output_tag}" ] && [ "${input_mode}" != "bam" ]; then
+        log_error "--output-tag can only be used with --from-bam"
+        exit 1
+    fi
+    if [ "${input_mode}" = "bam" ]; then
+        if [ -z "${bam_tag}" ] || [ -z "${output_tag}" ]; then
+            log_error "--from-bam requires both --bam-tag and --output-tag"
+            exit 1
+        fi
+        if [[ ! "${bam_tag}" =~ ^[A-Za-z0-9._-]+$ ]]; then
+            log_error "--bam-tag may only contain letters, numbers, dot, underscore, and hyphen"
+            exit 1
+        fi
+        if [[ ! "${output_tag}" =~ ^[A-Za-z0-9._-]+$ ]]; then
+            log_error "--output-tag may only contain letters, numbers, dot, underscore, and hyphen"
+            exit 1
+        fi
+    fi
     
     # Initialize logging
     init_logging "step1a" "pipeline" "${dataset_name}"
@@ -86,9 +118,10 @@ main() {
     log_info "Starting Step 1A execution"
     log_info "Dataset: $dataset_name"
     log_info "RDM Base Path: $rdm_base_path"
+    log_info "Input mode: $input_mode"
     
     # Validate inputs
-    validate_step1a_inputs "$rdm_base_path"
+    validate_step1a_inputs "$rdm_base_path" "$input_mode"
 
     prepare_shared_reference_assets "${dataset_name}"
     
@@ -97,7 +130,25 @@ main() {
 
     # Create or use sample list
     local sample_list_file=""
-    if [ -n "${custom_sample_list}" ]; then
+    if [ "${input_mode}" = "bam" ]; then
+        if [ -n "${custom_sample_list}" ]; then
+            if [ ! -f "${custom_sample_list}" ]; then
+                log_error "Provided --sample-list not found: ${custom_sample_list}"
+                exit 1
+            fi
+            sample_list_file="$(cd "$(dirname "${custom_sample_list}")" && pwd)/$(basename "${custom_sample_list}")"
+            validate_bam_entry_sample_list "$rdm_base_path" "$sample_list_file" "$bam_tag"
+            log_info "Using BAM-mode sample list: ${sample_list_file}"
+        elif [ -n "${custom_sample_name}" ]; then
+            validate_bam_entry_sample "$rdm_base_path" "$custom_sample_name" "$bam_tag"
+            sample_list_file="${scratch_sample_dir}/sample_list_${dataset_name}_${custom_sample_name}_${bam_tag}_$(date +%Y%m%d_%H%M%S).txt"
+            printf "%s\n" "${custom_sample_name}" > "${sample_list_file}"
+            log_info "Created single-sample BAM-mode list for '${custom_sample_name}': ${sample_list_file}"
+        else
+            sample_list_file="${scratch_sample_dir}/sample_list_${dataset_name}_${bam_tag}_$(date +%Y%m%d_%H%M%S).txt"
+            create_bam_entry_sample_list "$rdm_base_path" "$sample_list_file" "$bam_tag"
+        fi
+    elif [ -n "${custom_sample_list}" ]; then
         if [ ! -f "${custom_sample_list}" ]; then
             log_error "Provided --sample-list not found: ${custom_sample_list}"
             exit 1
@@ -126,12 +177,16 @@ main() {
     local sample_count
     sample_count=$(wc -l < "$sample_list_file")
     if [ "${sample_count}" -le 0 ]; then
-        log_error "No valid samples detected in ${rdm_base_path}/1.FASTQ"
+        if [ "${input_mode}" = "bam" ]; then
+            log_error "No valid BAM-mode samples detected in ${rdm_base_path}/4.BAM"
+        else
+            log_error "No valid samples detected in ${rdm_base_path}/1.FASTQ"
+        fi
         exit 1
     fi
     
     # Check pipeline completion unless user specified an explicit list or sample
-    if [ -z "${custom_sample_list}" ] && [ -z "${custom_sample_name}" ]; then
+    if [ "${input_mode}" = "fastq" ] && [ -z "${custom_sample_list}" ] && [ -z "${custom_sample_name}" ]; then
         local completion_status
         completion_status=$(check_pipeline_completion "$rdm_base_path" "$sample_list_file")
         case "$completion_status" in
@@ -169,6 +224,8 @@ main() {
                 log_info "No samples are complete - proceeding with full Step 1A run"
                 ;;
         esac
+    elif [ "${input_mode}" = "bam" ]; then
+        log_info "BAM input mode selected; skipping FASTQ completion prompts."
     else
         log_info "Explicit sample selection provided; skipping completion prompts."
     fi
@@ -193,7 +250,8 @@ main() {
     
     # Submit job
     local job_id=""
-    if job_id=$(submit_job "$slurm_script" "$rdm_base_path $sample_list_file" "$dataset_name" "1A"); then
+    local submit_params="$rdm_base_path $sample_list_file $input_mode $bam_tag $output_tag"
+    if job_id=$(submit_job "$slurm_script" "$submit_params" "$dataset_name" "1A"); then
         log_slurm_submission "$job_id" "$slurm_script" "$dataset_name" "$sample_count"
 
         local state_dir
@@ -223,8 +281,12 @@ execute_step1a_pipeline() {
     local sample="$1"
     local rdm_base_path="$2"
     local dataset_name="${3:-$(basename "${rdm_base_path}")}"
+    local input_mode="${4:-fastq}"
+    local bam_tag="${5:-}"
+    local output_tag="${6:-}"
     
     log_info "Executing Step 1A pipeline for sample: $sample"
+    log_info "Step 1A input mode for ${sample}: ${input_mode}"
     
     # Set up environment variables
     local NUM_THREADS="${STEP1A_CPUS_PER_TASK:-10}"
@@ -251,7 +313,7 @@ execute_step1a_pipeline() {
     if [ ! -f "$ADAPTER_FILE" ]; then
         error_exit "Adapter FASTA not found at $ADAPTER_FILE"
     fi
-    if [ ! -f "${TRIMMOMATIC_JAR}" ]; then
+    if [ "${input_mode}" = "fastq" ] && [ ! -f "${TRIMMOMATIC_JAR}" ]; then
         error_exit "Trimmomatic jar not found at ${TRIMMOMATIC_JAR}"
     fi
     
@@ -307,6 +369,40 @@ execute_step1a_pipeline() {
     # Parse returned basenames (format: ref_basename|known_sites_basename|adapter_basename)
     local LOCAL_REF_GENOME LOCAL_KNOWN_SITES LOCAL_ADAPTER_FILE
     IFS='|' read -r LOCAL_REF_GENOME LOCAL_KNOWN_SITES LOCAL_ADAPTER_FILE <<< "${ref_files_result}"
+
+    if [ "${input_mode}" = "bam" ]; then
+        if [ -z "${bam_tag}" ] || [ -z "${output_tag}" ]; then
+            error_exit "BAM input mode requires bam_tag and output_tag"
+        fi
+
+        start_step_timer "BAM entry: Variant calling from tagged BAM"
+
+        local source_bam
+        source_bam="$(resolve_bam_entry_input "$rdm_base_path" "$sample" "$bam_tag")"
+        validate_bam_entry_sample "$rdm_base_path" "$sample" "$bam_tag"
+        ensure_bam_index "$source_bam" "$NUM_THREADS"
+
+        local local_bam
+        local_bam="$(basename "$source_bam")"
+        rsync -rhivPt "$source_bam" "$local_bam" || error_exit "Failed to copy BAM input to working directory"
+        rsync -rhivPt "${source_bam}.bai" "${local_bam}.bai" || error_exit "Failed to copy BAM index to working directory"
+
+        local output_prefix="${sample}_${output_tag}"
+        local ready_bam
+        ready_bam="$(ensure_coordinate_sorted_bam "$local_bam" "${output_prefix}_sorted.bam" "$NUM_THREADS")"
+
+        run_haplotype_caller_on_bam "$sample" "$ready_bam" "$MEMORY" "$LOCAL_REF_GENOME" "$NUM_THREADS" "$output_prefix"
+        run_genotype_gvcfs_tagged "$output_prefix" "$MEMORY" "$LOCAL_REF_GENOME"
+        copy_tagged_vcf_results_to_rdm "$output_prefix" "$rdm_base_path"
+
+        end_step_timer "BAM entry: Variant calling from tagged BAM"
+        log_info "Step 1A BAM-entry pipeline completed successfully for sample: $sample"
+
+        if [ "${CLEANUP_TMPDIR}" = "true" ]; then
+            rm -rf "${WORK_TMPDIR}"
+        fi
+        return 0
+    fi
     
     # Copy input FASTQ files using rsync (matching original script approach)
     # Only if not restored from backup or if FASTQ files are missing
@@ -440,6 +536,7 @@ execute_step1a_pipeline() {
 # Validate Step 1A inputs
 validate_step1a_inputs() {
     local rdm_base_path="$1"
+    local input_mode="${2:-fastq}"
     
     log_info "Validating Step 1A inputs"
     
@@ -449,8 +546,12 @@ validate_step1a_inputs() {
         exit 1
     fi
     
-    # Check if 1.FASTQ directory exists
-    if [ ! -d "$rdm_base_path/1.FASTQ" ]; then
+    if [ "${input_mode}" = "bam" ]; then
+        if [ ! -d "$rdm_base_path/4.BAM" ]; then
+            log_error "4.BAM directory does not exist: $rdm_base_path/4.BAM"
+            exit 1
+        fi
+    elif [ ! -d "$rdm_base_path/1.FASTQ" ]; then
         log_error "1.FASTQ directory does not exist: $rdm_base_path/1.FASTQ"
         exit 1
     fi
