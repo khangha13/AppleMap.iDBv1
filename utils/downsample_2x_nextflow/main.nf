@@ -44,9 +44,14 @@ workflow {
             if (!bam_path.exists()) {
                 error "BAM file not found for accession ${accession}: ${bam_path}"
             }
-            tuple(accession, bam_path)
+            def bai_path = file("${bam_path}.bai")
+            def csi_path = file("${bam_path}.csi")
+            def index_path = bai_path.exists() ? bai_path.toString() : (csi_path.exists() ? csi_path.toString() : '')
+            tuple(accession, bam_path, index_path)
         }
         | DOWNSAMPLE_BAM
+
+    DOWNSAMPLE_BAM.out.metrics.collect() | MERGE_DOWNSAMPLING_METRICS
 }
 
 process DOWNSAMPLE_BAM {
@@ -60,14 +65,15 @@ process DOWNSAMPLE_BAM {
     publishDir params.outdir, mode: 'copy'
 
     input:
-    tuple val(accession), path(bam)
+    tuple val(accession), path(bam), val(source_index)
 
     output:
     tuple val(accession),
         path("${accession}_2x.bam"),
-        path("${accession}_2x.bam.bai"),
+        path("${accession}_2x.bam.*"),
         path("${accession}_remainder_*x.bam"),
-        path("${accession}_remainder_*x.bam.bai")
+        path("${accession}_remainder_*x.bam.*")
+    path("${accession}.downsampling_metrics.tsv"), emit: metrics
 
     script:
     """
@@ -78,6 +84,7 @@ process DOWNSAMPLE_BAM {
     CHROM_REGEX='${params.chrom_regex}'
     OUTPUT_BAM="${accession}_2x.bam"
     REMAINDER_TMP_BAM="${accession}_remainder.tmp.bam"
+    SOURCE_INDEX='${source_index}'
 
     calculate_depth() {
         local depth_bam="\$1"
@@ -96,6 +103,22 @@ process DOWNSAMPLE_BAM {
             }'
     }
 
+    ensure_bam_index() {
+        local index_bam="\$1"
+        if [ -f "\${index_bam}.bai" ] || [ -f "\${index_bam}.csi" ]; then
+            echo "BAM index found for \${index_bam}"
+            return 0
+        fi
+
+        echo "BAM index not found for \${index_bam}. Creating BAI index."
+        if samtools index -@ ${task.cpus} "\${index_bam}"; then
+            return 0
+        fi
+
+        echo "BAI index creation failed for \${index_bam}. Creating CSI index instead."
+        samtools index -@ ${task.cpus} -c "\${index_bam}"
+    }
+
     echo "=========================================="
     echo "Processing accession: ${accession}"
     echo "Input BAM: ${bam}"
@@ -110,10 +133,21 @@ process DOWNSAMPLE_BAM {
         exit 1
     fi
 
-    if [ ! -f "${bam}.bai" ]; then
-        echo "BAM index not found in task work directory. Creating index: ${bam}.bai"
-        samtools index -@ ${task.cpus} "${bam}"
+    if [ -n "\${SOURCE_INDEX}" ] && [ -f "\${SOURCE_INDEX}" ]; then
+        case "\${SOURCE_INDEX}" in
+            *.bai)
+                ln -sf "\${SOURCE_INDEX}" "${bam}.bai"
+                ;;
+            *.csi)
+                ln -sf "\${SOURCE_INDEX}" "${bam}.csi"
+                ;;
+            *)
+                echo "WARNING: Unrecognised BAM index extension, ignoring: \${SOURCE_INDEX}"
+                ;;
+        esac
     fi
+
+    ensure_bam_index "${bam}"
 
     echo "Estimating length-weighted mean depth over Chr01-Chr17..."
     depth=\$(calculate_depth "${bam}")
@@ -137,7 +171,15 @@ process DOWNSAMPLE_BAM {
     echo "samtools view -s argument: \${fraction_arg}"
 
     samtools view -@ ${task.cpus} -b -s "\${fraction_arg}" -U "\${REMAINDER_TMP_BAM}" -o "\${OUTPUT_BAM}" "${bam}"
-    samtools index -@ ${task.cpus} "\${OUTPUT_BAM}"
+    ensure_bam_index "\${OUTPUT_BAM}"
+
+    echo "Estimating actual coverage of downsampled BAM over Chr01-Chr17..."
+    downsampled_depth=\$(calculate_depth "\${OUTPUT_BAM}")
+
+    if [[ ! "\${downsampled_depth}" =~ ^[0-9]+([.][0-9]+)?\$ ]]; then
+        echo "ERROR: Could not calculate downsampled depth for ${accession} (depth=\${downsampled_depth})"
+        exit 1
+    fi
 
     echo "Estimating actual coverage of remainder BAM over Chr01-Chr17..."
     remainder_depth=\$(calculate_depth "\${REMAINDER_TMP_BAM}")
@@ -149,13 +191,54 @@ process DOWNSAMPLE_BAM {
 
     REMAINDER_BAM="${accession}_remainder_\${remainder_depth}x.bam"
     mv "\${REMAINDER_TMP_BAM}" "\${REMAINDER_BAM}"
-    samtools index -@ ${task.cpus} "\${REMAINDER_BAM}"
+    ensure_bam_index "\${REMAINDER_BAM}"
+
+    {
+        printf 'sample\\toriginal_depth\\ttarget_depth\\tkeep_fraction\\tdownsampled_depth\\tremainder_depth\\tdownsampled_bam\\tremainder_bam\\n'
+        printf '%s\\t%s\\t%s\\t%s\\t%s\\t%s\\t%s\\t%s\\n' \
+            '${accession}' \
+            "\${depth}" \
+            "\${TARGET_DEPTH}" \
+            "\${keep_fraction}" \
+            "\${downsampled_depth}" \
+            "\${remainder_depth}" \
+            "\${OUTPUT_BAM}" \
+            "\${REMAINDER_BAM}"
+    } > "${accession}.downsampling_metrics.tsv"
 
     echo "Downsampling complete for ${accession}"
     echo "Output BAM: \${OUTPUT_BAM}"
-    echo "Output index: \${OUTPUT_BAM}.bai"
+    echo "Output index: \$(ls \${OUTPUT_BAM}.bai \${OUTPUT_BAM}.csi 2>/dev/null | tr '\\n' ' ')"
+    echo "Downsampled observed depth: \${downsampled_depth}x"
     echo "Remainder observed depth: \${remainder_depth}x"
     echo "Remainder BAM: \${REMAINDER_BAM}"
-    echo "Remainder index: \${REMAINDER_BAM}.bai"
+    echo "Remainder index: \$(ls \${REMAINDER_BAM}.bai \${REMAINDER_BAM}.csi 2>/dev/null | tr '\\n' ' ')"
+    """
+}
+
+process MERGE_DOWNSAMPLING_METRICS {
+    tag 'downsampling_metrics'
+
+    publishDir params.outdir, mode: 'copy'
+
+    input:
+    path metrics_files
+
+    output:
+    path 'downsampling_metrics.tsv'
+
+    script:
+    """
+    set -euo pipefail
+
+    first_file=\$(ls *.downsampling_metrics.tsv | sort | head -n 1)
+    awk 'FNR == 1 && NR != 1 { next } { print }' \$(ls *.downsampling_metrics.tsv | sort) > downsampling_metrics.tsv
+
+    if [ ! -s downsampling_metrics.tsv ]; then
+        echo "ERROR: downsampling_metrics.tsv was not created" >&2
+        exit 1
+    fi
+
+    echo "Merged metrics using header from \${first_file}"
     """
 }

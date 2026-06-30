@@ -25,6 +25,15 @@ The BAM directory must be flat and contain one BAM per accession. By default, th
 
 For BAMs named like `<accession>.recal.bam`, pass `--bam_suffix .recal.bam`.
 
+Existing BAM indexes can be either BAI or CSI:
+
+```text
+<accession><bam_suffix>.bai
+<accession><bam_suffix>.csi
+```
+
+If neither index exists, the workflow creates an index in the task work directory. It tries BAI first and falls back to CSI if BAI creation fails.
+
 ## Run Locally
 
 From the repository root:
@@ -88,9 +97,16 @@ For each accession, the workflow publishes the 2x downsampled BAM and the comple
 
 ```text
 <accession>_2x.bam
-<accession>_2x.bam.bai
+<accession>_2x.bam.bai or <accession>_2x.bam.csi
 <accession>_remainder_<actualCoverage>x.bam
-<accession>_remainder_<actualCoverage>x.bam.bai
+<accession>_remainder_<actualCoverage>x.bam.bai or <accession>_remainder_<actualCoverage>x.bam.csi
+<accession>.downsampling_metrics.tsv
+```
+
+The workflow also publishes a combined report:
+
+```text
+downsampling_metrics.tsv
 ```
 
 The remainder BAM contains reads from the input BAM that were not selected by `samtools view -s` for the 2x BAM. The two BAM outputs are complementary splits of the source BAM.
@@ -102,6 +118,13 @@ SRR000001_2x.bam
 SRR000001_2x.bam.bai
 SRR000001_remainder_6.238000x.bam
 SRR000001_remainder_6.238000x.bam.bai
+SRR000001.downsampling_metrics.tsv
+```
+
+Metrics columns:
+
+```text
+sample  original_depth  target_depth  keep_fraction  downsampled_depth  remainder_depth  downsampled_bam  remainder_bam
 ```
 
 ## Depth Calculation
