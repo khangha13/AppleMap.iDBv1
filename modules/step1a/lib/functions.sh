@@ -564,6 +564,139 @@ create_bam_entry_sample_list() {
     log_info "Created BAM-mode sample list with ${#samples[@]} samples: ${sample_list_file}"
 }
 
+resolve_recal_bam_pattern_input() {
+    local rdm_base_path="$1"
+    local sample="$2"
+    local bam_pattern="$3"
+    local matches=()
+
+    shopt -s nullglob
+    matches=("${rdm_base_path}/4.BAM/${sample}/${sample}_"${bam_pattern})
+    shopt -u nullglob
+
+    if [ ${#matches[@]} -eq 0 ]; then
+        error_exit "No recal-BAM input found for sample '${sample}' matching ${rdm_base_path}/4.BAM/${sample}/${sample}_${bam_pattern}"
+    fi
+    if [ ${#matches[@]} -gt 1 ]; then
+        error_exit "Multiple recal-BAM inputs found for sample '${sample}' matching ${rdm_base_path}/4.BAM/${sample}/${sample}_${bam_pattern}: ${matches[*]}"
+    fi
+
+    printf '%s\n' "${matches[0]}"
+}
+
+create_recal_bam_manifest_for_sample_list() {
+    local rdm_base_path="$1"
+    local sample_list_file="$2"
+    local manifest_file="$3"
+    local bam_pattern="$4"
+    local sample
+    local bam_path
+    local sample_count=0
+
+    > "$manifest_file"
+    while IFS= read -r sample || [ -n "$sample" ]; do
+        [ -n "$sample" ] || continue
+        bam_path="$(resolve_recal_bam_pattern_input "$rdm_base_path" "$sample" "$bam_pattern")"
+        printf "%s\t%s\n" "$sample" "$bam_path" >> "$manifest_file"
+        sample_count=$((sample_count + 1))
+    done < "$sample_list_file"
+
+    if [ "$sample_count" -eq 0 ]; then
+        error_exit "No samples found in sample list: ${sample_list_file}"
+    fi
+
+    log_info "Created recal-BAM manifest with ${sample_count} samples: ${manifest_file}"
+}
+
+create_recal_bam_sample_list_and_manifest() {
+    local rdm_base_path="$1"
+    local sample_list_file="$2"
+    local manifest_file="$3"
+    local bam_pattern="$4"
+    local bam_root="${rdm_base_path}/4.BAM"
+    local sample_dir
+    local sample
+    local bam_path
+    local sample_count=0
+
+    if [ ! -d "$bam_root" ]; then
+        error_exit "BAM directory not found: ${bam_root}"
+    fi
+
+    > "$sample_list_file"
+    > "$manifest_file"
+    shopt -s nullglob
+    for sample_dir in "${bam_root}"/*; do
+        [ -d "$sample_dir" ] || continue
+        sample="$(basename "$sample_dir")"
+        bam_path="$(resolve_recal_bam_pattern_input "$rdm_base_path" "$sample" "$bam_pattern")"
+        printf "%s\n" "$sample" >> "$sample_list_file"
+        printf "%s\t%s\n" "$sample" "$bam_path" >> "$manifest_file"
+        sample_count=$((sample_count + 1))
+    done
+    shopt -u nullglob
+
+    if [ "$sample_count" -eq 0 ]; then
+        error_exit "No sample directories found under ${bam_root}"
+    fi
+
+    log_info "Created recal-BAM sample list with ${sample_count} samples: ${sample_list_file}"
+    log_info "Created recal-BAM manifest: ${manifest_file}"
+}
+
+resolve_recal_bam_manifest_input() {
+    local manifest_file="$1"
+    local sample="$2"
+    local matches
+    local match_count
+
+    if [ ! -f "$manifest_file" ]; then
+        error_exit "Recal-BAM manifest not found: ${manifest_file}"
+    fi
+
+    matches="$(awk -F'\t' -v sample="$sample" '$1 == sample { print $2 }' "$manifest_file")"
+    match_count="$(printf '%s\n' "$matches" | awk 'NF { count++ } END { print count + 0 }')"
+
+    if [ "$match_count" -eq 0 ]; then
+        error_exit "Sample '${sample}' was not found in recal-BAM manifest: ${manifest_file}"
+    fi
+    if [ "$match_count" -gt 1 ]; then
+        error_exit "Sample '${sample}' has multiple BAM entries in recal-BAM manifest: ${manifest_file}"
+    fi
+
+    printf '%s\n' "$matches"
+}
+
+validate_bam_sm_matches_sample() {
+    local bam_path="$1"
+    local sample="$2"
+    local sm_names
+    local sm_count
+
+    if ! sm_names=$("${SAMTOOLS_PATH}" view -H "$bam_path" | awk -F'\t' '
+        $1 == "@RG" {
+            for (i = 1; i <= NF; i++) {
+                if ($i ~ /^SM:/) {
+                    sub(/^SM:/, "", $i)
+                    print $i
+                }
+            }
+        }
+    ' | sort -u); then
+        error_exit "Failed to read BAM header for sample '${sample}': ${bam_path}"
+    fi
+
+    sm_count="$(printf '%s\n' "$sm_names" | awk 'NF { count++ } END { print count + 0 }')"
+    if [ "$sm_count" -eq 0 ]; then
+        error_exit "No @RG SM tag found in BAM header for sample '${sample}': ${bam_path}"
+    fi
+    if [ "$sm_count" -ne 1 ] || [ "$sm_names" != "$sample" ]; then
+        error_exit "BAM @RG SM tag must match sample '${sample}', found: ${sm_names}"
+    fi
+
+    log_info "BAM @RG SM tag matches clean sample ID: ${sample}"
+}
+
 ensure_bam_index() {
     local bam_path="$1"
     local num_threads="$2"

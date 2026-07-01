@@ -7,9 +7,10 @@ SAMPLE_LIST_FILE="$2"
 INPUT_MODE="${3:-fastq}"
 BAM_TAG="${4:-}"
 OUTPUT_TAG="${5:-}"
+RECAL_BAM_MANIFEST="${6:-}"
 
 if [ -z "${DATASET_PATH:-}" ] || [ -z "${SAMPLE_LIST_FILE:-}" ]; then
-    echo "Usage: ${BASH_SOURCE[0]} <dataset_path> <sample_list_file> [fastq|bam] [bam_tag] [output_tag]" >&2
+    echo "Usage: ${BASH_SOURCE[0]} <dataset_path> <sample_list_file> [fastq|bam|recal_bam] [bam_tag] [output_tag] [recal_bam_manifest]" >&2
     exit 1
 fi
 
@@ -88,4 +89,4 @@ if [ "${SLURM_ARRAY_TASK_ID}" -eq 0 ]; then
     log_info "Backup directories initialized"
 fi
 
-execute_step1a_pipeline "${SAMPLE}" "${DATASET_PATH}" "${DATASET_NAME}" "${INPUT_MODE}" "${BAM_TAG}" "${OUTPUT_TAG}"
+execute_step1a_pipeline "${SAMPLE}" "${DATASET_PATH}" "${DATASET_NAME}" "${INPUT_MODE}" "${BAM_TAG}" "${OUTPUT_TAG}" "${RECAL_BAM_MANIFEST}"

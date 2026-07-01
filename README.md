@@ -51,11 +51,12 @@ bash bin/gatk_pipeline.sh -d <dataset> -s 1b      # 1a/1b/1c/1d/full/auto
 ## Pipeline Steps
 ### Step 1A – Per-sample calling
 - FastQC → Trimmomatic → FastQC → BWA → MarkDuplicates → BQSR → HaplotypeCaller → GenotypeGVCFs.
-- BAM-entry mode is available for already analysis-ready BAMs, such as downsampled BAMs derived from recalibrated BAMs. It skips FastQC, trimming, BWA, MarkDuplicates, and BQSR, then runs HaplotypeCaller → GenotypeGVCFs.
+- BAM-entry modes are available for already analysis-ready BAMs, such as downsampled BAMs derived from recalibrated BAMs. They skip FastQC, trimming, BWA, MarkDuplicates, and BQSR, then run HaplotypeCaller → GenotypeGVCFs.
 - Creates backups after key stages (default steps 3/4/5/6) in `${PIPELINE_WORK_DIR}/step1a/<dataset>` to support resume.
 - Detects complete/partial samples; can restrict to incomplete samples.
 - Submit FASTQ mode: `bash wrappers/sbatch/step1a_submit.sh <dataset> <rdm_base> [--sample <id> | --sample-list <file>]`.
 - Submit BAM-entry mode: `bash wrappers/sbatch/step1a_submit.sh <dataset> <rdm_base> --from-bam --bam-tag <tag> --output-tag <tag> [--sample <id> | --sample-list <file>]`.
+- Submit recal-BAM pattern mode with clean sample outputs: `bash wrappers/sbatch/step1a_submit.sh <dataset> <rdm_base> --from-recal-bam --bam-pattern 'remainder_*.bam' [--sample <id> | --sample-list <file>]`.
 - Defaults (configurable): 10 CPUs, 32G, 200h, array limit 100.
 - Outputs: per-sample GVCF (`*_raw.g.vcf.gz`) and genotyped VCF (`*_genotyped.vcf.gz` + index) in `5.Individual_VCF/`; FastQC HTML/ZIP in `2.*` and `3.*`; BAMs and indexes in `4.BAM/`.
 
@@ -108,6 +109,18 @@ Use these when you want to drive a single module yourself rather than letting th
   - If the BAM header is not `SO:coordinate`, Step 1A sorts a local copy before HaplotypeCaller.
   - Tagged outputs are written to `5.Individual_VCF/`, for example `<sample>_2x_raw.g.vcf.gz` and `<sample>_2x_genotyped.vcf.gz`.
   - Step 1B will treat `<sample>_2x` as the sample name because it derives names from `*_raw.g.vcf.gz`.
+- Recal-BAM pattern mode for analysis-ready BAMs with variable suffixes:
+  ```bash
+  bash wrappers/sbatch/step1a_submit.sh <dataset> <rdm_base> \
+    --from-recal-bam \
+    --bam-pattern 'remainder_*.bam' \
+    [--sample <id> | --sample-list <file>]
+  ```
+  - Required BAM layout: `<rdm_base>/4.BAM/<sample>/<sample>_<bam-pattern>`.
+  - Each selected sample must match exactly one BAM. For example, `--bam-pattern 'remainder_*.bam'` matches `<sample>_remainder_109.813929x.bam`.
+  - The `.bai` index is optional; it is created if missing.
+  - Each worker checks that the BAM `@RG SM` tag matches the clean sample ID.
+  - Outputs are written with clean sample IDs, for example `<sample>_raw.g.vcf.gz` and `<sample>_genotyped.vcf.gz`, so Step 1B keeps the sample name as `<sample>`.
 - Interactive helper: `bash wrappers/interactive/step1a_interactive.sh`
   - Prompts for dataset and sample selection; respects the same optional `--sample` / `--sample-list` flags.
 

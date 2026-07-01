@@ -55,6 +55,7 @@ main() {
         log_error ""
         log_error "Expected usage:"
         log_error "  step1a_submit.sh <dataset_name> <rdm_base_path> [--sample NAME] [--sample-list PATH] [--from-bam --bam-tag TAG --output-tag TAG]"
+        log_error "  step1a_submit.sh <dataset_name> <rdm_base_path> [--sample NAME] [--sample-list PATH] [--from-recal-bam --bam-pattern PATTERN]"
         exit 1
     fi
     if [[ "${rdm_base_path}" == -* ]]; then
@@ -62,6 +63,7 @@ main() {
         log_error ""
         log_error "Expected usage:"
         log_error "  step1a_submit.sh <dataset_name> <rdm_base_path> [--sample NAME] [--sample-list PATH] [--from-bam --bam-tag TAG --output-tag TAG]"
+        log_error "  step1a_submit.sh <dataset_name> <rdm_base_path> [--sample NAME] [--sample-list PATH] [--from-recal-bam --bam-pattern PATTERN]"
         exit 1
     fi
 
@@ -71,6 +73,7 @@ main() {
     local input_mode="fastq"
     local bam_tag=""
     local output_tag=""
+    local bam_pattern=""
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --sample)
@@ -79,10 +82,14 @@ main() {
                 custom_sample_list="$2"; shift 2;;
             --from-bam)
                 input_mode="bam"; shift;;
+            --from-recal-bam)
+                input_mode="recal_bam"; shift;;
             --bam-tag)
                 bam_tag="$2"; shift 2;;
             --output-tag)
                 output_tag="$2"; shift 2;;
+            --bam-pattern)
+                bam_pattern="$2"; shift 2;;
             *)
                 log_warn "Unknown option ignored: $1"
                 shift;;
@@ -102,6 +109,10 @@ main() {
             log_error "--from-bam requires both --bam-tag and --output-tag"
             exit 1
         fi
+        if [ -n "${bam_pattern}" ]; then
+            log_error "--bam-pattern can only be used with --from-recal-bam"
+            exit 1
+        fi
         if [[ ! "${bam_tag}" =~ ^[A-Za-z0-9._-]+$ ]]; then
             log_error "--bam-tag may only contain letters, numbers, dot, underscore, and hyphen"
             exit 1
@@ -110,6 +121,26 @@ main() {
             log_error "--output-tag may only contain letters, numbers, dot, underscore, and hyphen"
             exit 1
         fi
+    elif [ "${input_mode}" = "recal_bam" ]; then
+        if [ -z "${bam_pattern}" ]; then
+            log_error "--from-recal-bam requires --bam-pattern"
+            exit 1
+        fi
+        if [ -n "${output_tag}" ]; then
+            log_error "--output-tag is not used with --from-recal-bam; outputs are named with the clean sample ID"
+            exit 1
+        fi
+        if [[ "${bam_pattern}" != *.bam ]]; then
+            log_error "--bam-pattern must end with .bam, for example 'remainder_*.bam'"
+            exit 1
+        fi
+        if [[ ! "${bam_pattern}" =~ ^[A-Za-z0-9._?*-]+\.bam$ ]]; then
+            log_error "--bam-pattern may only contain letters, numbers, dot, underscore, hyphen, ?, and *"
+            exit 1
+        fi
+    elif [ -n "${bam_pattern}" ]; then
+        log_error "--bam-pattern can only be used with --from-recal-bam"
+        exit 1
     fi
     
     # Initialize logging
@@ -130,6 +161,7 @@ main() {
 
     # Create or use sample list
     local sample_list_file=""
+    local recal_bam_manifest=""
     if [ "${input_mode}" = "bam" ]; then
         if [ -n "${custom_sample_list}" ]; then
             if [ ! -f "${custom_sample_list}" ]; then
@@ -147,6 +179,25 @@ main() {
         else
             sample_list_file="${scratch_sample_dir}/sample_list_${dataset_name}_${bam_tag}_$(date +%Y%m%d_%H%M%S).txt"
             create_bam_entry_sample_list "$rdm_base_path" "$sample_list_file" "$bam_tag"
+        fi
+    elif [ "${input_mode}" = "recal_bam" ]; then
+        recal_bam_manifest="${scratch_sample_dir}/recal_bam_manifest_${dataset_name}_$(date +%Y%m%d_%H%M%S).tsv"
+        if [ -n "${custom_sample_list}" ]; then
+            if [ ! -f "${custom_sample_list}" ]; then
+                log_error "Provided --sample-list not found: ${custom_sample_list}"
+                exit 1
+            fi
+            sample_list_file="$(cd "$(dirname "${custom_sample_list}")" && pwd)/$(basename "${custom_sample_list}")"
+            create_recal_bam_manifest_for_sample_list "$rdm_base_path" "$sample_list_file" "$recal_bam_manifest" "$bam_pattern"
+            log_info "Using recal-BAM sample list: ${sample_list_file}"
+        elif [ -n "${custom_sample_name}" ]; then
+            sample_list_file="${scratch_sample_dir}/sample_list_${dataset_name}_${custom_sample_name}_recal_bam_$(date +%Y%m%d_%H%M%S).txt"
+            printf "%s\n" "${custom_sample_name}" > "${sample_list_file}"
+            create_recal_bam_manifest_for_sample_list "$rdm_base_path" "$sample_list_file" "$recal_bam_manifest" "$bam_pattern"
+            log_info "Created single-sample recal-BAM list for '${custom_sample_name}': ${sample_list_file}"
+        else
+            sample_list_file="${scratch_sample_dir}/sample_list_${dataset_name}_recal_bam_$(date +%Y%m%d_%H%M%S).txt"
+            create_recal_bam_sample_list_and_manifest "$rdm_base_path" "$sample_list_file" "$recal_bam_manifest" "$bam_pattern"
         fi
     elif [ -n "${custom_sample_list}" ]; then
         if [ ! -f "${custom_sample_list}" ]; then
@@ -177,7 +228,7 @@ main() {
     local sample_count
     sample_count=$(wc -l < "$sample_list_file")
     if [ "${sample_count}" -le 0 ]; then
-        if [ "${input_mode}" = "bam" ]; then
+        if [ "${input_mode}" = "bam" ] || [ "${input_mode}" = "recal_bam" ]; then
             log_error "No valid BAM-mode samples detected in ${rdm_base_path}/4.BAM"
         else
             log_error "No valid samples detected in ${rdm_base_path}/1.FASTQ"
@@ -224,7 +275,7 @@ main() {
                 log_info "No samples are complete - proceeding with full Step 1A run"
                 ;;
         esac
-    elif [ "${input_mode}" = "bam" ]; then
+    elif [ "${input_mode}" = "bam" ] || [ "${input_mode}" = "recal_bam" ]; then
         log_info "BAM input mode selected; skipping FASTQ completion prompts."
     else
         log_info "Explicit sample selection provided; skipping completion prompts."
@@ -250,7 +301,13 @@ main() {
     
     # Submit job
     local job_id=""
-    local submit_params="$rdm_base_path $sample_list_file $input_mode $bam_tag $output_tag"
+    local submit_bam_tag="$bam_tag"
+    local submit_output_tag="$output_tag"
+    if [ "${input_mode}" = "recal_bam" ]; then
+        submit_bam_tag="."
+        submit_output_tag="."
+    fi
+    local submit_params="$rdm_base_path $sample_list_file $input_mode $submit_bam_tag $submit_output_tag $recal_bam_manifest"
     if job_id=$(submit_job "$slurm_script" "$submit_params" "$dataset_name" "1A"); then
         log_slurm_submission "$job_id" "$slurm_script" "$dataset_name" "$sample_count"
 
@@ -284,6 +341,7 @@ execute_step1a_pipeline() {
     local input_mode="${4:-fastq}"
     local bam_tag="${5:-}"
     local output_tag="${6:-}"
+    local recal_bam_manifest="${7:-}"
     
     log_info "Executing Step 1A pipeline for sample: $sample"
     log_info "Step 1A input mode for ${sample}: ${input_mode}"
@@ -397,6 +455,38 @@ execute_step1a_pipeline() {
 
         end_step_timer "BAM entry: Variant calling from tagged BAM"
         log_info "Step 1A BAM-entry pipeline completed successfully for sample: $sample"
+
+        if [ "${CLEANUP_TMPDIR}" = "true" ]; then
+            rm -rf "${WORK_TMPDIR}"
+        fi
+        return 0
+    elif [ "${input_mode}" = "recal_bam" ]; then
+        if [ -z "${recal_bam_manifest}" ]; then
+            error_exit "Recal-BAM mode requires a BAM manifest"
+        fi
+
+        start_step_timer "Recal BAM entry: Variant calling with clean sample output"
+
+        local source_bam
+        source_bam="$(resolve_recal_bam_manifest_input "$recal_bam_manifest" "$sample")"
+        ensure_bam_index "$source_bam" "$NUM_THREADS"
+
+        local local_bam
+        local_bam="$(basename "$source_bam")"
+        rsync -rhivPt "$source_bam" "$local_bam" || error_exit "Failed to copy recal BAM input to working directory"
+        rsync -rhivPt "${source_bam}.bai" "${local_bam}.bai" || error_exit "Failed to copy recal BAM index to working directory"
+        validate_bam_sm_matches_sample "$local_bam" "$sample"
+
+        local output_prefix="${sample}"
+        local ready_bam
+        ready_bam="$(ensure_coordinate_sorted_bam "$local_bam" "${output_prefix}_sorted.bam" "$NUM_THREADS")"
+
+        run_haplotype_caller_on_bam "$sample" "$ready_bam" "$MEMORY" "$LOCAL_REF_GENOME" "$NUM_THREADS" "$output_prefix"
+        run_genotype_gvcfs_tagged "$output_prefix" "$MEMORY" "$LOCAL_REF_GENOME"
+        copy_tagged_vcf_results_to_rdm "$output_prefix" "$rdm_base_path"
+
+        end_step_timer "Recal BAM entry: Variant calling with clean sample output"
+        log_info "Step 1A recal-BAM pipeline completed successfully for sample: $sample"
 
         if [ "${CLEANUP_TMPDIR}" = "true" ]; then
             rm -rf "${WORK_TMPDIR}"
@@ -546,7 +636,7 @@ validate_step1a_inputs() {
         exit 1
     fi
     
-    if [ "${input_mode}" = "bam" ]; then
+    if [ "${input_mode}" = "bam" ] || [ "${input_mode}" = "recal_bam" ]; then
         if [ ! -d "$rdm_base_path/4.BAM" ]; then
             log_error "4.BAM directory does not exist: $rdm_base_path/4.BAM"
             exit 1
