@@ -29,7 +29,6 @@ module load trimmomatic/0.39-java-11           # Read trimming and adapter remov
 module load bwa/0.7.17-gcccore-11.3.0          # Burrows-Wheeler Aligner for read mapping
 module load samtools/1.16.1-gcc-11.3.0         # SAM/BAM file manipulation and indexing
 module load gatk/4.3.0.0-gcccore-11.3.0-java-11 # Genome Analysis Toolkit for variant calling
-module load picard                              # Java tools for working with sequencing data
 
 if [ -n "${PIPELINE_ROOT:-}" ]; then
     if [ -d "${PIPELINE_ROOT}" ]; then
