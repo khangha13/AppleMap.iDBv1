@@ -296,8 +296,10 @@ main() {
     sleep 2
     
 
-    # The file is guaranteed to exist if create_slurm_script returned successfully
-    local array_range_max="${LAST_STEP1A_ARRAY_MAX:-$((sample_count - 1))}"
+    # Report the actual array range written to the generated SLURM script.
+    local array_range_max
+    array_range_max="$(awk -F= '/^#SBATCH --array=0-/ { sub(/^0-/, "", $2); print $2; exit }' "$slurm_script")"
+    array_range_max="${array_range_max:-$((sample_count - 1))}"
     
     # Submit job
     local job_id=""
