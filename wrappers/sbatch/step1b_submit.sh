@@ -46,6 +46,7 @@ shift 2 || true
 
 source "${PIPELINE_ROOT}/config/pipeline_config.sh"
 source "${PIPELINE_ROOT}/lib/logging.sh"
+source "${PIPELINE_ROOT}/lib/slurm.sh"
 
 if command -v resolve_log_root >/dev/null 2>&1; then
     LOG_DIR="$(resolve_log_root "${DATASET_NAME}" "slurm")"
@@ -63,12 +64,13 @@ if [ ! -f "${SCRIPT_PATH}" ]; then
     echo "[step1b_submit] ❌ Step 1B runner not found: ${SCRIPT_PATH}" >&2
     exit 1
 fi
-wrap_cmd=( bash "${SCRIPT_PATH}" "${DATASET_NAME}" "${DATASET_RDM_PATH}" )
+wrap_cmd=( /bin/bash "${SCRIPT_PATH}" "${DATASET_NAME}" "${DATASET_RDM_PATH}" )
 # sbatch --wrap expects a single string; quote to preserve args/spaces.
 wrap_cmd_str="$(printf '%q ' "${wrap_cmd[@]}")"
 wrap_cmd_str="${wrap_cmd_str% }"
 
 JOB_NAME="GATK_step1b_${DATASET_NAME}"
+SLURM_EXPORT_ARG="$(build_slurm_export_arg)"
 
 sbatch_cmd=(
     sbatch
@@ -84,7 +86,7 @@ sbatch_cmd=(
     -D "${LOG_DIR}"
     -o "${STDOUT_PATH}"
     -e "${STDERR_PATH}"
-    --export=ALL,PIPELINE_ROOT="${PIPELINE_ROOT}"
+    "${SLURM_EXPORT_ARG}"
     --wrap "${wrap_cmd_str}"
 )
 

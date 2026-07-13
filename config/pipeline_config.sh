@@ -21,15 +21,15 @@ fi
 export PIPELINE_ROOT
 
 if [ "${PIPELINE_CONFIG_SOURCED:-false}" = "true" ]; then
-    # Only short-circuit if core paths were already set; otherwise reload to avoid
-    # unbound variables under `set -u` when sourced in /var/spool copies.
-    if [ -n "${RDM_DATASETS_PATH:-}" ]; then
+    # Only short-circuit if this shell already has the full config loaded.
+    # A Slurm child can inherit PIPELINE_CONFIG_SOURCED without these functions.
+    if [ -n "${RDM_DATASETS_PATH:-}" ] && declare -F get_rdm_datasets_path >/dev/null 2>&1; then
         return 0 2>/dev/null || exit 0
     fi
-    echo "[pipeline_config] ⚠️  PIPELINE_CONFIG_SOURCED was true but required paths were empty; reloading config." >&2
+    echo "[pipeline_config] ⚠️  PIPELINE_CONFIG_SOURCED was true but required config state was incomplete; reloading config." >&2
 fi
 PIPELINE_CONFIG_SOURCED="true"
-export PIPELINE_CONFIG_SOURCED
+export -n PIPELINE_CONFIG_SOURCED 2>/dev/null || true
 
 ENV_FILE="${SCRIPT_DIR}/environment.sh"
 ENV_TEMPLATE="${SCRIPT_DIR}/environment.template.sh"

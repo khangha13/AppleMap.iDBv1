@@ -4,6 +4,132 @@
 # =============================================================================
 # SLURM job management functions used across all pipeline steps
 
+build_slurm_export_arg() {
+    local export_vars=(
+        PIPELINE_ROOT
+        PIPELINE_ENV_FILE
+        PIPELINE_DIR_NAME
+        PIPELINE_HOME_CANDIDATE
+        PIPELINE_LOG_DIR_OVERRIDE
+        PIPELINE_RDM_BASE
+        PIPELINE_RDM_DATASETS
+        PIPELINE_SCRATCH_BASE
+        PIPELINE_LOG_BASE
+        PIPELINE_REFERENCE_DIR
+        PIPELINE_REFERENCE_FASTA
+        PIPELINE_KNOWN_SITES_VCF
+        PIPELINE_ADAPTER_FASTA
+        PIPELINE_SLURM_ACCOUNT
+        PIPELINE_SLURM_PARTITION
+        PIPELINE_SLURM_QOS
+        PIPELINE_SLURM_NODES
+        PIPELINE_SLURM_NTASKS
+        PIPELINE_SLURM_SCRIPT_DIR
+        PIPELINE_WORK_DIR
+        PIPELINE_LOG_LEVEL
+        PIPELINE_VERBOSE_LOGGING
+        PIPELINE_GLOBAL_DRY_RUN
+        PIPELINE_ENABLE_BACKUP
+        PIPELINE_BACKUP_STEPS
+        PIPELINE_SHARED_REF_TIMEOUT
+        PIPELINE_SHARED_REF_POLL_INTERVAL
+        PIPELINE_CHROMOSOME_LIST
+        RDM_BASE_PATH
+        RDM_DATASETS_PATH
+        SCRATCH_BASE_PATH
+        LOG_BASE_PATH
+        MASTER_LOG_DIR
+        MASTER_LOG_FILE
+        WRAPPER_LOG_PATH
+        DEFAULT_LOG_LEVEL
+        LOG_TO_CONSOLE
+        LOG_TO_FILE
+        DEBUG_MODE
+        TEST_MODE
+        REFERENCE_GENOME
+        REFERENCE_GENOME_INDEX
+        REFERENCE_GENOME_DICT
+        REFERENCE_GENOME_ORIGINAL
+        KNOWN_SITES_VCF
+        KNOWN_SITES_INDEX
+        ADAPTER_FILE
+        STEP1A_CPUS
+        STEP1A_MEMORY
+        STEP1A_TIME
+        STEP1A_ARRAY_LIMIT
+        STEP1A_SAMTOOLS_MODULE
+        STEP1B_CPUS
+        STEP1B_MEMORY
+        STEP1B_TIME
+        STEP1B_ARRAY_LIMIT
+        STEP1B_CHROMOSOME_LIST
+        STEP1B_FAILURE_FLAG_PATH
+        STEP1B_RUNNING_FLAG_PATH
+        STEP1B_FAILURE_CONTEXT
+        STEP1B_GATK_MODULE
+        STEP1C_CPUS
+        STEP1C_MEMORY
+        STEP1C_TIME
+        STEP1C_ACCOUNT
+        STEP1C_PARTITION
+        STEP1C_NODES
+        STEP1C_NTASKS
+        STEP1C_SELF_IMPUTE
+        STEP1C_ARRAY_LIMIT
+        STEP1C_CONSTRAINT
+        STEP1C_DEBUG_BEAGLE
+        STEP1C_PERSIST_ARTIFACTS
+        STEP1D_CPUS
+        STEP1D_MEMORY
+        STEP1D_TIME
+        STEP1D_ACCOUNT
+        STEP1D_PARTITION
+        STEP1D_NODES
+        STEP1D_NTASKS
+        STEP1D_CONSTRAINT
+        STEP1D_PCA_DIR
+        STEP1D_PCA_MERGED_PATTERN
+        STEP1D_PCA_FORCE_CONCAT
+        STEP1D_PCA_MERGED_EXCLUDE_CHR
+        STEP1D_CACHE_DIR
+        STEP1D_PACKAGE_DIR
+        STEP1D_PARQUET_COMPRESSION
+        GATK_COMMAND
+        GATK_BATCH_SIZE
+        GATK_READER_THREADS
+        BWA_MEM_FLAGS
+        BWA_PATH
+        SAMTOOLS_PATH
+        SAMTOOLS_MODULE
+        FASTQC_PATH
+        TRIMMOMATIC_JAR
+        BCFTOOLS_BIN
+        PLINK2_BIN
+        BEAGLE_JAR
+        PYTHON_BIN
+    )
+    local export_items=()
+    local var value
+    for var in "${export_vars[@]}"; do
+        value="${!var:-}"
+        # Slurm --export is comma-delimited; comma-valued config is reloaded
+        # from pipeline_config.sh in the child job instead of being inlined here.
+        if [[ "${value}" == *,* ]]; then
+            continue
+        fi
+        if [ -n "${value}" ]; then
+            export_items+=("${var}=${value}")
+        fi
+    done
+
+    if [ "${#export_items[@]}" -eq 0 ]; then
+        echo "--export=NONE"
+    else
+        local IFS=,
+        echo "--export=${export_items[*]}"
+    fi
+}
+
 # Function to create SLURM script from template
 create_slurm_script() {
     local template="$1"
@@ -214,22 +340,8 @@ submit_job() {
         script_abs="${script_dir}/${script_file}"
     fi
     
-    local export_arg="--export=ALL"
-    if [ -n "${PIPELINE_ROOT:-}" ]; then
-        export_arg="${export_arg},PIPELINE_ROOT=${PIPELINE_ROOT}"
-    fi
-    if [ -n "${PIPELINE_ENV_FILE:-}" ]; then
-        export_arg="${export_arg},PIPELINE_ENV_FILE=${PIPELINE_ENV_FILE}"
-    fi
-    if [ -n "${PIPELINE_DIR_NAME:-}" ]; then
-        export_arg="${export_arg},PIPELINE_DIR_NAME=${PIPELINE_DIR_NAME}"
-    fi
-    if [ -n "${PIPELINE_HOME_CANDIDATE:-}" ]; then
-        export_arg="${export_arg},PIPELINE_HOME_CANDIDATE=${PIPELINE_HOME_CANDIDATE}"
-    fi
-    if [ -n "${PIPELINE_LOG_DIR_OVERRIDE:-}" ]; then
-        export_arg="${export_arg},PIPELINE_LOG_DIR_OVERRIDE=${PIPELINE_LOG_DIR_OVERRIDE}"
-    fi
+    local export_arg
+    export_arg="$(build_slurm_export_arg)"
     
     local sbatch_output
     if ! sbatch_output=$(sbatch --parsable "${export_arg}" "$script_abs" $params 2>&1); then

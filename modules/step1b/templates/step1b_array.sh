@@ -10,6 +10,9 @@ if [ -z "${DATASET_PATH:-}" ] || [ -z "${CHROMOSOME_LIST_FILE:-}" ]; then
     exit 1
 fi
 
+# Extract dataset name before any logging under `set -u`.
+DATASET_NAME="$(basename "${DATASET_PATH}")"
+
 step1b_array_exit_trap() {
     local status=$?
     if [ $status -ne 0 ] && [ -n "${STEP1B_FAILURE_FLAG_PATH:-}" ]; then
@@ -29,10 +32,11 @@ step1b_array_exit_trap() {
 # =============================================================================
 # MODULE LOADING SECTION
 # =============================================================================
-# Load all required bioinformatics tools and their specific versions
-# These versions have been tested and are compatible with each other
+# Start from an explicit module state; Bunya now requires explicit Java unloads
+# before loading a module stack that resolves a different java/* dependency.
 
-module purge
+module --force purge 2>/dev/null || module purge
+module unload java/11.0.27 java/17.0.15 2>/dev/null || true
 module load gatk/4.3.0.0-gcccore-11.3.0-java-11 # Genome Analysis Toolkit for variant calling
 module load samtools/1.16.1-gcc-11.3.0         # SAM/BAM file manipulation and indexing
 
@@ -69,9 +73,6 @@ fi
 
 log_info "Step 1B array task ${SLURM_ARRAY_TASK_ID} processing ${chromosome}"
 trap 'step1b_array_exit_trap' EXIT
-
-# Extract dataset name from DATASET_PATH for shared reference setup
-DATASET_NAME="$(basename "${DATASET_PATH}")"
 
 ref_genome="$(get_reference_fasta)"
 
