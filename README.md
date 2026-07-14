@@ -33,6 +33,62 @@ bash bin/gatk_pipeline.sh -d <dataset> -s 1b      # 1a/1b/1c/1d/full/auto
 - Preview actions without submitting jobs using `--dry-run`.
 - Master poll interval is `PIPELINE_MASTER_POLL_SECS` (defaults to `MONITOR_INTERVAL` from `pipeline_config.sh`, currently 30s).
 
+### Worked examples
+The examples below use a fictional dataset named `NCBI_truth_set`, stored at:
+`/QRISdata/Q8367/WGS_Reference_Panel/NCBI_truth_set`.
+
+Run these commands from the `GATK_Pipeline_KH_v1` directory. Replace
+`NCBI_truth_set` and the paths with your own values.
+
+```bash
+# 1. Preview the steps that auto-mode would run. No jobs are submitted.
+bash bin/gatk_pipeline.sh -d NCBI_truth_set --dry-run
+
+# 2. Submit the full controller. It detects completed outputs and starts
+#    only the missing pipeline steps.
+bash bin/gatk_pipeline.sh -d NCBI_truth_set --submit
+
+# 3. Submit only Step 1B through the controller.
+bash bin/gatk_pipeline.sh -d NCBI_truth_set -s 1b --submit
+
+# 4. Use a non-default dataset directory.
+bash bin/gatk_pipeline.sh -d NCBI_truth_set \
+  --rdm-path /QRISdata/Q8367/WGS_Reference_Panel/NCBI_truth_set \
+  --submit
+```
+
+To operate individual modules directly:
+
+```bash
+# Step 1A: call variants for one paired-end FASTQ sample.
+# Expected inputs:
+#   1.FASTQ/Gala_01_1.fastq.gz
+#   1.FASTQ/Gala_01_2.fastq.gz
+bash wrappers/sbatch/step1a_submit.sh NCBI_truth_set --sample Gala_01
+
+# Step 1A: start from one analysis-ready BAM instead of FASTQ.
+# Expected input: 4.BAM/Gala_01/Gala_01_2x.bam
+# Outputs include: 5.Individual_VCF/Gala_01_2x_raw.g.vcf.gz
+bash wrappers/sbatch/step1a_submit.sh NCBI_truth_set \
+  --from-bam --bam-tag 2x --output-tag 2x --sample Gala_01
+
+# Step 1B: jointly genotype all *_raw.g.vcf.gz files for the dataset.
+bash wrappers/sbatch/step1b_submit.sh NCBI_truth_set \
+  /QRISdata/Q8367/WGS_Reference_Panel/NCBI_truth_set
+
+# Step 1C: phase the consolidated chromosome VCFs with Beagle.
+bash wrappers/sbatch/step1c_submit.sh NCBI_truth_set \
+  /QRISdata/Q8367/WGS_Reference_Panel/NCBI_truth_set
+
+# Step 1D: preview the combined report-data workflow for the Beagle outputs.
+bash wrappers/sbatch/step1d_submit.sh NCBI_truth_set \
+  /QRISdata/Q8367/WGS_Reference_Panel/NCBI_truth_set/8.Imputated_VCF_BEAGLE \
+  --beagle --dry-run
+```
+
+For a first run, use the first `--dry-run` command, check the resolved dataset
+and reference paths in its output, then rerun with `--submit`.
+
 ## Data Layout (RDM)
 ```
 /QRISdata/Q8367/WGS_Reference_Panel/{dataset}/

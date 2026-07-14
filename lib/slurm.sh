@@ -66,6 +66,7 @@ build_slurm_export_arg() {
         STEP1B_FAILURE_FLAG_PATH
         STEP1B_RUNNING_FLAG_PATH
         STEP1B_FAILURE_CONTEXT
+        STEP1B_JAVA_MODULE
         STEP1B_GATK_MODULE
         STEP1C_CPUS
         STEP1C_MEMORY

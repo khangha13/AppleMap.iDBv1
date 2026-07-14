@@ -1131,6 +1131,47 @@ This works regardless of whether `logging.sh` was sourced or not.
 
 ---
 
+### 5.27 Step 1B GATK launcher could not find Java after module setup (2026-07-13)
+
+**Symptom**
+
+- Step 1B reached `GenomicsDBImport`, and the GATK launcher resolved its JAR,
+  but Python failed before Java started:
+  `FileNotFoundError: [Errno 2] No such file or directory: 'java'`.
+
+**Root cause**
+
+- `step1b_array.sh` loaded the GATK and samtools modules, then sourced
+  `modules/step1b/bin/run_step1b.sh`.
+- `run_step1b.sh` executed `module purge` at file scope. Sourcing the file
+  therefore removed Java from `PATH` after the array worker had loaded it.
+- An absolute `GATK_COMMAND` still survived in the job configuration, so the
+  Python GATK launcher started successfully and hid the missing runtime until it
+  attempted to execute `java`.
+
+**Fix**
+
+- Removed the file-scope purge from `run_step1b.sh`. A clean module purge is now
+  performed only inside `main`, when that script is executed as the Step 1B
+  orchestrator; sourcing it as a function library no longer mutates the caller's
+  module environment.
+- The array worker now explicitly loads `java/11.0.27`, matching the Java 11
+  GATK build, before loading GATK and samtools.
+- `ensure_step1b_prereqs` now validates both `java` and GATK and fails early with
+  a direct module diagnostic. `STEP1B_JAVA_MODULE` may be overridden for future
+  Bunya module revisions and is included in the curated Slurm export list.
+
+**Rerun guidance**
+
+- Regenerate and resubmit Step 1B so the array uses the updated template.
+- Existing failed GenomicsDB workspaces can be left in place because Step 1B
+  invokes `GenomicsDBImport` with
+  `--overwrite-existing-genomicsdb-workspace true`.
+- The corrected job log should show `Java runtime: .../bin/java` before
+  `GenomicsDBImport`. No Step 1A rerun is required.
+
+---
+
 ## 6. Configuration & Troubleshooting Checklist
 
 This is the condensed, pipeline‑wide checklist that replaces the separate

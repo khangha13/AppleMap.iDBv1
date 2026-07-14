@@ -32,13 +32,16 @@ step1b_array_exit_trap() {
 # =============================================================================
 # MODULE LOADING SECTION
 # =============================================================================
-# Start from an explicit module state; Bunya now requires explicit Java unloads
-# before loading a module stack that resolves a different java/* dependency.
+# Start from an explicit module state because Bunya no longer automatically
+# swaps conflicting java/* modules with the same name.
+
+STEP1B_JAVA_MODULE="${STEP1B_JAVA_MODULE:-java/11.0.27}"
+STEP1B_GATK_MODULE="${STEP1B_GATK_MODULE:-gatk/4.3.0.0-gcccore-11.3.0-java-11}"
 
 module --force purge 2>/dev/null || module purge
-module unload java/11.0.27 java/17.0.15 2>/dev/null || true
-module load gatk/4.3.0.0-gcccore-11.3.0-java-11 # Genome Analysis Toolkit for variant calling
-module load samtools/1.16.1-gcc-11.3.0         # SAM/BAM file manipulation and indexing
+module load "${STEP1B_JAVA_MODULE}"              # Java runtime required by the GATK launcher
+module load "${STEP1B_GATK_MODULE}"              # Genome Analysis Toolkit for variant calling
+module load samtools/1.16.1-gcc-11.3.0           # SAM/BAM file manipulation and indexing
 
 PIPELINE_ROOT="__PIPELINE_ROOT_PLACEHOLDER__"
 export PIPELINE_ROOT
@@ -51,6 +54,7 @@ source "${STEP1B_MODULE_DIR}/bin/run_step1b.sh"
 
 # Initialize logging for the array job
 init_logging "step1b" "pipeline" "${DATASET_NAME}"
+ensure_step1b_prereqs
 
 if [ ! -f "${CHROMOSOME_LIST_FILE}" ]; then
     error_exit "Chromosome list file not found: ${CHROMOSOME_LIST_FILE}"

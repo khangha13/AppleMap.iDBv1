@@ -22,10 +22,6 @@ if [ ! -d "${STEP1B_MODULE_DIR}" ]; then
     exit 1
 fi
 
-if command -v module >/dev/null 2>&1; then
-    module purge
-fi
-
 source "${PIPELINE_ROOT}/lib/logging.sh"
 source "${PIPELINE_ROOT}/lib/slurm.sh"
 source "${PIPELINE_ROOT}/lib/validation.sh"
@@ -33,6 +29,7 @@ source "${PIPELINE_ROOT}/lib/pipeline_common.sh"
 source "${STEP1B_MODULE_DIR}/lib/functions.sh"
 source "${PIPELINE_ROOT}/config/pipeline_config.sh"
 
+STEP1B_JAVA_MODULE="${STEP1B_JAVA_MODULE:-java/11.0.27}"
 STEP1B_GATK_MODULE="${STEP1B_GATK_MODULE:-gatk/4.3.0.0-gcccore-11.3.0-java-11}"
 LAST_STEP1B_ARRAY_MAX=0
 STEP1B_FAILURE_FLAG_PATH=""
@@ -138,8 +135,26 @@ setup_step1b_failure_tracking() {
 ensure_step1b_prereqs() {
     local resolved_gatk="${GATK_COMMAND:-}"
 
+    if ! command -v module >/dev/null 2>&1 && [ -f /etc/profile.d/modules.sh ]; then
+        # shellcheck disable=SC1091
+        source /etc/profile.d/modules.sh
+    fi
+
+    if ! command -v java >/dev/null 2>&1 && command -v module >/dev/null 2>&1; then
+        if module load "${STEP1B_JAVA_MODULE}" >/dev/null 2>&1; then
+            log_info "Loaded ${STEP1B_JAVA_MODULE} for Step 1B"
+        else
+            log_warn "Failed to load Java module ${STEP1B_JAVA_MODULE}"
+        fi
+    fi
+
+    if ! command -v java >/dev/null 2>&1; then
+        error_exit "Java runtime not found. Load ${STEP1B_JAVA_MODULE} or set PATH to a Java 11 runtime before running Step 1B."
+    fi
+
     if [ -n "${resolved_gatk}" ] && command -v "${resolved_gatk}" >/dev/null 2>&1; then
         log_debug "Using configured GATK command: ${resolved_gatk}"
+        log_info "Java runtime: $(command -v java)"
         return 0
     fi
 
@@ -147,12 +162,8 @@ ensure_step1b_prereqs() {
         GATK_COMMAND="$(command -v gatk)"
         export GATK_COMMAND
         log_info "Detected GATK in PATH: ${GATK_COMMAND}"
+        log_info "Java runtime: $(command -v java)"
         return 0
-    fi
-
-    if ! command -v module >/dev/null 2>&1 && [ -f /etc/profile.d/modules.sh ]; then
-        # shellcheck disable=SC1091
-        source /etc/profile.d/modules.sh
     fi
 
     if command -v module >/dev/null 2>&1; then
@@ -161,6 +172,7 @@ ensure_step1b_prereqs() {
             if [ -n "${GATK_COMMAND}" ]; then
                 export GATK_COMMAND
                 log_info "Loaded ${STEP1B_GATK_MODULE} for Step 1B: ${GATK_COMMAND}"
+                log_info "Java runtime: $(command -v java)"
                 return 0
             fi
         else
@@ -203,6 +215,9 @@ main() {
         MODULE_NAME="step1b"
         LOG_LEVEL="${LOG_LEVEL:-INFO}"
         log_info "Routing Step 1B logs to master log."
+    fi
+    if command -v module >/dev/null 2>&1; then
+        module --force purge 2>/dev/null || module purge
     fi
     ensure_step1b_prereqs
 
